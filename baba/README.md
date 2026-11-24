@@ -9,15 +9,18 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 
 ## Rules implemented
 
-- **Setup:** 5×5 board. Baba bottom-left, Keke top-right, rocks in the other
-  two corners, flag in the center. Printed rules: `BABA IS YOU` (P1),
-  `KEKE IS YOU` (P2) — permanent.
+- **Setup:** 5×5 board with the World 1 "The Plains" river terrain drawn on it.
+  Baba bottom-left, Keke top-right, rocks in the other two corners, flag in the
+  center. Printed rules: `ALL IS PUSH`, `BABA IS YOU` (P1), `KEKE IS YOU` (P2) —
+  permanent. **2–4 players:** extra players (ME 🐱, FOFO 🐑) spawn in the
+  remaining corners, displacing any rock there to the nearest free cell; each
+  gets a printed `IS YOU`.
 - **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
   level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
-- **MOVE:** move one of your YOU things one space orthogonally. Everything is
-  always PUSH; a pushed thing needs an empty cell behind it (no chain pushing,
+- **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —
+  everything can always be pushed; a pushed thing needs an empty cell behind it (no chain pushing,
   no pushing off the board — the whole move fails otherwise). Hold **Shift**
   while moving to also **PULL** the contents of the cell you left. A YOU thing
   may enter the cell of a WIN thing (and vice versa) — they stack.
@@ -51,10 +54,11 @@ ended the game. History is capped at 500 actions per game.
 
 Works with touch or mouse/keyboard; the board scales to the screen width.
 
-- Move: on-screen D-pad, arrow keys, or WASD; PULL toggle button or Shift = also pull;
-  Tab or tap a thing to select which of your YOU things moves
+- Move: swipe the board, on-screen D-pad, arrow keys, or WASD; PULL toggle button or
+  Shift = also pull; Tab or tap a thing to select which of your YOU things moves
 - Place: tap a supply tile (or keys 1–6), then tap a highlighted cell; Esc cancels
-- C = challenge · R = new game · N = new scenario · **U = undo last action**
+- C = challenge · R = new game · N = new scenario · **Z = undo last action**
+- 👥 buttons pick 2/3/4 players (starts a new game)
 
 ## Files
 

@@ -36,6 +36,7 @@
     border-radius: 4px;
     touch-action: manipulation;
   }
+  .cell.water { background: radial-gradient(circle at 50% 40%, #2a6ea6 0%, #1d4e79 70%); }
   .cell.target { background: #1e3a2a; outline: 2px dashed #2ecc71; cursor: pointer; }
   .cell.sel { outline: 3px solid #f1c40f; }
   .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
@@ -118,6 +119,13 @@
     touch-action: manipulation; user-select: none; -webkit-user-select: none;
   }
   .btns button:disabled { opacity: .4; cursor: default; }
+  #players { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; }
+  #players button {
+    background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170;
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+    touch-action: manipulation;
+  }
+  #players button.on { background: #f1c40f; color: #4a3800; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #8b93c9; margin-top: 6px; }
   #rules, #log { list-style: none; display: flex; flex-direction: column; gap: 4px; }
   #rules li {
@@ -151,7 +159,7 @@
       </div>
       <div class="cbtns">
         <button id="btn-pull">PULL: off</button>
-        <button id="btn-undo">↩ undo (U)</button>
+        <button id="btn-undo">↩ undo (Z)</button>
       </div>
     </div>
     <div id="tray-wrap">
@@ -164,6 +172,11 @@
     <h1>BABA <span>VS</span> KEKE</h1>
     <div id="turn"></div>
     <div id="score"></div>
+    <div id="players">👥 players:
+      <button data-n="2">2</button>
+      <button data-n="3">3</button>
+      <button data-n="4">4</button>
+    </div>
     <div class="btns">
       <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win (C)">⚔ Challenge (C)</button>
       <button id="btn-clock" title="Make this scenario best 2 of 3">🕐 spend clock</button>
@@ -176,13 +189,14 @@
     <ul id="log"></ul>
     <div class="help">
       Turns alternate; the very first turn has <b>1 action</b>, all later turns <b>2 actions</b>.
-      An action is a <b>MOVE</b> (D-pad / arrows / WASD, PULL toggle or Shift = also pull) of one of your
-      YOU things — tap a thing or Tab to select which — or a <b>PLACE</b> of a level tile into an empty
-      cell next to one of your YOU things (tap tile, then a green cell).
-      Everything is PUSH; pushed things need an empty cell behind them. A rule forms when a noun tile
-      points right or down into a property tile. <b>Win:</b> a thing that is YOU shares a space with a
-      thing that is WIN. <b>Challenge (C):</b> opponent gets 10 actions to win or you win.
-      If you cannot take your actions, you lose. <b>Undo (U)</b> takes back the last action.
+      An action is a <b>MOVE</b> (swipe the board / D-pad / arrows / WASD, PULL toggle or Shift = also
+      pull) of one of your YOU things — tap a thing or Tab to select which — or a <b>PLACE</b> of a
+      level tile into an empty cell next to one of your YOU things (tap tile, then a green cell).
+      <b>ALL IS PUSH</b> — everything can always be pushed; pushed things need an empty cell behind them.
+      A rule forms when a noun tile points right or down into a property tile. <b>Win:</b> a thing that
+      is YOU shares a space with a thing that is WIN. <b>Challenge (C):</b> the next player gets 10
+      actions to win or you win. If you cannot take your actions, you lose. <b>Undo (Z)</b> takes back
+      the last action. Extra players (3–4) spawn in the remaining corners.
     </div>
   </div>
 </div>

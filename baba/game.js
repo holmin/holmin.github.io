@@ -1,11 +1,14 @@
 'use strict';
 
 const W = 5, H = 5, CELL = 64;
-const NOUNS = ['BABA', 'KEKE', 'ROCK', 'FLAG'];
-const EMOJI = { BABA: '🐰', KEKE: '🐶', ROCK: '🪨', FLAG: '🚩' };
-const PLAYER_NAMES = ['BABA', 'KEKE'];
-const PLAYER_EMOJI = ['🐰', '🐶'];
-const PLAYER_COLORS = ['#ff6b9d', '#4dabf7'];
+const NOUNS = ['BABA', 'KEKE', 'ROCK', 'FLAG', 'ME', 'FOFO'];
+const EMOJI = { BABA: '🐰', KEKE: '🐶', ROCK: '🪨', FLAG: '🚩', ME: '🐱', FOFO: '🐑' };
+const PLAYER_NOUNS = ['BABA', 'KEKE', 'ME', 'FOFO'];
+const PLAYER_NAMES = PLAYER_NOUNS;
+const PLAYER_EMOJI = ['🐰', '🐶', '🐱', '🐑'];
+const PLAYER_COLORS = ['#ff6b9d', '#4dabf7', '#b388ff', '#ffd166'];
+// River terrain from the WORLD 1: THE PLAINS board map in the rulebook (decorative)
+const RIVER = new Set(['2,0', '2,1', '2,2', '2,3', '3,3', '3,4']);
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 let nextId = 1;
@@ -13,24 +16,47 @@ const obj = (type, x, y) => ({ id: nextId++, kind: 'object', type, x, y });
 const nounTile = (noun, x, y) => ({ id: nextId++, kind: 'word', noun, x, y });
 const propTile = (prop, owner, x, y) => ({ id: nextId++, kind: 'word', prop, label: 'IS ' + prop, owner, x, y });
 
-function createGame(scenario) {
+function firstFreeCell(entities, nearX, nearY) {
+  const free = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!entities.some(e => e.x === x && e.y === y)) free.push([x, y, Math.abs(x - nearX) + Math.abs(y - nearY)]);
+  }
+  free.sort((a, b) => a[2] - b[2]);
+  return [free[0][0], free[0][1]];
+}
+
+function createGame(numPlayers, scenario) {
+  numPlayers = Math.min(4, Math.max(2, numPlayers || 2));
   nextId = 1;
   scenario = scenario || {
     score: [0, 0], wins: [0, 0], bo3: false, clocks: [true, true],
     worldPoints: [0, 0], scenariosPlayed: 0,
   };
+  scenario.numPlayers = numPlayers;
+  for (const key of ['score', 'wins', 'worldPoints', 'clocks']) {
+    while (scenario[key].length < numPlayers) scenario[key].push(key === 'clocks' ? true : 0);
+    scenario[key].length = numPlayers;
+  }
   const entities = [
     obj('BABA', 0, H - 1), obj('KEKE', W - 1, 0),
     obj('ROCK', 0, 0), obj('ROCK', W - 1, H - 1),
     obj('FLAG', 2, 2),
   ];
+  // extra players spawn in the remaining corners; occupants there move to the nearest free cell
+  const corners = [[0, 0], [W - 1, H - 1]];
+  for (let p = 2; p < numPlayers; p++) {
+    const [cx, cy] = corners[p - 2];
+    const occ = entities.find(e => e.x === cx && e.y === cy);
+    if (occ) { const [fx, fy] = firstFreeCell(entities, cx, cy); occ.x = fx; occ.y = fy; }
+    entities.push(obj(PLAYER_NOUNS[p], cx, cy));
+  }
   const supply = [
     { prop: 'WIN' }, { prop: 'WIN' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
   ];
   const S = {
-    entities, supply,
+    entities, supply, numPlayers,
     turn: 0, gameTurn: 0, actionsLeft: 1,
     challenge: null, over: null, scenarioOver: false,
     scenario,
@@ -42,20 +68,25 @@ function createGame(scenario) {
   return S;
 }
 
-function newScenario(prev) {
+function newScenario(prev, numPlayers) {
+  numPlayers = numPlayers || (prev && prev.numPlayers) || 2;
   const sc = {
-    score: [0, 0], wins: [0, 0], bo3: false, clocks: [true, true],
-    worldPoints: prev ? prev.worldPoints.slice() : [0, 0],
+    score: new Array(numPlayers).fill(0),
+    wins: new Array(numPlayers).fill(0),
+    bo3: false,
+    clocks: new Array(numPlayers).fill(true),
+    worldPoints: new Array(numPlayers).fill(0),
     scenariosPlayed: prev ? prev.scenariosPlayed : 0,
+    numPlayers,
   };
-  return createGame(sc);
+  if (prev) prev.worldPoints.forEach((v, i) => { if (i < numPlayers) sc.worldPoints[i] = v; });
+  return createGame(numPlayers, sc);
 }
 
 function parseRules(S) {
-  const rules = [
-    { noun: 'BABA', prop: 'YOU', owner: 0, permanent: true },
-    { noun: 'KEKE', prop: 'YOU', owner: 1, permanent: true },
-  ];
+  const n = S.numPlayers || 2;
+  const rules = [{ noun: 'ALL', prop: 'PUSH', owner: null, permanent: true }];
+  for (let i = 0; i < n; i++) rules.push({ noun: PLAYER_NOUNS[i], prop: 'YOU', owner: i, permanent: true });
   const propAt = new Map();
   const nounTiles = [];
   for (const e of S.entities) {
@@ -104,7 +135,7 @@ function snapshot(S) {
   return JSON.stringify({
     entities: S.entities, supply: S.supply, turn: S.turn, gameTurn: S.gameTurn,
     actionsLeft: S.actionsLeft, challenge: S.challenge, over: S.over,
-    scenarioOver: S.scenarioOver, scenario: S.scenario,
+    scenarioOver: S.scenarioOver, scenario: S.scenario, numPlayers: S.numPlayers,
     selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
   });
 }
@@ -245,21 +276,23 @@ function act(S, p, fn) {
       else S.actionsLeft = 1;
     }
   } else if (!S.over && S.actionsLeft <= 0) {
-    S.turn = 1 - S.turn;
+    S.turn = (S.turn + 1) % S.numPlayers;
     S.gameTurn++;
     S.actionsLeft = S.gameTurn === 0 ? 1 : 2;
     S.selectedId = null;
     S.placeIdx = null;
   }
   if (!S.over && !hasLegalAction(S, S.turn)) {
-    end(S, 1 - S.turn, `${PLAYER_EMOJI[S.turn]} P${S.turn + 1} cannot take an action`);
+    end(S, (S.turn + 1) % S.numPlayers, `${PLAYER_EMOJI[S.turn]} ${PLAYER_NAMES[S.turn]} cannot take an action`);
   }
   return true;
 }
 
 function moveSelected(S, p, dx, dy, pull) {
-  const sel = S.entities.find(e => e.id === S.selectedId) || yourThings(S, p)[0];
-  if (!sel || !(isYou(S, sel) && youOwner(S, sel) === p)) return false;
+  const yours = yourThings(S, p);
+  let sel = S.entities.find(e => e.id === S.selectedId);
+  if (!sel || !yours.includes(sel)) sel = yours[0];
+  if (!sel) return false;
   return act(S, p, () => {
     if (!canMove(S, sel, dx, dy)) return false;
     doMove(S, sel, dx, dy, pull);
@@ -283,10 +316,11 @@ function challenge(S, p) {
   if (S.actionsLeft !== full) return false;
   pushHistory(S, snapshot(S));
   S.challenge = { challenger: p, left: 10 };
-  S.turn = 1 - p;
+  S.turn = (p + 1) % S.numPlayers;
   S.actionsLeft = 2;
   S.placeIdx = null;
-  log(S, `⚔ P${p + 1} challenges — P${1 - p + 1} gets 10 actions to win`);
+  const opp = S.turn;
+  log(S, `⚔ ${PLAYER_NAMES[p]} challenges — ${PLAYER_NAMES[opp]} gets 10 actions to win`);
   if (!S.over && !hasLegalAction(S, S.turn)) end(S, p, 'opponent cannot act');
   return true;
 }
@@ -308,7 +342,7 @@ if (typeof module !== 'undefined' && module.exports) {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
-    spendClock, resolve, undo, snapshot,
+    spendClock, resolve, undo, snapshot, RIVER, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
 
@@ -361,6 +395,7 @@ function initUI() {
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const cell = cells[y * W + x];
+        if (RIVER.has(x + ',' + y)) cell.classList.add('water');
         if (targets.has(x + ',' + y)) cell.classList.add('target');
         const ents = entitiesAt(S, x, y);
         if (ents.some(e => sel && e.id === sel.id)) cell.classList.add('sel');
@@ -389,14 +424,15 @@ function initUI() {
         ? `🤝 DRAW — ${S.over.reason}`
         : `<span style="color:${PLAYER_COLORS[w]}">${PLAYER_EMOJI[w]} ${PLAYER_NAMES[w]} (P${w + 1}) WINS</span> — ${S.over.reason}`;
     } else if (S.challenge) {
-      turnEl.innerHTML = `⚔ Challenge: <span style="color:${PLAYER_COLORS[1 - S.challenge.challenger]}">${PLAYER_EMOJI[1 - S.challenge.challenger]} P${2 - S.challenge.challenger}</span> must win in <b>${S.challenge.left}</b> actions`;
+      const opp = (S.challenge.challenger + 1) % S.numPlayers;
+      turnEl.innerHTML = `⚔ Challenge: <span style="color:${PLAYER_COLORS[opp]}">${PLAYER_EMOJI[opp]} ${PLAYER_NAMES[opp]} (P${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
     } else {
       turnEl.innerHTML = `<span style="color:${PLAYER_COLORS[S.turn]}">${PLAYER_EMOJI[S.turn]} ${PLAYER_NAMES[S.turn]} (P${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
     }
 
     const sc = S.scenario;
     document.getElementById('score').textContent =
-      `Scenario ${sc.score[0]}–${sc.score[1]} ${sc.bo3 ? '(best of 3)' : ''} · games ${sc.wins[0]}–${sc.wins[1]} · world pts ${sc.worldPoints[0]}–${sc.worldPoints[1]}`;
+      `Scenario ${sc.score.join('–')} ${sc.bo3 ? '(best of 3)' : ''} · games ${sc.wins.join('–')} · world pts ${sc.worldPoints.join('–')}`;
 
     const ul = document.getElementById('rules');
     ul.innerHTML = '';
@@ -430,8 +466,11 @@ function initUI() {
     document.getElementById('supply-empty').style.display = S.supply.length ? 'none' : 'block';
 
     document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft !== (S.gameTurn === 0 ? 1 : 2);
-    document.getElementById('btn-clock').disabled = S.over || S.scenarioOver || sc.bo3 || !sc.clocks[0] && !sc.clocks[1] || sc.score[0] + sc.score[1] > 0;
+    document.getElementById('btn-clock').disabled = S.over || S.scenarioOver || sc.bo3 || sc.clocks.every(c => !c) || sc.score.reduce((a, b) => a + b, 0) > 0;
     document.getElementById('btn-clock').textContent = sc.bo3 ? '🕐 best of 3 active' : '🕐 spend clock (best of 3)';
+    document.querySelectorAll('#players button').forEach((b) => {
+      b.classList.toggle('on', Number(b.dataset.n) === S.numPlayers);
+    });
 
     const ov = document.getElementById('overlay');
     if (S.over || S.scenarioOver) {
@@ -463,16 +502,16 @@ function initUI() {
   window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyR') {
-      S = S.scenarioOver ? newScenario(S.scenario) : createGame(S.scenario);
+      S = S.scenarioOver ? newScenario(S.scenario, S.numPlayers) : createGame(S.numPlayers, S.scenario);
       render();
       return;
     }
     if (e.code === 'KeyN') {
-      S = newScenario(S.scenario);
+      S = newScenario(S.scenario, S.numPlayers);
       render();
       return;
     }
-    if (e.code === 'KeyU') {
+    if (e.code === 'KeyZ') {
       undo(S);
       render();
       return;
@@ -518,10 +557,31 @@ function initUI() {
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
   document.getElementById('btn-clock').addEventListener('click', () => { spendClock(S, S.turn); render(); });
   document.getElementById('btn-newgame').addEventListener('click', () => {
-    S = S.scenarioOver ? newScenario(S.scenario) : createGame(S.scenario);
+    S = S.scenarioOver ? newScenario(S.scenario, S.numPlayers) : createGame(S.numPlayers, S.scenario);
     render();
   });
-  document.getElementById('btn-newscenario').addEventListener('click', () => { S = newScenario(S.scenario); render(); });
+  document.getElementById('btn-newscenario').addEventListener('click', () => { S = newScenario(S.scenario, S.numPlayers); render(); });
+  document.querySelectorAll('#players button').forEach((b) => {
+    b.addEventListener('click', () => { S = createGame(Number(b.dataset.n), S.scenario); render(); });
+  });
+
+  let touchStart = null;
+  board.addEventListener('touchstart', (e) => {
+    const t = e.changedTouches[0];
+    touchStart = [t.clientX, t.clientY];
+  }, { passive: true });
+  board.addEventListener('touchend', (e) => {
+    if (!touchStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart[0], dy = t.clientY - touchStart[1];
+    touchStart = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // tap, not swipe — let click handle it
+    e.preventDefault();
+    if (S.over || S.scenarioOver) return;
+    if (Math.abs(dx) > Math.abs(dy)) moveSelected(S, S.turn, Math.sign(dx), 0, pullOn);
+    else moveSelected(S, S.turn, 0, Math.sign(dy), pullOn);
+    render();
+  }, { passive: false });
 
   render();
 }

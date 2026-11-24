@@ -14,7 +14,7 @@ assert.strictEqual(s.entities.filter(e => e.kind === 'object').length, 5);
 assert.deepStrictEqual([baba(s).x, baba(s).y], [0, 4]);
 assert.deepStrictEqual([keke(s).x, keke(s).y], [4, 0]);
 assert.deepStrictEqual([rock(s, 0, 0) !== undefined, rock(s, 4, 4) !== undefined], [true, true]);
-assert.deepStrictEqual(rulesOf(s), ['BABA IS YOU (printed)', 'KEKE IS YOU (printed)']);
+assert.deepStrictEqual(rulesOf(s), ['ALL IS PUSH (printed)', 'BABA IS YOU (printed)', 'KEKE IS YOU (printed)']);
 assert.strictEqual(s.supply.length, 6, 'DEFAULT (2 IS WIN + ROCK + FLAG) + W1L1 (ROCK + FLAG)');
 console.log('ok 1: setup + printed rules');
 
@@ -196,5 +196,42 @@ assert.strictEqual(s.challenge, null);
 assert.strictEqual(s.turn, 0);
 assert.strictEqual(G.undo(s), false, 'nothing left to undo');
 console.log('ok 16: undo challenge');
+
+// 17. 4-player game: extra players spawn in the free corners, displacing rocks; rules + turn rotation
+s = G.createGame(4);
+const types = s.entities.filter(e => e.kind === 'object').map(e => e.type + '@' + e.x + ',' + e.y).sort();
+console.log('  4p objects:', types.join(' '));
+assert.ok(types.includes('ME@0,0'), 'P3 spawns top-left corner');
+assert.ok(types.includes('FOFO@4,4'), 'P4 spawns bottom-right corner');
+assert.ok(!types.includes('ROCK@0,0') && !types.includes('ROCK@4,4'), 'rocks displaced from corners');
+assert.strictEqual(s.entities.filter(e => e.kind === 'object' && e.type === 'ROCK').length, 2, 'rocks still on board');
+assert.strictEqual(rulesOf(s).filter(r => r.includes('IS YOU')).length, 4, 'four printed YOU rules');
+s.selectedId = s.entities.find(e => e.type === 'BABA').id;
+G.moveSelected(s, 0, 1, 0, false);
+assert.strictEqual(s.turn, 1);
+s.selectedId = s.entities.find(e => e.type === 'KEKE').id;
+G.moveSelected(s, 1, -1, 0, false); G.moveSelected(s, 1, 0, 1, false);
+assert.strictEqual(s.turn, 2, 'turn rotates to P3');
+console.log('ok 17: 4-player spawn + rotation');
+
+// 18. 3-player: ME in top-left corner, one rock displaced, KEKE corner intact
+s = G.createGame(3);
+assert.ok(s.entities.some(e => e.type === 'ME' && e.x === 0 && e.y === 0));
+assert.ok(s.entities.some(e => e.type === 'KEKE' && e.x === 4 && e.y === 0));
+assert.strictEqual(rulesOf(s).filter(r => r.includes('IS YOU')).length, 3);
+console.log('ok 18: 3-player setup');
+
+// 19. undo key is UI-level; engine undo still works with 4 players
+s = G.createGame(4);
+s.selectedId = s.entities.find(e => e.type === 'ME').id;
+const me = s.entities.find(e => e.type === 'ME');
+G.moveSelected(s, 0, 0, 0, false); // not P0's turn -> false
+G.moveSelected(s, 2, 0, 1, false); // not P2's turn yet -> false
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true);
+assert.strictEqual(s.turn, 1);
+G.undo(s);
+assert.strictEqual(s.turn, 0);
+assert.deepStrictEqual([me.x, me.y], [0, 0]);
+console.log('ok 19: undo in 4p game');
 
 console.log('\nAll engine tests passed.');
