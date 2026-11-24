@@ -9,14 +9,15 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 
 ## Rules implemented
 
-- **Setup:** 5×5 board with the World 1 "The Plains" river terrain drawn on it
-  (matrix-notation cells (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5);
-  terrain for future rules such as MELT, not blocking now). Baba bottom-left,
-  Keke top-right, rocks in the other two corners, flag in the center.
-  Default rules (shown as `(default)`): `ALL IS PUSH`, `BABA IS P1`,
-  `KEKE IS P2` — permanent. **2–4 players:** extra players (ME 🐱 = P3,
-  FOFO 🐑 = P4) spawn in the remaining corners, displacing any rock there to
-  the nearest free cell; each gets a default `IS Pn`.
+- **Setup:** 5×5 board with the World 1 "The Plains" river drawn on it — matrix
+  notation (row,col) cells (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5).
+  River cells identify as **WATER** (terrain for future rules such as MELT/SINK;
+  not blocking now). Baba bottom-left, Keke top-right, rocks in the other two
+  corners, flag in the center. Default rules (shown as `(default)`): `ALL IS PUSH`,
+  `BABA IS P1`, `KEKE IS P2` — permanent. **2–4 players:** the 👥 buttons drop
+  players in/out of the same live game; new players (ME 🐱 = P3, FOFO 🐑 = P4)
+  spawn as close as possible to their home corner (the corner itself if free,
+  else the closest free cell), each with a default `IS Pn`.
 - **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
   level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
@@ -34,10 +35,12 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   right or below it (its arrows). A noun can point at two properties; a
   property can have two nouns pointing at it. Placed `IS YOU` tiles belong to
   the player who placed them.
-- **Win:** when a thing that is YOU shares a space with a different thing that
-  is WIN, the YOU thing's controller wins. If both players' YOU things share
-  with WIN simultaneously, the player who last acted wins. Being both YOU and
-  WIN does not auto-win.
+- **Win:** when an object that is YOU shares a space with a different object
+  that is WIN, the YOU object's controller wins. Word tiles never carry
+  properties — touching the word "FLAG" does not win; you must touch the actual
+  flag object (videogame-faithful). If both players' YOU things share with WIN
+  simultaneously, the player who last acted wins. Being both YOU and WIN does
+  not auto-win.
 - **Challenge (C):** if you think the game is unwinnable, skip your turn to
   challenge — your opponent then gets 10 actions to win; if they fail, you win.
 - **Game end:** a YOU+WIN share, a resolved challenge, or a player who cannot
@@ -61,7 +64,7 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
   Shift = also pull; Tab or tap a thing to select which of your YOU things moves
 - Place: tap a supply tile (or keys 1–6), then tap a highlighted cell; Esc cancels
 - C = challenge · R = new game · N = new scenario · **Z = undo last action**
-- 👥 buttons pick 2/3/4 players (starts a new game)
+- 👥 buttons drop players in/out of the current game (2/3/4 players) — undoable with Z
 
 ## Files
 

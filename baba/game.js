@@ -1,16 +1,18 @@
 'use strict';
 
 const W = 5, H = 5, CELL = 64;
-const NOUNS = ['BABA', 'KEKE', 'ROCK', 'FLAG', 'ME', 'FOFO'];
-const EMOJI = { BABA: '🐰', KEKE: '🐶', ROCK: '🪨', FLAG: '🚩', ME: '🐱', FOFO: '🐑' };
+const NOUNS = ['BABA', 'KEKE', 'ROCK', 'FLAG', 'ME', 'FOFO', 'WATER'];
+const EMOJI = { BABA: '🐰', KEKE: '🐶', ROCK: '🪨', FLAG: '🚩', ME: '🐱', FOFO: '🐑', WATER: '🌊' };
 const PLAYER_NOUNS = ['BABA', 'KEKE', 'ME', 'FOFO'];
 const PLAYER_NAMES = PLAYER_NOUNS;
 const PLAYER_EMOJI = ['🐰', '🐶', '🐱', '🐑'];
 const PLAYER_COLORS = ['#ff6b9d', '#4dabf7', '#b388ff', '#ffd166'];
-// River terrain of the WORLD 1: THE PLAINS board (matrix notation (row,col), 1-indexed:
-// (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5)). Terrain only for now —
-// future rules (e.g. MELT) will interact with it.
-const RIVER = new Set(['0,0', '0,1', '1,1', '1,2', '2,2', '2,3', '3,3', '4,3', '4,4']);
+// River terrain of the WORLD 1: THE PLAINS board. Matrix notation (row,col), 1-indexed:
+// (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5)  ->  stored 0-indexed as (x=col-1, y=row-1).
+// River cells identify as WATER (noun 'WATER'); future rules (MELT, SINK, ...) apply to them.
+const RIVER = new Set(['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
+const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1]]; // P1..P4
+function isWaterCell(x, y) { return RIVER.has(x + ',' + y); }
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 let nextId = 1;
@@ -44,13 +46,11 @@ function createGame(numPlayers, scenario) {
     obj('ROCK', 0, 0), obj('ROCK', W - 1, H - 1),
     obj('FLAG', 2, 2),
   ];
-  // extra players spawn in the remaining corners; occupants there move to the nearest free cell
-  const corners = [[0, 0], [W - 1, H - 1]];
+  // extra players spawn as close as possible to their home corner (corner if free, else nearest free cell)
   for (let p = 2; p < numPlayers; p++) {
-    const [cx, cy] = corners[p - 2];
-    const occ = entities.find(e => e.x === cx && e.y === cy);
-    if (occ) { const [fx, fy] = firstFreeCell(entities, cx, cy); occ.x = fx; occ.y = fy; }
-    entities.push(obj(PLAYER_NOUNS[p], cx, cy));
+    const [cx, cy] = HOME_CORNERS[p];
+    const [fx, fy] = firstFreeCell(entities, cx, cy);
+    entities.push(obj(PLAYER_NOUNS[p], fx, fy));
   }
   const supply = [
     { prop: 'WIN' }, { prop: 'WIN' },
@@ -83,6 +83,47 @@ function newScenario(prev, numPlayers) {
   };
   if (prev) prev.worldPoints.forEach((v, i) => { if (i < numPlayers) sc.worldPoints[i] = v; });
   return createGame(numPlayers, sc);
+}
+
+// Drop players in/out of the LIVE game: new players spawn as close as possible
+// to their home corner (closest free cell); removed players' figures and their
+// placed property tiles leave the board. Undoable.
+function setNumPlayers(S, n) {
+  n = Math.min(4, Math.max(2, n));
+  if (n === S.numPlayers) return false;
+  pushHistory(S, snapshot(S));
+  if (n > S.numPlayers) {
+    for (let p = S.numPlayers; p < n; p++) {
+      const [cx, cy] = HOME_CORNERS[p];
+      const [fx, fy] = firstFreeCell(S.entities, cx, cy);
+      S.entities.push(obj(PLAYER_NOUNS[p], fx, fy));
+      log(S, `${PLAYER_EMOJI[p]} ${PLAYER_NAMES[p]} (P${p + 1}) drops in at ${fx},${fy}`);
+    }
+  } else {
+    const removed = new Set();
+    for (let p = n; p < S.numPlayers; p++) removed.add(p);
+    S.entities = S.entities.filter((e) => {
+      if (e.kind === 'object' && removed.has(PLAYER_NOUNS.indexOf(e.type))) return false;
+      if (e.kind === 'word' && e.owner !== undefined && e.owner !== null && removed.has(e.owner)) return false;
+      return true;
+    });
+    if (S.challenge && removed.has(S.challenge.challenger)) S.challenge = null;
+    if (S.turn >= n) S.turn = 0;
+    log(S, `P${n + 1}–P${S.numPlayers} drop out`);
+  }
+  S.numPlayers = n;
+  S.scenario.numPlayers = n;
+  for (const key of ['score', 'wins', 'worldPoints', 'clocks']) {
+    const a = S.scenario[key];
+    while (a.length < n) a.push(key === 'clocks' ? true : 0);
+    a.length = n;
+  }
+  if (S.selectedId) {
+    const sel = S.entities.find(e => e.id === S.selectedId);
+    if (!sel || !yourThings(S, S.turn).includes(sel)) S.selectedId = null;
+  }
+  ensureParsed(S);
+  return true;
 }
 
 function parseRules(S) {
@@ -125,7 +166,9 @@ function ruleList(S) {
 }
 
 const typeOf = (e) => (e.kind === 'object' ? e.type : e.noun);
-function propsOf(S, e) { return S._propMap[typeOf(e)] || {}; }
+// Word tiles are just rule text: they never carry properties themselves
+// (videogame-faithful: you win by touching the actual FLAG object, not the word "FLAG").
+function propsOf(S, e) { if (e.kind === 'word') return {}; return S._propMap[e.type] || {}; }
 function isYou(S, e) { return !!propsOf(S, e).YOU; }
 function isWin(S, e) { return !!propsOf(S, e).WIN; }
 function youOwner(S, e) { return S._youOwner[typeOf(e)]; }
@@ -356,7 +399,8 @@ if (typeof module !== 'undefined' && module.exports) {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
-    spendClock, resolve, undo, snapshot, RIVER, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
+    spendClock, resolve, undo, snapshot, setNumPlayers, isWaterCell, RIVER, HOME_CORNERS,
+    NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
 
@@ -576,7 +620,7 @@ function initUI() {
   });
   document.getElementById('btn-newscenario').addEventListener('click', () => { S = newScenario(S.scenario, S.numPlayers); render(); });
   document.querySelectorAll('#players button').forEach((b) => {
-    b.addEventListener('click', () => { S = createGame(Number(b.dataset.n), S.scenario); render(); });
+    b.addEventListener('click', () => { setNumPlayers(S, Number(b.dataset.n)); render(); });
   });
 
   let touchStart = null;

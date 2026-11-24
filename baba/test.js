@@ -208,14 +208,15 @@ assert.strictEqual(s.turn, 0);
 assert.strictEqual(G.undo(s), false, 'nothing left to undo');
 console.log('ok 16: undo challenge');
 
-// 17. 4-player game: extra players spawn in the free corners, displacing rocks; rules + turn rotation
+// 17. 4-player game: extra players spawn as close as possible to their home corners
 s = G.createGame(4);
 const types = s.entities.filter(e => e.kind === 'object').map(e => e.type + '@' + e.x + ',' + e.y).sort();
 console.log('  4p objects:', types.join(' '));
-assert.ok(types.includes('ME@0,0'), 'P3 spawns top-left corner');
-assert.ok(types.includes('FOFO@4,4'), 'P4 spawns bottom-right corner');
-assert.ok(!types.includes('ROCK@0,0') && !types.includes('ROCK@4,4'), 'rocks displaced from corners');
-assert.strictEqual(s.entities.filter(e => e.kind === 'object' && e.type === 'ROCK').length, 2, 'rocks still on board');
+const me17 = s.entities.find(e => e.type === 'ME');
+const fofo17 = s.entities.find(e => e.type === 'FOFO');
+assert.ok(Math.abs(me17.x - 0) + Math.abs(me17.y - 0) <= 1, 'ME spawns next to its corner (0,0)');
+assert.ok(Math.abs(fofo17.x - 4) + Math.abs(fofo17.y - 4) <= 1, 'FOFO spawns next to its corner (4,4)');
+assert.ok(rock(s, 0, 0) && rock(s, 4, 4), 'rocks stay in the corners');
 assert.strictEqual(rulesOf(s).filter(r => /IS P\d/.test(r)).length, 4, 'four default P-rules');
 assert.ok(rulesOf(s).includes('ALL IS PUSH (default)'));
 assert.ok(rulesOf(s).includes('ME IS P3 (default)') && rulesOf(s).includes('FOFO IS P4 (default)'));
@@ -227,9 +228,10 @@ G.moveSelected(s, 1, -1, 0, false); G.moveSelected(s, 1, 0, 1, false);
 assert.strictEqual(s.turn, 2, 'turn rotates to P3');
 console.log('ok 17: 4-player spawn + rotation');
 
-// 18. 3-player: ME in top-left corner, one rock displaced, KEKE corner intact
+// 18. 3-player: ME near top-left corner, KEKE corner intact
 s = G.createGame(3);
-assert.ok(s.entities.some(e => e.type === 'ME' && e.x === 0 && e.y === 0));
+const me18 = s.entities.find(e => e.type === 'ME');
+assert.ok(me18 && Math.abs(me18.x) + Math.abs(me18.y) <= 1);
 assert.ok(s.entities.some(e => e.type === 'KEKE' && e.x === 4 && e.y === 0));
 assert.strictEqual(rulesOf(s).filter(r => /IS P\d/.test(r)).length, 3);
 console.log('ok 18: 3-player setup');
@@ -244,7 +246,49 @@ assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true);
 assert.strictEqual(s.turn, 1);
 G.undo(s);
 assert.strictEqual(s.turn, 0);
-assert.deepStrictEqual([me.x, me.y], [0, 0]);
+assert.deepStrictEqual([me.x, me.y], [1, 0], 'ME at closest free cell to its corner');
 console.log('ok 19: undo in 4p game');
+
+// 20. Word tiles never count as WIN/YOU: standing on the word "FLAG" does not win
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 0, y: 4 }); // word tile on BABA's cell
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 1, y: 4 });
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('FLAG IS WIN'), 'rule formed');
+G.resolve(s, 0);
+assert.ok(!s.over, 'word tile FLAG is not a WIN object');
+const flagObj = s.entities.find(e => e.kind === 'object' && e.type === 'FLAG');
+flagObj.x = 0; flagObj.y = 4; // actual flag object onto BABA
+G.resolve(s, 0);
+assert.ok(s.over && s.over.winner === 0, 'actual FLAG object wins');
+console.log('ok 20: word tiles are not WIN objects ->', s.over.reason);
+
+// 21. Live drop in/out via setNumPlayers keeps the same game
+s = G.createGame(2);
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // P1 acted, turn now P2
+assert.strictEqual(s.turn, 1);
+assert.strictEqual(G.setNumPlayers(s, 4), true, 'drop in P3+P4 mid-game');
+assert.strictEqual(s.numPlayers, 4);
+assert.strictEqual(s.turn, 1, 'same game, turn preserved');
+assert.ok(s.entities.some(e => e.type === 'ME') && s.entities.some(e => e.type === 'FOFO'));
+assert.ok(rulesOf(s).includes('ME IS P3 (default)') && rulesOf(s).includes('FOFO IS P4 (default)'));
+const me21 = s.entities.find(e => e.type === 'ME');
+assert.ok(Math.abs(me21.x) + Math.abs(me21.y) <= 1, 'ME near its corner');
+assert.strictEqual(G.setNumPlayers(s, 2), true, 'drop out');
+assert.strictEqual(s.numPlayers, 2);
+assert.ok(!s.entities.some(e => e.type === 'ME' || e.type === 'FOFO'), 'figures removed');
+assert.strictEqual(rulesOf(s).filter(r => /IS P\d/.test(r)).length, 2);
+assert.strictEqual(s.turn, 1, 'turn preserved after drop out');
+G.undo(s); // undo the drop-out
+assert.strictEqual(s.numPlayers, 4, 'undo restores dropped-in players');
+console.log('ok 21: live drop in/out + undo');
+
+// 22. River cells match the PDF matrix list and identify as WATER
+assert.deepStrictEqual([...G.RIVER].sort(), ['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
+assert.ok(G.isWaterCell(0, 0) && G.isWaterCell(2, 1) && G.isWaterCell(4, 4));
+assert.ok(!G.isWaterCell(1, 2), 'no river at matrix (3,2)');
+assert.ok(G.NOUNS.includes('WATER'));
+console.log('ok 22: river = WATER terrain cells');
 
 console.log('\nAll engine tests passed.');
