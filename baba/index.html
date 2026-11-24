@@ -14,9 +14,11 @@
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     display: flex;
     justify-content: center;
+    align-items: center;
+    min-height: 100vh;
     padding: 12px;
   }
-  #app { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  #app { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; justify-content: center; margin: auto; }
   #board-wrap { position: relative; }
   #board {
     display: grid;
@@ -39,7 +41,7 @@
   .cell.water { background: radial-gradient(circle at 50% 40%, #2a6ea6 0%, #1d4e79 70%); }
   .cell.target { background: #1e3a2a; outline: 2px dashed #2ecc71; cursor: pointer; }
   .cell.sel { outline: 3px solid #f1c40f; }
-  .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; }
   .cell.stack .ent { width: 50%; height: 50%; font-size: calc(var(--cell) * .34); }
   .cell.stack .ent.word { font-size: calc(var(--cell) * .14); }
   .obj { font-size: calc(var(--cell) * .56); line-height: 1; }
@@ -47,12 +49,12 @@
   .obj-KEKE { background: rgba(77, 171, 247, .28); border-radius: 50%; }
   .word {
     margin: 3px; width: calc(100% - 6px); height: calc(100% - 6px);
-    font-size: calc(var(--cell) * .17); font-weight: 800; letter-spacing: .5px;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: calc(var(--cell) * .17); font-weight: 800; letter-spacing: .5px; line-height: 1.1;
   }
   .word.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
   .word.prop-win { background: #f1c40f; color: #4a3800; border-radius: 8px; }
   .word.prop-you { background: #2ecc71; color: #06281a; border-radius: 8px; }
-  .word.prop-fast { background: #e67e22; color: #fff; border-radius: 8px; }
   .word.prop-curious { background: #16a085; color: #fff; border-radius: 8px; }
   .word.own0 { outline: 2px solid #ff6b9d; }
   .word.own1 { outline: 2px solid #4dabf7; }
@@ -89,14 +91,13 @@
     border: none; cursor: pointer;
     padding: 10px 14px; min-width: 44px; min-height: 44px;
     border-radius: 8px;
-    font-size: 13px; font-weight: 800;
+    font-size: 13px; font-weight: 800; text-align: center;
     touch-action: manipulation; user-select: none; -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
   .tile.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
   .tile.prop-win { background: #f1c40f; color: #4a3800; }
   .tile.prop-you { background: #2ecc71; color: #06281a; }
-  .tile.prop-fast { background: #e67e22; color: #fff; }
   .tile.prop-curious { background: #16a085; color: #fff; }
   .tile.picked { outline: 3px solid #fff; }
   #overlay {
@@ -200,11 +201,10 @@
       actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
       by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same
       game</b> — active players become P1, P2, … in the order listed, and new ones spawn as close to
-      their corner as possible. The blue river is <b>WATER</b> terrain — later rules (e.g. MELT) will
-      interact with it. <b>FAST</b>: on its MOVE, a FAST thing slides as many spaces as you like in one
-      direction (until blocked). <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column,
-      it moves 1 space toward them — effects cascade (push a tile → a rock moves → …). One FAST and one
-      CURIOUS tile exist, so at most two nouns get each.
+      their corner as possible. The blue river is <b>RIVER</b> terrain (not a tile) — later rules will
+      interact with it. <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column (from
+      outside it), it moves 1 space toward them — effects cascade (push a tile → a rock moves → …).
+      One CURIOUS tile exists, so at most one noun is curious.
     </div>
   </div>
 </div>

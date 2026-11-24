@@ -11,8 +11,8 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 
 - **Setup:** 5×5 board with the World 1 "The Plains" river drawn on it — matrix
   notation (row,col) cells (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5).
-  River cells identify as **WATER** (terrain for future rules such as MELT/SINK;
-  not blocking now). Rocks in two corners, flag in the center. Default rules
+  The river is terrain called **RIVER** (not a tile, not WATER) — future rules
+  will interact with it. Rocks in two corners, flag in the center. Default rules
   (shown as `(default)`, listed below any formed rules): `ALL IS PUSH`, plus one
   `IS Pn` per active character — permanent.
 - **Characters:** Sami 🐻‍❄️ and Erik 🦙 are on by default; Gaba 🐴, Ebba 🦦 and
@@ -39,14 +39,13 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   right or below it (its arrows). A noun can point at two properties; a
   property can have two nouns pointing at it. Placed `IS YOU` tiles belong to
   the player who placed them.
-- **FAST** (board-game keyword, design diary #3): on its MOVE action, a FAST thing
-  slides **as many spaces as you like in a single direction**, stopping only when
-  blocked (push chains and the edge apply as usual). One `IS FAST` tile exists.
 - **CURIOUS** (board-game keyword, design diary #3): when **anything enters** a
-  CURIOUS thing's row or column, it moves **1 space toward it**. Entering = moving
-  into or being placed into a space (pushed things count), so effects cascade
-  (push a tile → rock moves → another curious thing moves → …). One `IS CURIOUS`
-  tile exists. Both tiles are in the supply here.
+  CURIOUS thing's row or column — i.e. arrives in a cell of that line from outside
+  it (placing counts as entering from off-board) — it moves **1 space toward it**.
+  Moving along the same row/column does not trigger it. Effects cascade (a push
+  can make a rock move, which makes another curious thing move, …). One
+  `IS CURIOUS` tile exists and is in the supply here. FAST is not included for
+  now (no character noun tiles exist to write e.g. `SAMI IS FAST`).
 - **Win:** when an object that is YOU shares a space with a different object
   that is WIN, the YOU object's controller wins. Word tiles never carry
   properties — touching the word "FLAG" does not win; you must touch the actual

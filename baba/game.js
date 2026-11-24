@@ -1,8 +1,8 @@
 'use strict';
 
 const W = 5, H = 5, CELL = 64;
-const NOUNS = ['SAMI', 'ERIK', 'GABA', 'EBBA', 'ZABA', 'ROCK', 'FLAG', 'WATER'];
-const EMOJI = { SAMI: '🐻‍❄️', ERIK: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', ROCK: '🪨', FLAG: '🚩', WATER: '🌊' };
+const NOUNS = ['SAMI', 'ERIK', 'GABA', 'EBBA', 'ZABA', 'ROCK', 'FLAG', 'RIVER'];
+const EMOJI = { SAMI: '🐻‍❄️', ERIK: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊' };
 const CHARACTERS = [
   { noun: 'SAMI', name: 'Sami', emoji: '🐻‍❄️', color: '#ff6b9d' },
   { noun: 'ERIK', name: 'Erik', emoji: '🦙', color: '#4dabf7' },
@@ -17,10 +17,10 @@ const PLAYER_EMOJI = CHARACTERS.map(c => c.emoji);
 const PLAYER_COLORS = CHARACTERS.map(c => c.color);
 // River terrain of the WORLD 1: THE PLAINS board. Matrix notation (row,col), 1-indexed:
 // (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5)  ->  stored 0-indexed as (x=col-1, y=row-1).
-// River cells identify as WATER (noun 'WATER'); future rules (MELT, SINK, ...) apply to them.
+// The river is called RIVER (noun 'RIVER'); it is terrain, not a tile — future rules will interact with it.
 const RIVER = new Set(['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
 const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0]]; // home spots for the 5 characters
-function isWaterCell(x, y) { return RIVER.has(x + ',' + y); }
+function isRiverCell(x, y) { return RIVER.has(x + ',' + y); }
 function activeChars(S) {
   const out = [];
   for (let i = 0; i < CHARACTERS.length; i++) if (S.enabled[i]) out.push(i);
@@ -70,7 +70,7 @@ function createGame(enabled, scenario) {
     { prop: 'WIN' }, { prop: 'WIN' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
-    { prop: 'FAST' }, { prop: 'CURIOUS' },
+    { prop: 'CURIOUS' },
   ];
   const S = {
     entities, supply, numPlayers, enabled,
@@ -290,18 +290,22 @@ function doMove(S, m, dx, dy, pull) {
   const list = [];
   if (!gather(S, m, m, dx, dy, list)) return false;
   const ox = m.x, oy = m.y;
+  const ev = [];
+  if (S._entered) {
+    ev.push({ id: m.id, fx: ox, fy: oy, tx: ox + dx, ty: oy + dy });
+    for (const o of list) ev.push({ id: o.id, fx: o.x, fy: o.y, tx: o.x + dx, ty: o.y + dy });
+  }
   for (const o of list) { o.x += dx; o.y += dy; }
   m.x += dx; m.y += dy;
-  let pulled = null;
   if (pull) {
     const behind = entitiesAt(S, ox - dx, oy - dy);
-    if (behind.length > 0) { pulled = behind[0]; pulled.x = ox; pulled.y = oy; } // pull only one thing
+    if (behind.length > 0) {
+      const p = behind[0]; // pull only one thing
+      if (S._entered) ev.push({ id: p.id, fx: p.x, fy: p.y, tx: ox, ty: oy });
+      p.x = ox; p.y = oy;
+    }
   }
-  if (S._entered) { // everything that entered a space this action (for CURIOUS)
-    S._entered.push(m.id);
-    for (const o of list) S._entered.push(o.id);
-    if (pulled) S._entered.push(pulled.id);
-  }
+  if (S._entered) S._entered.push(...ev); // enter-events (for CURIOUS): from -> to
   return true;
 }
 
@@ -327,7 +331,7 @@ function doPlace(S, p, idx, x, y) {
   const e = t.prop ? propTile(t.prop, p, x, y) : nounTile(t.noun, x, y);
   S.entities.push(e);
   S.supply.splice(idx, 1);
-  if (S._entered) S._entered.push(e.id); // a placed thing enters its space
+  if (S._entered) S._entered.push({ id: e.id, fx: null, fy: null, tx: x, ty: y }); // placed = enters from off-board
   return e;
 }
 
@@ -391,38 +395,41 @@ function moveSelected(S, p, dx, dy, pull) {
   return act(S, p, () => {
     if (!canMove(S, sel, dx, dy)) return false;
     doMove(S, sel, dx, dy, pull);
-    // FAST (board game, per design diary #3): move as many spaces as you like
-    // in a single direction — slide until blocked
-    if (propsOf(S, sel).FAST) {
-      while (canMove(S, sel, dx, dy)) doMove(S, sel, dx, dy, false);
-    }
     return true;
   });
 }
 
 // CURIOUS (board game, per design diary #3): when anything ENTERS a CURIOUS
-// object's row or column, the CURIOUS thing moves 1 space towards it.
-// Entering = moving into or being placed into a space (pushed things count too),
-// so effects cascade: a push can make a rock move, which makes Keke move, ...
+// object's row or column — i.e. arrives in a cell of that row/column from
+// outside it (placing counts as entering from off-board) — the CURIOUS thing
+// moves 1 space towards it. Merely moving along the same row/column does NOT
+// trigger it. Effects cascade: a push can make a rock move, which makes
+// another curious thing move, ... Each enter-event triggers at most one step.
 function resolveCurious(S) {
-  const reacted = new Set(); // each (curious, entering) pair triggers at most one 1-space move
+  const reacted = new Set(); // enter-events already consumed
   for (let iter = 0; iter < 50; iter++) {
     ensureParsed(S);
     const curious = S.entities.filter(e => e.kind === 'object' && propsOf(S, e).CURIOUS);
     if (!curious.length) return;
-    const entered = (S._entered || [])
-      .map(id => S.entities.find(e => e.id === id))
-      .filter(Boolean);
+    const evs = S._entered || [];
     let moved = false;
     for (const c of curious) {
-      const cands = entered.filter(e => e !== c && (e.x === c.x || e.y === c.y) && !reacted.has(c.id + ':' + e.id));
+      const cands = evs.filter((ev) => {
+        if (reacted.has(ev)) return false;
+        const e = S.entities.find(x => x.id === ev.id);
+        if (!e || e === c) return false;
+        const inLineNew = ev.tx === c.x || ev.ty === c.y;          // target cell is in c's row/col
+        const wasInLine = ev.fx !== null && (ev.fx === c.x || ev.fy === c.y); // came from outside that line
+        return inLineNew && !wasInLine;
+      });
       if (!cands.length) continue;
-      let t = cands[0], bd = Infinity;
-      for (const e of cands) {
-        const d = Math.abs(e.x - c.x) + Math.abs(e.y - c.y);
-        if (d < bd) { bd = d; t = e; }
+      let ev = cands[0], bd = Infinity;
+      for (const c2 of cands) {
+        const d = Math.abs(c2.tx - c.x) + Math.abs(c2.ty - c.y);
+        if (d < bd) { bd = d; ev = c2; }
       }
-      reacted.add(c.id + ':' + t.id);
+      reacted.add(ev);
+      const t = S.entities.find(x => x.id === ev.id);
       const dx = Math.sign(t.x - c.x), dy = Math.sign(t.y - c.y);
       const dirs = Math.abs(t.x - c.x) >= Math.abs(t.y - c.y)
         ? [[dx, 0], [0, dy]]
@@ -478,7 +485,7 @@ if (typeof module !== 'undefined' && module.exports) {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
-    spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isWaterCell,
+    spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious,
     RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,

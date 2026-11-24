@@ -14,7 +14,9 @@ assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4]);
 assert.deepStrictEqual([erik(s).x, erik(s).y], [4, 0]);
 assert.ok(rock(s, 0, 0) && rock(s, 4, 4));
 assert.deepStrictEqual(rulesOf(s), ['ALL IS PUSH (default)', 'ERIK IS P2 (default)', 'SAMI IS P1 (default)']);
-assert.strictEqual(s.supply.length, 8, 'DEFAULT + W1L1 + IS FAST + IS CURIOUS tiles');
+assert.strictEqual(s.supply.length, 7, 'DEFAULT + W1L1 + IS CURIOUS tiles (FAST removed)');
+assert.ok(!s.supply.some(t => t.prop === 'FAST'), 'no FAST tile');
+assert.ok(s.supply.some(t => t.prop === 'CURIOUS'), 'one CURIOUS tile');
 assert.strictEqual(s.numPlayers, 2);
 console.log('ok 1: setup + default rules');
 
@@ -233,80 +235,60 @@ G.resolve(s, 0);
 assert.ok(s.over && s.over.winner === 0, 'actual flag object wins');
 console.log('ok 20: word tiles are not WIN objects');
 
-// 21. FAST (diary #3): move as many spaces as you like in a single direction on one MOVE
-s = G.createGame();
-s.entities.push({ id: 900, kind: 'word', noun: 'SAMI', x: 0, y: 3 });
-s.entities.push({ id: 901, kind: 'word', prop: 'FAST', label: 'IS FAST', owner: 0, x: 1, y: 3 });
-G.ensureParsed(s);
-assert.ok(rulesOf(s).includes('SAMI IS FAST'));
-s.selectedId = sami(s).id;
-assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true);
-assert.deepStrictEqual([sami(s).x, sami(s).y], [3, 4], 'FAST slid until the rock at (4,4) blocked');
-// fully blocked row -> move fails entirely
-s = G.createGame();
-s.entities.push({ id: 900, kind: 'word', noun: 'SAMI', x: 0, y: 3 });
-s.entities.push({ id: 901, kind: 'word', prop: 'FAST', label: 'IS FAST', owner: 0, x: 1, y: 3 });
-const r21a = rock(s, 0, 0); r21a.x = 1; r21a.y = 4;
-s.entities.push({ id: 998, kind: 'object', type: 'ROCK', x: 2, y: 4 });
-s.entities.push({ id: 997, kind: 'object', type: 'ROCK', x: 3, y: 4 });
-const r21b = rock(s, 4, 4); // stays at (4,4)
-G.ensureParsed(s);
-s.selectedId = sami(s).id;
-assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), false, 'FAST blocked by full row cannot move');
-console.log('ok 21: FAST slides any distance, blocked only at the end');
-
-// 22. CURIOUS (diary #3): when anything enters a CURIOUS object's row/column, it moves 1 space toward it
+// 21. CURIOUS (diary #3): "enters a row/column" = crossing INTO it.
+// Trigger: SAMI (0,4)->(0,3) enters row 3, from row 4, where the curious rock (3,3) sits
 s = G.createGame();
 s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 2 });
 s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 1, y: 2 });
-const rock22 = rock(s, 4, 4); rock22.x = 3; rock22.y = 4; // same row as SAMI's row 4
+const rock21 = rock(s, 4, 4); rock21.x = 3; rock21.y = 3;
 G.ensureParsed(s);
 s.selectedId = sami(s).id;
-G.moveSelected(s, 0, 1, 0, false); // SAMI enters (1,4), same row as the curious rock
-assert.deepStrictEqual([rock22.x, rock22.y], [2, 4], 'CURIOUS rock stepped 1 space toward SAMI');
+G.moveSelected(s, 0, 0, -1, false); // SAMI enters (0,3): row 3, coming from row 4
+assert.deepStrictEqual([rock21.x, rock21.y], [2, 3], 'CURIOUS rock stepped 1 space toward SAMI');
 assert.ok(!s.over);
-// negative: enter outside its row/column -> no move
+// The old unexpected case: moving ALONG the same row must NOT trigger
 s = G.createGame();
 s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 2 });
 s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 1, y: 2 });
-const rock22b = rock(s, 4, 4); rock22b.x = 4; rock22b.y = 2; // (4,2): row 2, col 4
+const rock21b = rock(s, 4, 4); // stays (4,4), row 4
 G.ensureParsed(s);
 s.selectedId = sami(s).id;
-G.moveSelected(s, 0, 1, 0, false); // SAMI enters (1,4): row 4, col 1 — not shared with (4,2)
-assert.deepStrictEqual([rock22b.x, rock22b.y], [4, 2], 'no trigger outside row/column');
-console.log('ok 22: CURIOUS row/column enter trigger');
+G.moveSelected(s, 0, 1, 0, false); // SAMI (0,4)->(1,4): stays in row 4 -> no trigger
+assert.deepStrictEqual([rock21b.x, rock21b.y], [4, 4], 'moving along the same row does not trigger');
+console.log('ok 21: CURIOUS triggers on entering the row/column, not on moving within it');
 
-// 23. CURIOUS cascade: pushing a tile can make a curious rock shove SAMI back
+// 22. CURIOUS cascade: rock A stepping into rock B's row makes B move too
 s = G.createGame();
 s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 2 });
 s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 1, y: 2 });
-const rock23 = rock(s, 4, 4); rock23.x = 2; rock23.y = 4; // row 4 with SAMI
+const rockA = rock(s, 0, 0); rockA.x = 1; rockA.y = 0;   // col 1
+const rockB = rock(s, 4, 4); rockB.x = 3; rockB.y = 1;   // row 1
 G.ensureParsed(s);
 s.selectedId = sami(s).id;
-G.moveSelected(s, 0, 1, 0, false); // SAMI enters (1,4) -> rock (2,4) moves left, pushing SAMI back to (0,4)
-assert.deepStrictEqual([rock23.x, rock23.y], [1, 4], 'curious rock stepped toward SAMI');
-assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4], 'rock pushed SAMI back (knock-on)');
-console.log('ok 23: CURIOUS knock-on push');
+G.moveSelected(s, 0, 1, 0, false); // SAMI (0,4)->(1,4): enters col 1 -> A (1,0)->(1,1) -> enters row 1 -> B (3,1)->(2,1)
+assert.deepStrictEqual([rockA.x, rockA.y], [1, 1], 'rock A stepped toward SAMI');
+assert.deepStrictEqual([rockB.x, rockB.y], [2, 1], 'rock B cascade-stepped toward A');
+console.log('ok 22: CURIOUS knock-on cascade');
 
-// 24. CURIOUS + WIN: a curious WIN rock slides onto a YOU thing; the YOU owner wins
+// 23. CURIOUS + WIN: a curious WIN rock steps onto a YOU thing; the YOU owner wins
 s = G.createGame();
 s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 3, y: 0 });
 s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 4, y: 0 });
 s.entities.push({ id: 902, kind: 'word', noun: 'ROCK', x: 3, y: 1 });
 s.entities.push({ id: 903, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 3, y: 2 });
-const rock24 = rock(s, 4, 4); rock24.x = 2; rock24.y = 4; // row 4, WIN+CURIOUS
+const rock23 = rock(s, 4, 4); rock23.x = 1; rock23.y = 3; // row 3, WIN+CURIOUS
 G.ensureParsed(s);
 assert.ok(rulesOf(s).includes('ROCK IS WIN') && rulesOf(s).includes('ROCK IS CURIOUS'), rulesOf(s).join('|'));
 s.selectedId = sami(s).id;
-G.moveSelected(s, 0, 1, 0, false); // SAMI enters (1,4) -> rock steps onto SAMI (YOU+WIN stack) -> P1 wins
+G.moveSelected(s, 0, 0, -1, false); // SAMI (0,4)->(0,3): enters row 3 -> rock steps onto SAMI (YOU+WIN stack) -> P1 wins
 assert.ok(s.over && s.over.winner === 0, 'curious WIN rock won for SAMI owner');
-console.log('ok 24: CURIOUS+WIN ->', s.over && s.over.reason);
+console.log('ok 23: CURIOUS+WIN ->', s.over && s.over.reason);
 
-// 25. River = WATER terrain cells (PDF matrix list)
+// 24. River is terrain called RIVER (not a tile, not WATER)
 assert.deepStrictEqual([...G.RIVER].sort(), ['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
-assert.ok(G.isWaterCell(0, 0) && G.isWaterCell(2, 1) && G.isWaterCell(4, 4));
-assert.ok(!G.isWaterCell(1, 2));
-assert.ok(G.NOUNS.includes('WATER'));
-console.log('ok 21: river/WATER cells');
+assert.ok(G.isRiverCell(0, 0) && G.isRiverCell(2, 1) && G.isRiverCell(4, 4));
+assert.ok(!G.isRiverCell(1, 2));
+assert.ok(G.NOUNS.includes('RIVER') && !G.NOUNS.includes('WATER'));
+console.log('ok 24: river = RIVER terrain cells');
 
 console.log('\nAll engine tests passed.');
