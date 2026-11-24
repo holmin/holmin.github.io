@@ -12,12 +12,16 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **Setup:** 5×5 board with the World 1 "The Plains" river drawn on it — matrix
   notation (row,col) cells (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5).
   River cells identify as **WATER** (terrain for future rules such as MELT/SINK;
-  not blocking now). Baba bottom-left, Keke top-right, rocks in the other two
-  corners, flag in the center. Default rules (shown as `(default)`): `ALL IS PUSH`,
-  `BABA IS P1`, `KEKE IS P2` — permanent. **2–4 players:** the 👥 buttons drop
-  players in/out of the same live game; new players (ME 🐱 = P3, FOFO 🐑 = P4)
-  spawn as close as possible to their home corner (the corner itself if free,
-  else the closest free cell), each with a default `IS Pn`.
+  not blocking now). Rocks in two corners, flag in the center. Default rules
+  (shown as `(default)`, listed below any formed rules): `ALL IS PUSH`, plus one
+  `IS Pn` per active character — permanent.
+- **Characters:** Sami 🐻‍❄️ and Erik 🦙 are on by default; Gaba 🐴, Ebba 🦦 and
+  Zaba 🐸 can be toggled on/off (1–5 players; disabling all is allowed while
+  selecting). Active players are always **P1, P2, … in the order listed**, so
+  toggling re-ranks them (e.g. disable Sami and Erik becomes P1). Toggling works
+  mid-game (undoable with Z): enabling spawns the figure as close as possible
+  to its home corner (corner if free, else closest free cell); disabling removes
+  the figure and that character's placed property tiles.
 - **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
   level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
@@ -64,7 +68,9 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
   Shift = also pull; Tab or tap a thing to select which of your YOU things moves
 - Place: tap a supply tile (or keys 1–6), then tap a highlighted cell; Esc cancels
 - C = challenge · R = new game · N = new scenario · **Z = undo last action**
-- 👥 buttons drop players in/out of the current game (2/3/4 players) — undoable with Z
+- 👥 buttons toggle characters on/off in the current game (1–5 players) — undoable with Z.
+  Player names show with their sprite in the buttons, rules list and log (not on the board/tiles);
+  formed (non-default) rules are bold and listed above the defaults
 
 ## Files
 
