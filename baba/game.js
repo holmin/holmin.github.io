@@ -70,6 +70,7 @@ function createGame(enabled, scenario) {
     { prop: 'WIN' }, { prop: 'WIN' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
+    { prop: 'FAST' }, { prop: 'CURIOUS' },
   ];
   const S = {
     entities, supply, numPlayers, enabled,
@@ -291,9 +292,15 @@ function doMove(S, m, dx, dy, pull) {
   const ox = m.x, oy = m.y;
   for (const o of list) { o.x += dx; o.y += dy; }
   m.x += dx; m.y += dy;
+  let pulled = null;
   if (pull) {
     const behind = entitiesAt(S, ox - dx, oy - dy);
-    if (behind.length > 0) { behind[0].x = ox; behind[0].y = oy; } // pull only one thing
+    if (behind.length > 0) { pulled = behind[0]; pulled.x = ox; pulled.y = oy; } // pull only one thing
+  }
+  if (S._entered) { // everything that entered a space this action (for CURIOUS)
+    S._entered.push(m.id);
+    for (const o of list) S._entered.push(o.id);
+    if (pulled) S._entered.push(pulled.id);
   }
   return true;
 }
@@ -320,6 +327,7 @@ function doPlace(S, p, idx, x, y) {
   const e = t.prop ? propTile(t.prop, p, x, y) : nounTile(t.noun, x, y);
   S.entities.push(e);
   S.supply.splice(idx, 1);
+  if (S._entered) S._entered.push(e.id); // a placed thing enters its space
   return e;
 }
 
@@ -344,10 +352,16 @@ function act(S, p, fn) {
   if (S.over || S.scenarioOver) return false;
   if (S.turn !== p || S.actionsLeft <= 0) return false;
   const before = snapshot(S);
-  if (!fn()) return false;
+  S._entered = [];
+  if (!fn()) { S._entered = []; return false; }
   pushHistory(S, before);
   S.actionsLeft--;
   resolve(S, p);
+  if (!S.over) {
+    resolveCurious(S); // CURIOUS reacts to everything that entered this action
+    resolve(S, p);     // curious movement may have changed rules / created a WIN
+  }
+  S._entered = [];
   if (S.challenge) {
     if (!S.over) {
       S.challenge.left--;
@@ -369,6 +383,7 @@ function act(S, p, fn) {
 }
 
 function moveSelected(S, p, dx, dy, pull) {
+  ensureParsed(S);
   const yours = yourThings(S, p);
   let sel = S.entities.find(e => e.id === S.selectedId);
   if (!sel || !yours.includes(sel)) sel = yours[0];
@@ -376,8 +391,49 @@ function moveSelected(S, p, dx, dy, pull) {
   return act(S, p, () => {
     if (!canMove(S, sel, dx, dy)) return false;
     doMove(S, sel, dx, dy, pull);
+    // FAST (board game, per design diary #3): move as many spaces as you like
+    // in a single direction — slide until blocked
+    if (propsOf(S, sel).FAST) {
+      while (canMove(S, sel, dx, dy)) doMove(S, sel, dx, dy, false);
+    }
     return true;
   });
+}
+
+// CURIOUS (board game, per design diary #3): when anything ENTERS a CURIOUS
+// object's row or column, the CURIOUS thing moves 1 space towards it.
+// Entering = moving into or being placed into a space (pushed things count too),
+// so effects cascade: a push can make a rock move, which makes Keke move, ...
+function resolveCurious(S) {
+  const reacted = new Set(); // each (curious, entering) pair triggers at most one 1-space move
+  for (let iter = 0; iter < 50; iter++) {
+    ensureParsed(S);
+    const curious = S.entities.filter(e => e.kind === 'object' && propsOf(S, e).CURIOUS);
+    if (!curious.length) return;
+    const entered = (S._entered || [])
+      .map(id => S.entities.find(e => e.id === id))
+      .filter(Boolean);
+    let moved = false;
+    for (const c of curious) {
+      const cands = entered.filter(e => e !== c && (e.x === c.x || e.y === c.y) && !reacted.has(c.id + ':' + e.id));
+      if (!cands.length) continue;
+      let t = cands[0], bd = Infinity;
+      for (const e of cands) {
+        const d = Math.abs(e.x - c.x) + Math.abs(e.y - c.y);
+        if (d < bd) { bd = d; t = e; }
+      }
+      reacted.add(c.id + ':' + t.id);
+      const dx = Math.sign(t.x - c.x), dy = Math.sign(t.y - c.y);
+      const dirs = Math.abs(t.x - c.x) >= Math.abs(t.y - c.y)
+        ? [[dx, 0], [0, dy]]
+        : [[0, dy], [dx, 0]];
+      for (const [mx, my] of dirs) {
+        if (mx === 0 && my === 0) continue;
+        if (canMove(S, c, mx, my)) { doMove(S, c, mx, my, false); moved = true; break; }
+      }
+    }
+    if (!moved) return;
+  }
 }
 
 function place(S, p, idx, x, y) {
@@ -423,6 +479,7 @@ if (typeof module !== 'undefined' && module.exports) {
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isWaterCell,
+    resolveCurious,
     RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };

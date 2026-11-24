@@ -39,6 +39,14 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   right or below it (its arrows). A noun can point at two properties; a
   property can have two nouns pointing at it. Placed `IS YOU` tiles belong to
   the player who placed them.
+- **FAST** (board-game keyword, design diary #3): on its MOVE action, a FAST thing
+  slides **as many spaces as you like in a single direction**, stopping only when
+  blocked (push chains and the edge apply as usual). One `IS FAST` tile exists.
+- **CURIOUS** (board-game keyword, design diary #3): when **anything enters** a
+  CURIOUS thing's row or column, it moves **1 space toward it**. Entering = moving
+  into or being placed into a space (pushed things count), so effects cascade
+  (push a tile → rock moves → another curious thing moves → …). One `IS CURIOUS`
+  tile exists. Both tiles are in the supply here.
 - **Win:** when an object that is YOU shares a space with a different object
   that is WIN, the YOU object's controller wins. Word tiles never carry
   properties — touching the word "FLAG" does not win; you must touch the actual

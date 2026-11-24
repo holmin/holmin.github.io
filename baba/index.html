@@ -52,6 +52,8 @@
   .word.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
   .word.prop-win { background: #f1c40f; color: #4a3800; border-radius: 8px; }
   .word.prop-you { background: #2ecc71; color: #06281a; border-radius: 8px; }
+  .word.prop-fast { background: #e67e22; color: #fff; border-radius: 8px; }
+  .word.prop-curious { background: #16a085; color: #fff; border-radius: 8px; }
   .word.own0 { outline: 2px solid #ff6b9d; }
   .word.own1 { outline: 2px solid #4dabf7; }
   #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -94,6 +96,8 @@
   .tile.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
   .tile.prop-win { background: #f1c40f; color: #4a3800; }
   .tile.prop-you { background: #2ecc71; color: #06281a; }
+  .tile.prop-fast { background: #e67e22; color: #fff; }
+  .tile.prop-curious { background: #16a085; color: #fff; }
   .tile.picked { outline: 3px solid #fff; }
   #overlay {
     position: absolute; inset: 0;
@@ -197,7 +201,10 @@
       by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same
       game</b> — active players become P1, P2, … in the order listed, and new ones spawn as close to
       their corner as possible. The blue river is <b>WATER</b> terrain — later rules (e.g. MELT) will
-      interact with it.
+      interact with it. <b>FAST</b>: on its MOVE, a FAST thing slides as many spaces as you like in one
+      direction (until blocked). <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column,
+      it moves 1 space toward them — effects cascade (push a tile → a rock moves → …). One FAST and one
+      CURIOUS tile exist, so at most two nouns get each.
     </div>
   </div>
 </div>
