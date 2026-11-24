@@ -9,21 +9,24 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 
 ## Rules implemented
 
-- **Setup:** 5×5 board with the World 1 "The Plains" river terrain drawn on it.
-  Baba bottom-left, Keke top-right, rocks in the other two corners, flag in the
-  center. Printed rules: `ALL IS PUSH`, `BABA IS YOU` (P1), `KEKE IS YOU` (P2) —
-  permanent. **2–4 players:** extra players (ME 🐱, FOFO 🐑) spawn in the
-  remaining corners, displacing any rock there to the nearest free cell; each
-  gets a printed `IS YOU`.
+- **Setup:** 5×5 board with the World 1 "The Plains" river terrain drawn on it
+  (matrix-notation cells (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5);
+  terrain for future rules such as MELT, not blocking now). Baba bottom-left,
+  Keke top-right, rocks in the other two corners, flag in the center.
+  Default rules (shown as `(default)`): `ALL IS PUSH`, `BABA IS P1`,
+  `KEKE IS P2` — permanent. **2–4 players:** extra players (ME 🐱 = P3,
+  FOFO 🐑 = P4) spawn in the remaining corners, displacing any rock there to
+  the nearest free cell; each gets a default `IS Pn`.
 - **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
   level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
 - **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —
-  everything can always be pushed; a pushed thing needs an empty cell behind it (no chain pushing,
-  no pushing off the board — the whole move fails otherwise). Hold **Shift**
-  while moving to also **PULL** the contents of the cell you left. A YOU thing
-  may enter the cell of a WIN thing (and vice versa) — they stack.
+  pushing shoves the whole row/column of things along (chain push); only the
+  board edge stops a push, and then the whole move fails. Hold **Shift** (or the
+  PULL toggle) while moving to also **PULL** — exactly one thing from the cell
+  you left is dragged into the vacated cell. A YOU thing may enter the cell of a
+  WIN thing (and vice versa) — they stack.
 - **PLACE:** place a level tile from the supply into an empty cell orthogonally
   adjacent to one of your YOU things (click tile or keys 1–6, then click a
   green cell).

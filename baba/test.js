@@ -14,7 +14,7 @@ assert.strictEqual(s.entities.filter(e => e.kind === 'object').length, 5);
 assert.deepStrictEqual([baba(s).x, baba(s).y], [0, 4]);
 assert.deepStrictEqual([keke(s).x, keke(s).y], [4, 0]);
 assert.deepStrictEqual([rock(s, 0, 0) !== undefined, rock(s, 4, 4) !== undefined], [true, true]);
-assert.deepStrictEqual(rulesOf(s), ['ALL IS PUSH (printed)', 'BABA IS YOU (printed)', 'KEKE IS YOU (printed)']);
+assert.deepStrictEqual(rulesOf(s), ['ALL IS PUSH (default)', 'BABA IS P1 (default)', 'KEKE IS P2 (default)']);
 assert.strictEqual(s.supply.length, 6, 'DEFAULT (2 IS WIN + ROCK + FLAG) + W1L1 (ROCK + FLAG)');
 console.log('ok 1: setup + printed rules');
 
@@ -42,17 +42,23 @@ assert.deepStrictEqual([baba(s).x, baba(s).y], [1, 4]);
 assert.deepStrictEqual([rock(s, 2, 4) !== undefined], [true], 'rock pushed to (2,4)');
 console.log('ok 3: push into empty cell');
 
-// 4. No chain pushing and no pushing off the edge
+// 4. Chain pushing works (ALL IS PUSH pushes whole rows); only the edge stops it
 s = G.createGame();
 const r4 = rock(s, 0, 0); r4.x = 1; r4.y = 4;
 s.entities.push({ id: 999, kind: 'object', type: 'ROCK', x: 2, y: 4 });
-assert.strictEqual(G.canMove(s, baba(s), 1, 0), false, 'cannot chain-push');
+assert.strictEqual(G.canMove(s, baba(s), 1, 0), true, 'chain push allowed');
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false);
+assert.deepStrictEqual([baba(s).x, baba(s).y], [1, 4]);
+assert.ok(rock(s, 2, 4) && rock(s, 3, 4), 'both rocks pushed in a row');
 s = G.createGame();
-const r4b = rock(s, 4, 4); r4b.x = 4; r4b.y = 1; // rock at (4,1)
-s.entities.push({ id: 998, kind: 'object', type: 'ROCK', x: 4, y: 2 }); // blocks the push
-keke(s).x = 4; keke(s).y = 0; s.selectedId = keke(s).id;
-assert.strictEqual(G.canMove(s, keke(s), 0, 1), false, 'cannot push into occupied cell');
-console.log('ok 4: no chain push / blocked push');
+// fill row 4 completely: BABA + 4 rocks -> chain hits the edge -> move fails
+const r4c = rock(s, 0, 0); r4c.x = 1; r4c.y = 4;
+s.entities.push({ id: 998, kind: 'object', type: 'ROCK', x: 2, y: 4 });
+s.entities.push({ id: 997, kind: 'object', type: 'ROCK', x: 3, y: 4 });
+const r4d = rock(s, 4, 4); r4d.x = 4; r4d.y = 4;
+assert.strictEqual(G.canMove(s, baba(s), 1, 0), false, 'edge stops the chain');
+console.log('ok 4: chain push + edge stop');
 
 // 5. Rule formation: noun tile pointing right/down into property tile
 s = G.createGame();
@@ -89,14 +95,15 @@ assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true);
 assert.ok(!s.over, 'BABA IS YOU + BABA IS WIN does not auto-win');
 console.log('ok 7: YOU+WIN self does not win');
 
-// 8. Pull: moving away drags the adjacent cell contents into the vacated cell
+// 8. Pull: moving away drags exactly ONE thing from the cell you left into the vacated cell
 s = G.createGame();
 s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 1 });
+s.entities.push({ id: 901, kind: 'word', noun: 'ROCK', x: 2, y: 1 });
 baba(s).x = 2; baba(s).y = 2; s.selectedId = baba(s).id;
 assert.strictEqual(G.moveSelected(s, 0, 0, 1, true), true, 'move down with pull');
-const pulled = s.entities.find(e => e.id === 900);
-assert.deepStrictEqual([pulled.x, pulled.y], [2, 2], 'pulled tile into vacated cell');
-console.log('ok 8: pull');
+assert.strictEqual(at(s, 2, 2).length, 2, 'BABA + exactly one pulled tile');
+assert.strictEqual(at(s, 2, 1).length, 1, 'one tile left behind');
+console.log('ok 8: pull one thing');
 
 // 9. Place: only into empty cell adjacent to your YOU things
 s = G.createGame();
@@ -119,13 +126,17 @@ for (let i = 0; i < 10 && !s.over; i++) {
 assert.ok(s.over && s.over.winner === 0, 'challenger wins if opponent fails 10 actions');
 console.log('ok 10: challenge ->', s.over.reason);
 
-// 11. Cannot act -> lose: wall in KEKE with rocks, empty supply
+// 11. Cannot act -> lose: KEKE boxed in by full rows/columns (chains hit edges), empty supply
 s = G.createGame();
 s.supply = [];
-const r11 = rock(s, 0, 0); r11.x = 3; r11.y = 0;
-s.entities.push({ id: 991, kind: 'object', type: 'ROCK', x: 4, y: 1 });
+const r11a = rock(s, 0, 0); r11a.x = 0; r11a.y = 0;
+const r11b = rock(s, 4, 4); r11b.x = 4; r11b.y = 4;
+s.entities.push({ id: 991, kind: 'object', type: 'ROCK', x: 1, y: 0 });
 s.entities.push({ id: 992, kind: 'object', type: 'ROCK', x: 2, y: 0 });
-s.entities.push({ id: 993, kind: 'object', type: 'ROCK', x: 4, y: 2 });
+s.entities.push({ id: 993, kind: 'object', type: 'ROCK', x: 3, y: 0 });
+s.entities.push({ id: 994, kind: 'object', type: 'ROCK', x: 4, y: 1 });
+s.entities.push({ id: 995, kind: 'object', type: 'ROCK', x: 4, y: 2 });
+s.entities.push({ id: 996, kind: 'object', type: 'ROCK', x: 4, y: 3 });
 s.selectedId = baba(s).id;
 G.moveSelected(s, 0, 1, 0, false); // P1 uses their single first-turn action -> turn passes to P2
 assert.ok(s.over && s.over.winner === 0, 'P2 cannot move -> P1 wins');
@@ -205,7 +216,9 @@ assert.ok(types.includes('ME@0,0'), 'P3 spawns top-left corner');
 assert.ok(types.includes('FOFO@4,4'), 'P4 spawns bottom-right corner');
 assert.ok(!types.includes('ROCK@0,0') && !types.includes('ROCK@4,4'), 'rocks displaced from corners');
 assert.strictEqual(s.entities.filter(e => e.kind === 'object' && e.type === 'ROCK').length, 2, 'rocks still on board');
-assert.strictEqual(rulesOf(s).filter(r => r.includes('IS YOU')).length, 4, 'four printed YOU rules');
+assert.strictEqual(rulesOf(s).filter(r => /IS P\d/.test(r)).length, 4, 'four default P-rules');
+assert.ok(rulesOf(s).includes('ALL IS PUSH (default)'));
+assert.ok(rulesOf(s).includes('ME IS P3 (default)') && rulesOf(s).includes('FOFO IS P4 (default)'));
 s.selectedId = s.entities.find(e => e.type === 'BABA').id;
 G.moveSelected(s, 0, 1, 0, false);
 assert.strictEqual(s.turn, 1);
@@ -218,7 +231,7 @@ console.log('ok 17: 4-player spawn + rotation');
 s = G.createGame(3);
 assert.ok(s.entities.some(e => e.type === 'ME' && e.x === 0 && e.y === 0));
 assert.ok(s.entities.some(e => e.type === 'KEKE' && e.x === 4 && e.y === 0));
-assert.strictEqual(rulesOf(s).filter(r => r.includes('IS YOU')).length, 3);
+assert.strictEqual(rulesOf(s).filter(r => /IS P\d/.test(r)).length, 3);
 console.log('ok 18: 3-player setup');
 
 // 19. undo key is UI-level; engine undo still works with 4 players

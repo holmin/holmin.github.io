@@ -7,8 +7,10 @@ const PLAYER_NOUNS = ['BABA', 'KEKE', 'ME', 'FOFO'];
 const PLAYER_NAMES = PLAYER_NOUNS;
 const PLAYER_EMOJI = ['🐰', '🐶', '🐱', '🐑'];
 const PLAYER_COLORS = ['#ff6b9d', '#4dabf7', '#b388ff', '#ffd166'];
-// River terrain from the WORLD 1: THE PLAINS board map in the rulebook (decorative)
-const RIVER = new Set(['2,0', '2,1', '2,2', '2,3', '3,3', '3,4']);
+// River terrain of the WORLD 1: THE PLAINS board (matrix notation (row,col), 1-indexed:
+// (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5)). Terrain only for now —
+// future rules (e.g. MELT) will interact with it.
+const RIVER = new Set(['0,0', '0,1', '1,1', '1,2', '2,2', '2,3', '3,3', '4,3', '4,4']);
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 let nextId = 1;
@@ -116,7 +118,10 @@ function ensureParsed(S) {
 }
 
 function ruleList(S) {
-  return S.rules.map(r => r.noun + ' IS ' + r.prop + (r.permanent ? ' (printed)' : '')).sort();
+  return S.rules.map((r) => {
+    const prop = r.prop === 'YOU' && r.owner !== null && r.owner !== undefined ? 'P' + (r.owner + 1) : r.prop;
+    return r.noun + ' IS ' + prop + (r.permanent ? ' (default)' : '');
+  }).sort();
 }
 
 const typeOf = (e) => (e.kind === 'object' ? e.type : e.noun);
@@ -195,28 +200,37 @@ function stackable(S, m, o) {
   return (isYou(S, m) && isWin(S, o)) || (isWin(S, m) && isYou(S, o));
 }
 
-function canMove(S, m, dx, dy) {
-  const tx = m.x + dx, ty = m.y + dy;
+// Chain push: everything in the path is pushed (ALL IS PUSH); the move only
+// fails if the chain runs into the edge of the board. A YOU mover may still
+// stack onto a WIN thing instead of pushing it.
+function gather(S, m, e, dx, dy, list) {
+  const tx = e.x + dx, ty = e.y + dy;
   if (tx < 0 || ty < 0 || tx >= W || ty >= H) return false;
-  for (const o of entitiesAt(S, tx, ty)) {
+  const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o));
+  for (const o of ents) {
     if (stackable(S, m, o)) continue;
-    const nx = tx + dx, ny = ty + dy;
-    if (nx < 0 || ny < 0 || nx >= W || ny >= H) return false;
-    if (entitiesAt(S, nx, ny).length > 0) return false;
+    if (!gather(S, m, o, dx, dy, list)) return false;
   }
+  for (const o of ents) if (!stackable(S, m, o)) list.push(o);
   return true;
 }
 
+function canMove(S, m, dx, dy) {
+  if (dx === 0 && dy === 0) return false;
+  return gather(S, m, m, dx, dy, []);
+}
+
 function doMove(S, m, dx, dy, pull) {
-  const ox = m.x, oy = m.y, tx = ox + dx, ty = oy + dy;
-  for (const o of entitiesAt(S, tx, ty)) {
-    if (stackable(S, m, o)) continue;
-    o.x += dx; o.y += dy;
-  }
+  const list = [];
+  if (!gather(S, m, m, dx, dy, list)) return false;
+  const ox = m.x, oy = m.y;
+  for (const o of list) { o.x += dx; o.y += dy; }
+  m.x += dx; m.y += dy;
   if (pull) {
-    for (const o of entitiesAt(S, ox - dx, oy - dy)) { o.x = ox; o.y = oy; }
+    const behind = entitiesAt(S, ox - dx, oy - dy);
+    if (behind.length > 0) { behind[0].x = ox; behind[0].y = oy; } // pull only one thing
   }
-  m.x = tx; m.y = ty;
+  return true;
 }
 
 function placeTargets(S, p) {
