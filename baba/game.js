@@ -1,180 +1,288 @@
 'use strict';
 
-const W = 17, H = 11, CELL = 46;
-const NOUNS = ['BABA', 'KEKE', 'WALL', 'ROCK', 'FLAG', 'WATER'];
-const PROPS = ['YOU', 'WIN', 'STOP', 'PUSH', 'SINK', 'DEFEAT'];
-const EMOJI = { BABA: '🐰', KEKE: '🐶', WALL: '🧱', ROCK: '🪨', FLAG: '🚩', WATER: '🌊' };
-const PROP_CLASS = { YOU: 'you', WIN: 'win', STOP: 'stop', PUSH: 'push', SINK: 'sink', DEFEAT: 'defeat' };
-const MOVE_LIMIT = 400;
+const W = 5, H = 5, CELL = 64;
+const NOUNS = ['BABA', 'KEKE', 'ROCK', 'FLAG'];
+const EMOJI = { BABA: '🐰', KEKE: '🐶', ROCK: '🪨', FLAG: '🚩' };
+const PLAYER_NAMES = ['BABA', 'KEKE'];
+const PLAYER_EMOJI = ['🐰', '🐶'];
+const PLAYER_COLORS = ['#ff6b9d', '#4dabf7'];
+const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 let nextId = 1;
-function word(t, x, y) { return { id: nextId++, kind: 'word', type: t, x, y, alive: true }; }
-function obj(t, x, y) { return { id: nextId++, kind: 'object', type: t, x, y, alive: true }; }
+const obj = (type, x, y) => ({ id: nextId++, kind: 'object', type, x, y });
+const nounTile = (noun, x, y) => ({ id: nextId++, kind: 'word', noun, x, y });
+const propTile = (prop, owner, x, y) => ({ id: nextId++, kind: 'word', prop, label: 'IS ' + prop, owner, x, y });
 
-function createGame() {
+function createGame(scenario) {
   nextId = 1;
-  const entities = [];
-  for (let x = 0; x < W; x++) { entities.push(obj('WALL', x, 0), obj('WALL', x, H - 1)); }
-  for (let y = 1; y < H - 1; y++) { entities.push(obj('WALL', 0, y), obj('WALL', W - 1, y)); }
-
-  entities.push(obj('BABA', 3, 5), obj('KEKE', 13, 5));
-  entities.push(obj('FLAG', 8, 2));
-  entities.push(obj('WATER', 7, 8), obj('WATER', 8, 8), obj('WATER', 9, 8));
-  entities.push(obj('ROCK', 5, 3), obj('ROCK', 11, 7), obj('ROCK', 8, 5), obj('ROCK', 3, 7), obj('ROCK', 13, 3));
-
-  const words = [
-    ['BABA', 2, 1], ['IS', 3, 1], ['YOU', 4, 1],
-    ['KEKE', 12, 1], ['IS', 13, 1], ['YOU', 14, 1],
-    ['WALL', 2, 2], ['IS', 3, 2], ['STOP', 4, 2],
-    ['FLAG', 12, 2], ['IS', 13, 2], ['WIN', 14, 2],
-    ['ROCK', 2, 3], ['IS', 3, 3], ['STOP', 4, 3],
-    ['WATER', 12, 3], ['IS', 13, 3], ['SINK', 14, 3],
-    ['ROCK', 2, 4], ['IS', 3, 4], ['PUSH', 4, 4],
-    ['DEFEAT', 12, 4], ['IS', 13, 4], ['STOP', 14, 4],
-    ['YOU', 6, 6], ['IS', 7, 6], ['WIN', 8, 6], ['DEFEAT', 9, 6], ['SINK', 10, 6],
-    ['PUSH', 5, 7], ['STOP', 6, 7], ['IS', 11, 6], ['BABA', 11, 7],
-    ['ROCK', 5, 8], ['FLAG', 11, 8], ['WATER', 8, 7], ['IS', 9, 7], ['KEKE', 7, 4],
+  scenario = scenario || {
+    score: [0, 0], wins: [0, 0], bo3: false, clocks: [true, true],
+    worldPoints: [0, 0], scenariosPlayed: 0,
+  };
+  const entities = [
+    obj('BABA', 0, H - 1), obj('KEKE', W - 1, 0),
+    obj('ROCK', 0, 0), obj('ROCK', W - 1, H - 1),
+    obj('FLAG', 2, 2),
   ];
-  for (const [t, x, y] of words) entities.push(word(t, x, y));
-
+  const supply = [
+    { prop: 'WIN' }, { prop: 'WIN' },
+    { noun: 'ROCK' }, { noun: 'FLAG' },
+    { noun: 'ROCK' }, { noun: 'FLAG' },
+  ];
   const S = {
-    entities,
-    players: [
-      { name: 'BABA', emoji: EMOJI.BABA, color: '#ff6b9d', char: entities.find(e => e.kind === 'object' && e.type === 'BABA').id },
-      { name: 'KEKE', emoji: EMOJI.KEKE, color: '#4dabf7', char: entities.find(e => e.kind === 'object' && e.type === 'KEKE').id },
-    ],
-    rules: new Set(), _propMap: {}, _prevRules: null,
-    log: [], moves: 0, over: null,
+    entities, supply,
+    turn: 0, gameTurn: 0, actionsLeft: 1,
+    challenge: null, over: null, scenarioOver: false,
+    scenario,
+    selectedId: null, placeIdx: null,
+    log: [], rules: [], _prevRules: [],
   };
   ensureParsed(S);
-  S._prevRules = new Set(S.rules);
+  S._prevRules = ruleList(S);
   return S;
 }
 
-function parseRules(S) {
-  const at = new Map();
-  for (const e of S.entities) if (e.alive && e.kind === 'word') at.set(e.x + ',' + e.y, e.type);
-  const rules = new Set();
-  const propMap = {};
-  const add = (n, p) => {
-    rules.add(n + ' IS ' + p);
-    (propMap[n] = propMap[n] || {})[p] = true;
+function newScenario(prev) {
+  const sc = {
+    score: [0, 0], wins: [0, 0], bo3: false, clocks: [true, true],
+    worldPoints: prev ? prev.worldPoints.slice() : [0, 0],
+    scenariosPlayed: prev ? prev.scenariosPlayed : 0,
   };
-  for (const [k, t] of at) {
-    if (!NOUNS.includes(t)) continue;
-    const [x, y] = k.split(',').map(Number);
-    const r1 = at.get((x + 1) + ',' + y), r2 = at.get((x + 2) + ',' + y);
-    if (r1 === 'IS' && PROPS.includes(r2)) add(t, r2);
-    const d1 = at.get(x + ',' + (y + 1)), d2 = at.get(x + ',' + (y + 2));
-    if (d1 === 'IS' && PROPS.includes(d2)) add(t, d2);
+  return createGame(sc);
+}
+
+function parseRules(S) {
+  const rules = [
+    { noun: 'BABA', prop: 'YOU', owner: 0, permanent: true },
+    { noun: 'KEKE', prop: 'YOU', owner: 1, permanent: true },
+  ];
+  const propAt = new Map();
+  const nounTiles = [];
+  for (const e of S.entities) {
+    if (e.kind !== 'word') continue;
+    if (e.prop) propAt.set(e.x + ',' + e.y, e);
+    else if (e.noun) nounTiles.push(e);
   }
-  return { rules, propMap };
+  for (const n of nounTiles) {
+    const r = propAt.get((n.x + 1) + ',' + n.y);
+    if (r) rules.push({ noun: n.noun, prop: r.prop, owner: r.owner });
+    const d = propAt.get(n.x + ',' + (n.y + 1));
+    if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner });
+  }
+  return rules;
 }
 
 function ensureParsed(S) {
-  const p = parseRules(S);
-  S.rules = p.rules;
-  S._propMap = p.propMap;
+  const rules = parseRules(S);
+  S.rules = rules;
+  const propMap = {}, youOwner = {};
+  for (const r of rules) {
+    (propMap[r.noun] = propMap[r.noun] || {})[r.prop] = true;
+    if (r.prop === 'YOU' && youOwner[r.noun] === undefined) youOwner[r.noun] = r.owner;
+  }
+  S._propMap = propMap;
+  S._youOwner = youOwner;
 }
 
-function propsOf(S, e) {
-  if (e.kind === 'word') return { PUSH: true };
-  return S._propMap[e.type] || {};
+function ruleList(S) {
+  return S.rules.map(r => r.noun + ' IS ' + r.prop + (r.permanent ? ' (printed)' : '')).sort();
 }
 
-function entitiesAt(S, x, y) {
-  return S.entities.filter(e => e.alive && e.x === x && e.y === y);
-}
+const typeOf = (e) => (e.kind === 'object' ? e.type : e.noun);
+function propsOf(S, e) { return S._propMap[typeOf(e)] || {}; }
+function isYou(S, e) { return !!propsOf(S, e).YOU; }
+function isWin(S, e) { return !!propsOf(S, e).WIN; }
+function youOwner(S, e) { return S._youOwner[typeOf(e)]; }
+function entitiesAt(S, x, y) { return S.entities.filter(e => e.x === x && e.y === y); }
 
 function log(S, msg) {
   S.log.unshift(msg);
-  if (S.log.length > 6) S.log.pop();
+  if (S.log.length > 8) S.log.pop();
 }
 
-function gather(S, e, dx, dy, list) {
-  const tx = e.x + dx, ty = e.y + dy;
-  if (tx < 0 || ty < 0 || tx >= W || ty >= H) return false;
-  const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o));
-  for (const o of ents) {
-    const pr = propsOf(S, o);
-    if (pr.PUSH) { if (!gather(S, o, dx, dy, list)) return false; }
-    else if (pr.STOP) return false;
-  }
-  for (const o of ents) if (propsOf(S, o).PUSH) list.push(o);
-  return true;
-}
-
-function tryMovePlayer(S, pi, dx, dy) {
-  if (S.over) return false;
-  const p = S.players[pi];
-  const c = S.entities.find(e => e.id === p.char);
-  if (!c || !c.alive) return false;
-  ensureParsed(S);
-  const pr = propsOf(S, c);
-  if (!pr.YOU) { log(S, `${p.emoji} ${p.name} is not YOU — frozen!`); return false; }
-  if (pr.STOP) { log(S, `${p.emoji} ${p.name} is STOP — frozen!`); return false; }
-  const list = [];
-  if (!gather(S, c, dx, dy, list)) return false;
-  for (const e of list) { e.x += dx; e.y += dy; }
-  c.x += dx; c.y += dy;
-  S.moves++;
-  return true;
-}
-
-function end(S, w, reason) {
-  S.over = { winner: w, reason };
-  if (w === null) log(S, '🤝 ' + reason);
-  else log(S, `${S.players[w].emoji} ${S.players[w].name} WINS — ${reason}`);
-}
-
-function resolve(S) {
-  ensureParsed(S);
-  for (const r of S.rules) if (!S._prevRules.has(r)) log(S, '➕ ' + r);
-  for (const r of S._prevRules) if (!S.rules.has(r)) log(S, '➖ ' + r);
-  S._prevRules = new Set(S.rules);
-
-  const has = (e, pr) => !!propsOf(S, e)[pr];
-  const dead = new Set();
-
-  for (const w of S.entities) {
-    if (!w.alive || w.kind !== 'object' || w.type !== 'WATER' || !has(w, 'SINK')) continue;
-    for (const o of entitiesAt(S, w.x, w.y)) {
-      if (o !== w && o.alive && !(o.kind === 'object' && o.type === 'WATER')) dead.add(o);
+function end(S, winner, reason) {
+  S.over = { winner, reason };
+  if (winner !== null) {
+    const sc = S.scenario;
+    sc.wins[winner]++;
+    const target = sc.bo3 ? 2 : 1;
+    if (sc.wins[winner] >= target) {
+      sc.score[winner]++;
+      sc.scenariosPlayed++;
+      S.scenarioOver = true;
+      if (sc.scenariosPlayed % 5 === 0) {
+        if (sc.score[0] > sc.score[1]) sc.worldPoints[0]++;
+        else if (sc.score[1] > sc.score[0]) sc.worldPoints[1]++;
+      }
     }
   }
+  log(S, winner === null ? '🤝 ' + reason : `${PLAYER_EMOJI[winner]} P${winner + 1} ${reason}`);
+}
+
+function resolve(S, actor) {
+  ensureParsed(S);
+  const rl = ruleList(S);
+  for (const r of rl) if (!S._prevRules.includes(r)) log(S, '➕ ' + r);
+  for (const r of S._prevRules) if (!rl.includes(r)) log(S, '➖ ' + r);
+  S._prevRules = rl;
+
+  const winners = new Set();
   for (const e of S.entities) {
-    if (!e.alive || e.kind !== 'object' || !has(e, 'DEFEAT')) continue;
-    if (entitiesAt(S, e.x, e.y).some(o => o !== e && o.alive)) dead.add(e);
-  }
-  for (const d of dead) {
-    if (!d.alive) continue;
-    d.alive = false;
-    if (d.kind === 'word') log(S, `word "${d.type}" is gone`);
-    else log(S, `${EMOJI[d.type] || ''} ${d.type} is gone`);
-  }
-
-  const winners = [];
-  for (const p of S.players) {
-    const c = S.entities.find(e => e.id === p.char);
-    if (!c || !c.alive || !has(c, 'YOU')) continue;
-    for (const o of entitiesAt(S, c.x, c.y)) {
-      if (o !== c && o.alive && has(o, 'WIN')) winners.push(p);
+    if (!isYou(S, e)) continue;
+    for (const o of entitiesAt(S, e.x, e.y)) {
+      if (o !== e && isWin(S, o)) winners.add(youOwner(S, e));
     }
   }
-  const alive = [0, 1].filter(i => {
-    const c = S.entities.find(e => e.id === S.players[i].char);
-    return c && c.alive;
-  });
+  if (winners.size === 2) end(S, actor, 'both YOU on WIN — last action wins');
+  else if (winners.size === 1) end(S, [...winners][0], 'YOU shared a space with WIN');
+}
 
-  if (winners.length === 2) end(S, null, 'mutual WIN — draw!');
-  else if (winners.length === 1) end(S, S.players.indexOf(winners[0]), `${winners[0].emoji} touched something that IS WIN!`);
-  else if (alive.length === 0) end(S, null, 'both destroyed — draw!');
-  else if (alive.length === 1) end(S, alive[0], `${S.players[1 - alive[0]].emoji} ${S.players[1 - alive[0]].name} was destroyed!`);
-  else if (S.moves >= MOVE_LIMIT) end(S, null, 'move limit reached — draw!');
+function stackable(S, m, o) {
+  return (isYou(S, m) && isWin(S, o)) || (isWin(S, m) && isYou(S, o));
+}
+
+function canMove(S, m, dx, dy) {
+  const tx = m.x + dx, ty = m.y + dy;
+  if (tx < 0 || ty < 0 || tx >= W || ty >= H) return false;
+  for (const o of entitiesAt(S, tx, ty)) {
+    if (stackable(S, m, o)) continue;
+    const nx = tx + dx, ny = ty + dy;
+    if (nx < 0 || ny < 0 || nx >= W || ny >= H) return false;
+    if (entitiesAt(S, nx, ny).length > 0) return false;
+  }
+  return true;
+}
+
+function doMove(S, m, dx, dy, pull) {
+  const ox = m.x, oy = m.y, tx = ox + dx, ty = oy + dy;
+  for (const o of entitiesAt(S, tx, ty)) {
+    if (stackable(S, m, o)) continue;
+    o.x += dx; o.y += dy;
+  }
+  if (pull) {
+    for (const o of entitiesAt(S, ox - dx, oy - dy)) { o.x = ox; o.y = oy; }
+  }
+  m.x = tx; m.y = ty;
+}
+
+function placeTargets(S, p) {
+  const targets = new Set();
+  for (const e of S.entities) {
+    if (!(isYou(S, e) && youOwner(S, e) === p)) continue;
+    for (const [dx, dy] of DIRS) {
+      const x = e.x + dx, y = e.y + dy;
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      if (entitiesAt(S, x, y).length === 0) targets.add(x + ',' + y);
+    }
+  }
+  return targets;
+}
+
+function canPlace(S, p) {
+  return S.supply.length > 0 && placeTargets(S, p).size > 0;
+}
+
+function doPlace(S, p, idx, x, y) {
+  const t = S.supply[idx];
+  const e = t.prop ? propTile(t.prop, p, x, y) : nounTile(t.noun, x, y);
+  S.entities.push(e);
+  S.supply.splice(idx, 1);
+  return e;
+}
+
+function legalMoves(S, p) {
+  const res = [];
+  for (const e of S.entities) {
+    if (!(isYou(S, e) && youOwner(S, e) === p)) continue;
+    for (const [dx, dy] of DIRS) if (canMove(S, e, dx, dy)) res.push([e, dx, dy]);
+  }
+  return res;
+}
+
+function hasLegalAction(S, p) {
+  return legalMoves(S, p).length > 0 || canPlace(S, p);
+}
+
+function yourThings(S, p) {
+  return S.entities.filter(e => isYou(S, e) && youOwner(S, e) === p);
+}
+
+function act(S, p, fn) {
+  if (S.over || S.scenarioOver) return false;
+  if (S.turn !== p || S.actionsLeft <= 0) return false;
+  if (!fn()) return false;
+  S.actionsLeft--;
+  resolve(S, p);
+  if (S.challenge) {
+    if (!S.over) {
+      S.challenge.left--;
+      if (S.challenge.left <= 0) end(S, S.challenge.challenger, 'opponent failed to win within 10 actions');
+      else S.actionsLeft = 1;
+    }
+  } else if (!S.over && S.actionsLeft <= 0) {
+    S.turn = 1 - S.turn;
+    S.gameTurn++;
+    S.actionsLeft = S.gameTurn === 0 ? 1 : 2;
+    S.selectedId = null;
+    S.placeIdx = null;
+  }
+  if (!S.over && !hasLegalAction(S, S.turn)) {
+    end(S, 1 - S.turn, `${PLAYER_EMOJI[S.turn]} P${S.turn + 1} cannot take an action`);
+  }
+  return true;
+}
+
+function moveSelected(S, p, dx, dy, pull) {
+  const sel = S.entities.find(e => e.id === S.selectedId) || yourThings(S, p)[0];
+  if (!sel || !(isYou(S, sel) && youOwner(S, sel) === p)) return false;
+  return act(S, p, () => {
+    if (!canMove(S, sel, dx, dy)) return false;
+    doMove(S, sel, dx, dy, pull);
+    return true;
+  });
+}
+
+function place(S, p, idx, x, y) {
+  return act(S, p, () => {
+    if (idx >= S.supply.length) return false;
+    if (!placeTargets(S, p).has(x + ',' + y)) return false;
+    doPlace(S, p, idx, x, y);
+    return true;
+  });
+}
+
+function challenge(S, p) {
+  if (S.over || S.challenge) return false;
+  if (S.turn !== p) return false;
+  const full = S.gameTurn === 0 ? 1 : 2;
+  if (S.actionsLeft !== full) return false;
+  S.challenge = { challenger: p, left: 10 };
+  S.turn = 1 - p;
+  S.actionsLeft = 2;
+  S.placeIdx = null;
+  log(S, `⚔ P${p + 1} challenges — P${1 - p + 1} gets 10 actions to win`);
+  if (!S.over && !hasLegalAction(S, S.turn)) end(S, p, 'opponent cannot act');
+  return true;
+}
+
+function spendClock(S, p) {
+  const sc = S.scenario;
+  if (sc.bo3 || !sc.clocks[p]) return false;
+  if (sc.score[0] !== 0 || sc.score[1] !== 0) return false;
+  if (S.over) return false;
+  sc.bo3 = true;
+  sc.clocks[p] = false;
+  log(S, `🕐 P${p + 1} spends their clock — this scenario is best 2 of 3`);
+  return true;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { W, H, NOUNS, PROPS, EMOJI, createGame, parseRules, ensureParsed, propsOf, entitiesAt, tryMovePlayer, resolve, log };
+  module.exports = {
+    W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
+    propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
+    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
+    spendClock, resolve,
+  };
 }
 
 if (typeof document !== 'undefined') initUI();
@@ -188,41 +296,83 @@ function initUI() {
     for (let x = 0; x < W; x++) {
       const d = document.createElement('div');
       d.className = 'cell';
+      d.dataset.x = x; d.dataset.y = y;
+      d.addEventListener('click', () => onCellClick(x, y));
       board.appendChild(d);
       cells.push(d);
     }
   }
 
-  function render() {
-    for (const c of cells) { c.innerHTML = ''; c.classList.remove('water', 'stack'); }
-    const byCell = new Map();
-    for (const e of S.entities) {
-      if (!e.alive) continue;
-      const k = e.x + ',' + e.y;
-      if (!byCell.has(k)) byCell.set(k, []);
-      byCell.get(k).push(e);
+  function activeSelectable() {
+    return yourThings(S, S.turn);
+  }
+
+  function selected() {
+    let sel = S.entities.find(e => e.id === S.selectedId);
+    if (!sel || !activeSelectable().includes(sel)) sel = activeSelectable()[0];
+    if (sel) S.selectedId = sel.id;
+    return sel;
+  }
+
+  function onCellClick(x, y) {
+    if (S.over || S.scenarioOver) return;
+    if (S.placeIdx !== null) {
+      if (place(S, S.turn, S.placeIdx, x, y)) S.placeIdx = null;
+      render();
+      return;
     }
-    for (const [k, list] of byCell) {
-      const [x, y] = k.split(',').map(Number);
-      const cell = cells[y * W + x];
-      if (list.length > 1) cell.classList.add('stack');
-      if (list.some(e => e.kind === 'object' && e.type === 'WATER')) cell.classList.add('water');
-      for (const e of list) {
-        const sp = document.createElement('span');
-        if (e.kind === 'word') {
-          const cls = e.type === 'IS' ? 'is' : NOUNS.includes(e.type) ? 'noun' : 'prop-' + PROP_CLASS[e.type];
-          sp.className = 'ent word ' + cls;
-          sp.textContent = e.type;
-        } else {
-          sp.className = 'ent obj obj-' + e.type;
-          sp.textContent = EMOJI[e.type] || e.type;
+    const here = entitiesAt(S, x, y);
+    const mine = here.find(e => activeSelectable().includes(e));
+    if (mine) { S.selectedId = mine.id; render(); }
+  }
+
+  function render() {
+    for (const c of cells) { c.innerHTML = ''; c.className = 'cell'; }
+    const sel = selected();
+    const targets = S.placeIdx !== null ? placeTargets(S, S.turn) : new Set();
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const cell = cells[y * W + x];
+        if (targets.has(x + ',' + y)) cell.classList.add('target');
+        const ents = entitiesAt(S, x, y);
+        if (ents.some(e => sel && e.id === sel.id)) cell.classList.add('sel');
+        if (ents.length > 1) cell.classList.add('stack');
+        for (const e of ents) {
+          const sp = document.createElement('span');
+          if (e.kind === 'object') {
+            sp.className = 'ent obj obj-' + e.type;
+            sp.textContent = EMOJI[e.type];
+          } else if (e.prop) {
+            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.owner !== undefined ? ' own' + e.owner : '');
+            sp.textContent = e.label;
+          } else {
+            sp.className = 'ent word noun';
+            sp.textContent = e.noun;
+          }
+          cell.appendChild(sp);
         }
-        cell.appendChild(sp);
       }
     }
+
+    const turnEl = document.getElementById('turn');
+    if (S.over) {
+      const w = S.over.winner;
+      turnEl.innerHTML = w === null
+        ? `🤝 DRAW — ${S.over.reason}`
+        : `<span style="color:${PLAYER_COLORS[w]}">${PLAYER_EMOJI[w]} ${PLAYER_NAMES[w]} (P${w + 1}) WINS</span> — ${S.over.reason}`;
+    } else if (S.challenge) {
+      turnEl.innerHTML = `⚔ Challenge: <span style="color:${PLAYER_COLORS[1 - S.challenge.challenger]}">${PLAYER_EMOJI[1 - S.challenge.challenger]} P${2 - S.challenge.challenger}</span> must win in <b>${S.challenge.left}</b> actions`;
+    } else {
+      turnEl.innerHTML = `<span style="color:${PLAYER_COLORS[S.turn]}">${PLAYER_EMOJI[S.turn]} ${PLAYER_NAMES[S.turn]} (P${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
+    }
+
+    const sc = S.scenario;
+    document.getElementById('score').textContent =
+      `Scenario ${sc.score[0]}–${sc.score[1]} ${sc.bo3 ? '(best of 3)' : ''} · games ${sc.wins[0]}–${sc.wins[1]} · world pts ${sc.worldPoints[0]}–${sc.worldPoints[1]}`;
+
     const ul = document.getElementById('rules');
     ul.innerHTML = '';
-    for (const r of [...S.rules].sort()) {
+    for (const r of ruleList(S)) {
       const li = document.createElement('li');
       li.textContent = r;
       ul.appendChild(li);
@@ -234,39 +384,96 @@ function initUI() {
       li.textContent = m;
       lg.appendChild(li);
     }
-    document.getElementById('moves').textContent = S.moves;
+
+    const tray = document.getElementById('supply');
+    tray.innerHTML = '';
+    S.supply.forEach((t, i) => {
+      const b = document.createElement('button');
+      b.className = 'tile' + (t.prop ? ' prop-' + t.prop.toLowerCase() : ' noun') + (S.placeIdx === i ? ' picked' : '');
+      b.textContent = t.prop ? 'IS ' + t.prop : t.noun;
+      b.title = 'Click, then click a highlighted cell to place';
+      b.addEventListener('click', () => {
+        if (S.over || S.scenarioOver) return;
+        S.placeIdx = S.placeIdx === i ? null : i;
+        render();
+      });
+      tray.appendChild(b);
+    });
+    document.getElementById('supply-empty').style.display = S.supply.length ? 'none' : 'block';
+
+    document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft !== (S.gameTurn === 0 ? 1 : 2);
+    document.getElementById('btn-clock').disabled = S.over || S.scenarioOver || sc.bo3 || !sc.clocks[0] && !sc.clocks[1] || sc.score[0] + sc.score[1] > 0;
+    document.getElementById('btn-clock').textContent = sc.bo3 ? '🕐 best of 3 active' : '🕐 spend clock (best of 3)';
+
     const ov = document.getElementById('overlay');
-    if (S.over) {
+    if (S.over || S.scenarioOver) {
       ov.classList.remove('hidden');
-      const p = S.over.winner === null ? null : S.players[S.over.winner];
-      ov.innerHTML = p
-        ? `<div class="big" style="color:${p.color}">${p.emoji} ${p.name} WINS!</div><div class="sub">${S.over.reason}</div><div class="sub">Press R to restart</div>`
-        : `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div><div class="sub">Press R to restart</div>`;
+      let html = '';
+      if (S.over) {
+        const w = S.over.winner;
+        html += w === null
+          ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
+          : `<div class="big" style="color:${PLAYER_COLORS[w]}">${PLAYER_EMOJI[w]} ${PLAYER_NAMES[w]} wins the game!</div><div class="sub">${S.over.reason}</div>`;
+        html += `<div class="sub">R = next game${S.scenarioOver ? '' : ' · N = new scenario'}</div>`;
+      }
+      if (S.scenarioOver) {
+        const w = sc.score[0] === sc.score[1] ? null : (sc.score[0] > sc.score[1] ? 0 : 1);
+        html += `<div class="big" style="color:${w === null ? '#fff' : PLAYER_COLORS[w]}">🏆 Scenario to ${w === null ? 'tie' : PLAYER_NAMES[w] + ' (P' + (w + 1) + ')'}</div>`;
+        html += `<div class="sub">N = new scenario · R = replay</div>`;
+      }
+      ov.innerHTML = html;
     } else {
       ov.classList.add('hidden');
     }
   }
 
   const KEYMAP = {
-    KeyW: [0, 0, -1], KeyS: [0, 0, 1], KeyA: [0, -1, 0], KeyD: [0, 1, 0],
-    ArrowUp: [1, 0, -1], ArrowDown: [1, 0, 1], ArrowLeft: [1, -1, 0], ArrowRight: [1, 1, 0],
+    ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0],
   };
 
   window.addEventListener('keydown', (e) => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyR') {
-      S = createGame();
+      S = S.scenarioOver ? newScenario(S.scenario) : createGame(S.scenario);
       render();
+      return;
+    }
+    if (e.code === 'KeyN') {
+      S = newScenario(S.scenario);
+      render();
+      return;
+    }
+    if (S.over || S.scenarioOver) return;
+    if (e.code === 'Tab') {
+      const list = activeSelectable();
+      if (list.length) {
+        const i = list.findIndex(x => x.id === S.selectedId);
+        S.selectedId = list[(i + 1) % list.length].id;
+        render();
+      }
+      return;
+    }
+    if (e.code === 'Escape') { S.placeIdx = null; render(); return; }
+    if (e.code === 'KeyC') { challenge(S, S.turn); render(); return; }
+    if (/^Digit[1-9]$/.test(e.code)) {
+      const i = Number(e.code.slice(5)) - 1;
+      if (i < S.supply.length) { S.placeIdx = S.placeIdx === i ? null : i; render(); }
       return;
     }
     const m = KEYMAP[e.code];
     if (!m) return;
-    const [pi, dx, dy] = m;
-    if (tryMovePlayer(S, pi, dx, dy)) {
-      resolve(S);
-      render();
-    }
+    moveSelected(S, S.turn, m[0], m[1], e.shiftKey);
+    render();
   });
+
+  document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
+  document.getElementById('btn-clock').addEventListener('click', () => { spendClock(S, S.turn); render(); });
+  document.getElementById('btn-newgame').addEventListener('click', () => {
+    S = S.scenarioOver ? newScenario(S.scenario) : createGame(S.scenario);
+    render();
+  });
+  document.getElementById('btn-newscenario').addEventListener('click', () => { S = newScenario(S.scenario); render(); });
 
   render();
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BABA IS 1V1 — Baba Duel</title>
+<title>BABA VS KEKE — board game rules</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -18,66 +18,80 @@
   #board-wrap { position: relative; }
   #board {
     display: grid;
-    gap: 1px;
+    gap: 2px;
     background: #232842;
     border: 2px solid #343b66;
     border-radius: 8px;
-    padding: 1px;
+    padding: 2px;
   }
   .cell {
-    width: 46px; height: 46px;
+    width: 64px; height: 64px;
     background: #141828;
     display: flex; flex-wrap: wrap;
     align-items: center; justify-content: center;
     overflow: hidden;
+    border-radius: 4px;
   }
-  .cell.water { background: rgba(52, 152, 219, .30); }
+  .cell.target { background: #1e3a2a; outline: 2px dashed #2ecc71; cursor: pointer; }
+  .cell.sel { outline: 3px solid #f1c40f; }
   .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-  .cell.stack .ent { width: 50%; height: 50%; font-size: 17px; }
-  .cell.stack .ent.word { font-size: 8px; }
-  .obj { font-size: 26px; line-height: 1; }
+  .cell.stack .ent { width: 50%; height: 50%; font-size: 22px; }
+  .cell.stack .ent.word { font-size: 9px; }
+  .obj { font-size: 36px; line-height: 1; }
   .obj-BABA { background: rgba(255, 107, 157, .28); border-radius: 50%; }
   .obj-KEKE { background: rgba(77, 171, 247, .28); border-radius: 50%; }
   .word {
     margin: 3px; width: calc(100% - 6px); height: calc(100% - 6px);
-    border-radius: 6px;
+    border-radius: 50%;
     font-size: 11px; font-weight: 800; letter-spacing: .5px;
   }
-  .word.noun { background: #e8eaf6; color: #1a1a2e; }
-  .word.is { background: #3a3f5c; color: #cfd4ff; }
-  .word.prop-you { background: #2ecc71; color: #06281a; }
-  .word.prop-win { background: #f1c40f; color: #4a3800; }
-  .word.prop-stop { background: #e74c3c; color: #fff; }
-  .word.prop-push { background: #e67e22; color: #fff; }
-  .word.prop-sink { background: #3498db; color: #fff; }
-  .word.prop-defeat { background: #9b59b6; color: #fff; }
+  .word.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
+  .word.prop-win { background: #f1c40f; color: #4a3800; border-radius: 8px; }
+  .word.prop-you { background: #2ecc71; color: #06281a; border-radius: 8px; }
+  .word.own0 { outline: 2px solid #ff6b9d; }
+  .word.own1 { outline: 2px solid #4dabf7; }
+  #tray-wrap { margin-top: 10px; background: #1a1f38; border-radius: 8px; padding: 10px; }
+  #tray-wrap h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8b93c9; margin-bottom: 6px; }
+  #supply { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; }
+  #supply-empty { font-size: 12px; color: #8b93c9; display: none; }
+  .tile {
+    border: none; cursor: pointer;
+    padding: 8px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 800;
+  }
+  .tile.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
+  .tile.prop-win { background: #f1c40f; color: #4a3800; }
+  .tile.prop-you { background: #2ecc71; color: #06281a; }
+  .tile.picked { outline: 3px solid #fff; }
   #overlay {
     position: absolute; inset: 0;
-    background: rgba(5, 7, 18, .82);
+    background: rgba(5, 7, 18, .85);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     gap: 10px; border-radius: 8px;
     text-align: center; padding: 20px;
   }
   #overlay.hidden { display: none; }
-  #overlay .big { font-size: 40px; font-weight: 900; }
-  #overlay .sub { font-size: 15px; color: #aab2e8; }
-  #side { width: 280px; display: flex; flex-direction: column; gap: 10px; }
-  h1 { font-size: 26px; font-weight: 900; letter-spacing: 1px; }
+  #overlay .big { font-size: 30px; font-weight: 900; }
+  #overlay .sub { font-size: 14px; color: #aab2e8; }
+  #side { width: 300px; display: flex; flex-direction: column; gap: 10px; }
+  h1 { font-size: 24px; font-weight: 900; letter-spacing: 1px; }
   h1 span { color: #f1c40f; }
+  #turn { font-size: 16px; font-weight: 700; background: #1a1f38; padding: 10px; border-radius: 8px; }
+  #score { font-size: 12px; color: #8b93c9; }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btns button {
+    background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170;
+    border-radius: 8px; padding: 7px 10px; font-size: 12px; cursor: pointer;
+  }
+  .btns button:disabled { opacity: .4; cursor: default; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #8b93c9; margin-top: 6px; }
-  .players { display: flex; flex-direction: column; gap: 6px; }
-  .p { padding: 8px 10px; border-radius: 8px; background: #1a1f38; font-size: 14px; }
-  .p1 { border-left: 4px solid #ff6b9d; }
-  .p2 { border-left: 4px solid #4dabf7; }
-  .p b { color: #fff; }
   #rules, #log { list-style: none; display: flex; flex-direction: column; gap: 4px; }
   #rules li {
     font-family: ui-monospace, Menlo, Consolas, monospace;
     font-size: 12px; background: #1a1f38; padding: 4px 8px; border-radius: 6px;
   }
   #log li { font-size: 12px; color: #aab2e8; padding: 2px 2px; }
-  #status { font-size: 12px; color: #8b93c9; }
   .help {
     font-size: 12px; line-height: 1.5; color: #9aa3d6;
     background: #1a1f38; border-radius: 8px; padding: 10px;
@@ -86,26 +100,39 @@
 </head>
 <body>
 <div id="app">
-  <div id="board-wrap">
-    <div id="board"></div>
-    <div id="overlay" class="hidden"></div>
+  <div>
+    <div id="board-wrap">
+      <div id="board"></div>
+      <div id="overlay" class="hidden"></div>
+    </div>
+    <div id="tray-wrap">
+      <h3>Level tiles (place with 1–6, then click a green cell)</h3>
+      <div id="supply"></div>
+      <div id="supply-empty">supply empty</div>
+    </div>
   </div>
   <div id="side">
-    <h1>BABA <span>IS</span> 1V1</h1>
-    <div class="players">
-      <div class="p p1">🐰 <b>BABA</b> — move with <b>WASD</b></div>
-      <div class="p p2">🐶 <b>KEKE</b> — move with <b>Arrow keys</b></div>
+    <h1>BABA <span>VS</span> KEKE</h1>
+    <div id="turn"></div>
+    <div id="score"></div>
+    <div class="btns">
+      <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win (C)">⚔ Challenge (C)</button>
+      <button id="btn-clock" title="Make this scenario best 2 of 3">🕐 spend clock</button>
+      <button id="btn-newgame" title="R">↺ new game (R)</button>
+      <button id="btn-newscenario" title="N">⇢ new scenario (N)</button>
     </div>
-    <div id="status">Moves: <span id="moves">0</span> &nbsp;·&nbsp; R = restart</div>
-    <h2>Active rules</h2>
+    <h2>Rules</h2>
     <ul id="rules"></ul>
     <h2>Log</h2>
     <ul id="log"></ul>
     <div class="help">
-      Push word tiles to rewrite the rules — every rule applies to <b>both</b> players.
-      Touch something that <b>IS WIN</b> to win. Avoid things that <b>IS DEFEAT</b> and
-      water that <b>IS SINK</b>. Remove the opponent's <b>IS YOU</b> to freeze them,
-      or turn their noun into <b>WIN</b>/<b>DEFEAT</b> and touch them. First to win takes it!
+      Turns alternate; the very first turn has <b>1 action</b>, all later turns <b>2 actions</b>.
+      An action is a <b>MOVE</b> (arrows/WASD, Shift = also PULL) of one of your YOU things — Tab or click to select which —
+      or a <b>PLACE</b> of a level tile into an empty cell next to one of your YOU things.
+      Everything is PUSH; pushed things need an empty cell behind them. A rule forms when a noun tile points
+      right or down into a property tile. <b>Win:</b> a thing that is YOU shares a space with a thing that is WIN.
+      If you think the game is unwinnable, <b>challenge (C)</b>: your opponent gets 10 actions to win or you win.
+      If you cannot take your actions, you lose.
     </div>
   </div>
 </div>
