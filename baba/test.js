@@ -150,4 +150,51 @@ assert.ok(s.over && s.over.winner === 0 && !s.scenarioOver, 'first Bo3 game won,
 assert.strictEqual(s.scenario.wins[0], 1);
 console.log('ok 12: clock / best-of-3');
 
+// 13. Undo restores position, turn, actions and supply after a move
+s = G.createGame();
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false);
+assert.deepStrictEqual([baba(s).x, baba(s).y], [1, 4]);
+assert.strictEqual(s.turn, 1);
+assert.strictEqual(G.undo(s), true);
+assert.deepStrictEqual([baba(s).x, baba(s).y], [0, 4], 'position restored');
+assert.strictEqual(s.turn, 0, 'turn restored');
+assert.strictEqual(s.actionsLeft, 1, 'actions restored');
+console.log('ok 13: undo move');
+
+// 14. Undo restores supply after a place
+s = G.createGame();
+const n0 = s.supply.length;
+G.place(s, 0, 0, 1, 4);
+assert.strictEqual(s.supply.length, n0 - 1);
+G.undo(s);
+assert.strictEqual(s.supply.length, n0, 'supply restored');
+assert.strictEqual(at(s, 1, 4).length, 0, 'placed tile removed');
+console.log('ok 14: undo place');
+
+// 15. Undo after game over clears the result and reverts the scenario score
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 1, y: 2 });
+G.ensureParsed(s);
+baba(s).x = 2; baba(s).y = 3; s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 0, -1, false);
+assert.ok(s.over && s.over.winner === 0);
+assert.strictEqual(s.scenario.wins[0], 1, 'win counted');
+G.undo(s);
+assert.ok(!s.over, 'game over cleared');
+assert.strictEqual(s.scenario.wins[0], 0, 'score reverted');
+assert.deepStrictEqual([baba(s).x, baba(s).y], [2, 3], 'winning move reverted');
+console.log('ok 15: undo after game over');
+
+// 16. Undo after a challenge restores the pre-challenge turn
+s = G.createGame();
+G.challenge(s, 0);
+assert.ok(s.challenge);
+G.undo(s);
+assert.strictEqual(s.challenge, null);
+assert.strictEqual(s.turn, 0);
+assert.strictEqual(G.undo(s), false, 'nothing left to undo');
+console.log('ok 16: undo challenge');
+
 console.log('\nAll engine tests passed.');

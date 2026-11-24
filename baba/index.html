@@ -2,19 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>BABA VS KEKE — board game rules</title>
 <style>
+  :root { --cell: min(64px, 16.5vw); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overscroll-behavior: none; }
   body {
     background: #0d1020;
     color: #dfe3ff;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     display: flex;
     justify-content: center;
-    padding: 20px;
+    padding: 12px;
   }
-  #app { display: flex; gap: 20px; align-items: flex-start; }
+  #app { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
   #board-wrap { position: relative; }
   #board {
     display: grid;
@@ -23,41 +25,70 @@
     border: 2px solid #343b66;
     border-radius: 8px;
     padding: 2px;
+    touch-action: none;
   }
   .cell {
-    width: 64px; height: 64px;
+    width: var(--cell); height: var(--cell);
     background: #141828;
     display: flex; flex-wrap: wrap;
     align-items: center; justify-content: center;
     overflow: hidden;
     border-radius: 4px;
+    touch-action: manipulation;
   }
   .cell.target { background: #1e3a2a; outline: 2px dashed #2ecc71; cursor: pointer; }
   .cell.sel { outline: 3px solid #f1c40f; }
   .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-  .cell.stack .ent { width: 50%; height: 50%; font-size: 22px; }
-  .cell.stack .ent.word { font-size: 9px; }
-  .obj { font-size: 36px; line-height: 1; }
+  .cell.stack .ent { width: 50%; height: 50%; font-size: calc(var(--cell) * .34); }
+  .cell.stack .ent.word { font-size: calc(var(--cell) * .14); }
+  .obj { font-size: calc(var(--cell) * .56); line-height: 1; }
   .obj-BABA { background: rgba(255, 107, 157, .28); border-radius: 50%; }
   .obj-KEKE { background: rgba(77, 171, 247, .28); border-radius: 50%; }
   .word {
     margin: 3px; width: calc(100% - 6px); height: calc(100% - 6px);
-    border-radius: 50%;
-    font-size: 11px; font-weight: 800; letter-spacing: .5px;
+    font-size: calc(var(--cell) * .17); font-weight: 800; letter-spacing: .5px;
   }
   .word.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
   .word.prop-win { background: #f1c40f; color: #4a3800; border-radius: 8px; }
   .word.prop-you { background: #2ecc71; color: #06281a; border-radius: 8px; }
   .word.own0 { outline: 2px solid #ff6b9d; }
   .word.own1 { outline: 2px solid #4dabf7; }
+  #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  #dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 52px);
+    grid-template-rows: repeat(2, 52px);
+    gap: 6px;
+    touch-action: none;
+  }
+  #dpad button {
+    font-size: 20px; border-radius: 12px; border: 1px solid #3a4170;
+    background: #2a3050; color: #dfe3ff; touch-action: none; user-select: none;
+    -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  #dpad button:active { background: #3a4170; }
+  #dpad button[data-dx="0"][data-dy="-1"] { grid-column: 2; grid-row: 1; }
+  #dpad button[data-dx="-1"][data-dy="0"] { grid-column: 1; grid-row: 2; }
+  #dpad button[data-dx="0"][data-dy="1"] { grid-column: 2; grid-row: 2; }
+  #dpad button[data-dx="1"][data-dy="0"] { grid-column: 3; grid-row: 2; }
+  .cbtns { display: flex; flex-direction: column; gap: 6px; }
+  .cbtns button {
+    border: 1px solid #3a4170; background: #2a3050; color: #dfe3ff;
+    border-radius: 10px; padding: 10px 12px; font-size: 13px; font-weight: 700;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  }
+  .cbtns button.on { background: #2ecc71; color: #06281a; }
   #tray-wrap { margin-top: 10px; background: #1a1f38; border-radius: 8px; padding: 10px; }
   #tray-wrap h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8b93c9; margin-bottom: 6px; }
-  #supply { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; }
+  #supply { display: flex; flex-wrap: wrap; gap: 6px; min-height: 40px; }
   #supply-empty { font-size: 12px; color: #8b93c9; display: none; }
   .tile {
     border: none; cursor: pointer;
-    padding: 8px 12px; border-radius: 8px;
-    font-size: 12px; font-weight: 800;
+    padding: 10px 14px; min-width: 44px; min-height: 44px;
+    border-radius: 8px;
+    font-size: 13px; font-weight: 800;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
   .tile.noun { background: #e8eaf6; color: #1a1a2e; border-radius: 50%; }
   .tile.prop-win { background: #f1c40f; color: #4a3800; }
@@ -70,11 +101,12 @@
     align-items: center; justify-content: center;
     gap: 10px; border-radius: 8px;
     text-align: center; padding: 20px;
+    touch-action: manipulation;
   }
   #overlay.hidden { display: none; }
-  #overlay .big { font-size: 30px; font-weight: 900; }
+  #overlay .big { font-size: 26px; font-weight: 900; }
   #overlay .sub { font-size: 14px; color: #aab2e8; }
-  #side { width: 300px; display: flex; flex-direction: column; gap: 10px; }
+  #side { width: 300px; max-width: 100%; display: flex; flex-direction: column; gap: 10px; }
   h1 { font-size: 24px; font-weight: 900; letter-spacing: 1px; }
   h1 span { color: #f1c40f; }
   #turn { font-size: 16px; font-weight: 700; background: #1a1f38; padding: 10px; border-radius: 8px; }
@@ -82,7 +114,8 @@
   .btns { display: flex; gap: 6px; flex-wrap: wrap; }
   .btns button {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170;
-    border-radius: 8px; padding: 7px 10px; font-size: 12px; cursor: pointer;
+    border-radius: 8px; padding: 9px 10px; font-size: 12px; cursor: pointer;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
   }
   .btns button:disabled { opacity: .4; cursor: default; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #8b93c9; margin-top: 6px; }
@@ -96,6 +129,10 @@
     font-size: 12px; line-height: 1.5; color: #9aa3d6;
     background: #1a1f38; border-radius: 8px; padding: 10px;
   }
+  @media (max-width: 860px) {
+    #side { width: min(100%, 420px); }
+    body { padding: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -105,8 +142,20 @@
       <div id="board"></div>
       <div id="overlay" class="hidden"></div>
     </div>
+    <div id="controls">
+      <div id="dpad">
+        <button data-dx="0" data-dy="-1" aria-label="up">▲</button>
+        <button data-dx="-1" data-dy="0" aria-label="left">◀</button>
+        <button data-dx="0" data-dy="1" aria-label="down">▼</button>
+        <button data-dx="1" data-dy="0" aria-label="right">▶</button>
+      </div>
+      <div class="cbtns">
+        <button id="btn-pull">PULL: off</button>
+        <button id="btn-undo">↩ undo (U)</button>
+      </div>
+    </div>
     <div id="tray-wrap">
-      <h3>Level tiles (place with 1–6, then click a green cell)</h3>
+      <h3>Level tiles (tap, then tap a green cell)</h3>
       <div id="supply"></div>
       <div id="supply-empty">supply empty</div>
     </div>
@@ -127,12 +176,13 @@
     <ul id="log"></ul>
     <div class="help">
       Turns alternate; the very first turn has <b>1 action</b>, all later turns <b>2 actions</b>.
-      An action is a <b>MOVE</b> (arrows/WASD, Shift = also PULL) of one of your YOU things — Tab or click to select which —
-      or a <b>PLACE</b> of a level tile into an empty cell next to one of your YOU things.
-      Everything is PUSH; pushed things need an empty cell behind them. A rule forms when a noun tile points
-      right or down into a property tile. <b>Win:</b> a thing that is YOU shares a space with a thing that is WIN.
-      If you think the game is unwinnable, <b>challenge (C)</b>: your opponent gets 10 actions to win or you win.
-      If you cannot take your actions, you lose.
+      An action is a <b>MOVE</b> (D-pad / arrows / WASD, PULL toggle or Shift = also pull) of one of your
+      YOU things — tap a thing or Tab to select which — or a <b>PLACE</b> of a level tile into an empty
+      cell next to one of your YOU things (tap tile, then a green cell).
+      Everything is PUSH; pushed things need an empty cell behind them. A rule forms when a noun tile
+      points right or down into a property tile. <b>Win:</b> a thing that is YOU shares a space with a
+      thing that is WIN. <b>Challenge (C):</b> opponent gets 10 actions to win or you win.
+      If you cannot take your actions, you lose. <b>Undo (U)</b> takes back the last action.
     </div>
   </div>
 </div>

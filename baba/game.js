@@ -35,7 +35,7 @@ function createGame(scenario) {
     challenge: null, over: null, scenarioOver: false,
     scenario,
     selectedId: null, placeIdx: null,
-    log: [], rules: [], _prevRules: [],
+    log: [], rules: [], _prevRules: [], history: [],
   };
   ensureParsed(S);
   S._prevRules = ruleList(S);
@@ -98,6 +98,29 @@ function entitiesAt(S, x, y) { return S.entities.filter(e => e.x === x && e.y ==
 function log(S, msg) {
   S.log.unshift(msg);
   if (S.log.length > 8) S.log.pop();
+}
+
+function snapshot(S) {
+  return JSON.stringify({
+    entities: S.entities, supply: S.supply, turn: S.turn, gameTurn: S.gameTurn,
+    actionsLeft: S.actionsLeft, challenge: S.challenge, over: S.over,
+    scenarioOver: S.scenarioOver, scenario: S.scenario,
+    selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
+  });
+}
+
+function pushHistory(S, before) {
+  S.history.unshift(before);
+  if (S.history.length > 500) S.history.pop();
+}
+
+function undo(S) {
+  if (!S.history || S.history.length === 0) return false;
+  const snap = JSON.parse(S.history.shift());
+  Object.assign(S, snap);
+  ensureParsed(S);
+  log(S, '↩ undone');
+  return true;
 }
 
 function end(S, winner, reason) {
@@ -210,7 +233,9 @@ function yourThings(S, p) {
 function act(S, p, fn) {
   if (S.over || S.scenarioOver) return false;
   if (S.turn !== p || S.actionsLeft <= 0) return false;
+  const before = snapshot(S);
   if (!fn()) return false;
+  pushHistory(S, before);
   S.actionsLeft--;
   resolve(S, p);
   if (S.challenge) {
@@ -256,6 +281,7 @@ function challenge(S, p) {
   if (S.turn !== p) return false;
   const full = S.gameTurn === 0 ? 1 : 2;
   if (S.actionsLeft !== full) return false;
+  pushHistory(S, snapshot(S));
   S.challenge = { challenger: p, left: 10 };
   S.turn = 1 - p;
   S.actionsLeft = 2;
@@ -270,6 +296,7 @@ function spendClock(S, p) {
   if (sc.bo3 || !sc.clocks[p]) return false;
   if (sc.score[0] !== 0 || sc.score[1] !== 0) return false;
   if (S.over) return false;
+  pushHistory(S, snapshot(S));
   sc.bo3 = true;
   sc.clocks[p] = false;
   log(S, `🕐 P${p + 1} spends their clock — this scenario is best 2 of 3`);
@@ -281,7 +308,7 @@ if (typeof module !== 'undefined' && module.exports) {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
-    spendClock, resolve,
+    spendClock, resolve, undo, snapshot,
   };
 }
 
@@ -289,8 +316,9 @@ if (typeof document !== 'undefined') initUI();
 
 function initUI() {
   let S = createGame();
+  let pullOn = false;
   const board = document.getElementById('board');
-  board.style.gridTemplateColumns = `repeat(${W}, ${CELL}px)`;
+  board.style.gridTemplateColumns = `repeat(${W}, var(--cell))`;
   const cells = [];
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
@@ -444,6 +472,11 @@ function initUI() {
       render();
       return;
     }
+    if (e.code === 'KeyU') {
+      undo(S);
+      render();
+      return;
+    }
     if (S.over || S.scenarioOver) return;
     if (e.code === 'Tab') {
       const list = activeSelectable();
@@ -463,9 +496,24 @@ function initUI() {
     }
     const m = KEYMAP[e.code];
     if (!m) return;
-    moveSelected(S, S.turn, m[0], m[1], e.shiftKey);
+    moveSelected(S, S.turn, m[0], m[1], e.shiftKey || pullOn);
     render();
   });
+
+  document.querySelectorAll('#dpad button').forEach((b) => {
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (S.over || S.scenarioOver) return;
+      moveSelected(S, S.turn, Number(b.dataset.dx), Number(b.dataset.dy), pullOn);
+      render();
+    });
+  });
+  document.getElementById('btn-pull').addEventListener('click', () => {
+    pullOn = !pullOn;
+    document.getElementById('btn-pull').textContent = 'PULL: ' + (pullOn ? 'ON' : 'off');
+    document.getElementById('btn-pull').classList.toggle('on', pullOn);
+  });
+  document.getElementById('btn-undo').addEventListener('click', () => { undo(S); render(); });
 
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
   document.getElementById('btn-clock').addEventListener('click', () => { spendClock(S, S.turn); render(); });
