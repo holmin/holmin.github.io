@@ -284,6 +284,20 @@ G.moveSelected(s, 0, 0, -1, false); // SAMI (0,4)->(0,3): enters row 3 -> rock s
 assert.ok(s.over && s.over.winner === 0, 'curious WIN rock won for SAMI owner');
 console.log('ok 23: CURIOUS+WIN ->', s.over && s.over.reason);
 
+// 23b. Two curious rocks in the SAME column both react to one enter event
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 1 });
+s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 1, y: 1 });
+const rockTop = rock(s, 0, 0); rockTop.x = 2; rockTop.y = 0;   // (2,0), col 2
+const rockBot = rock(s, 4, 4); rockBot.x = 2; rockBot.y = 4;   // (2,4), col 2
+sami(s).x = 1; sami(s).y = 2;
+G.ensureParsed(s);
+s.selectedId = sami(s).id;
+G.moveSelected(s, 0, 1, 0, false); // SAMI (1,2)->(2,2): enters col 2, between the two rocks
+assert.deepStrictEqual([rockTop.x, rockTop.y], [2, 1], 'top rock moved down toward SAMI');
+assert.deepStrictEqual([rockBot.x, rockBot.y], [2, 3], 'bottom rock moved up toward SAMI');
+console.log('ok 23b: all curious objects in the entered line move, not just one');
+
 // 24. River is terrain called RIVER (not a tile, not WATER)
 assert.deepStrictEqual([...G.RIVER].sort(), ['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
 assert.ok(G.isRiverCell(0, 0) && G.isRiverCell(2, 1) && G.isRiverCell(4, 4));

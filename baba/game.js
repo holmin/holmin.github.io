@@ -414,21 +414,22 @@ function resolveCurious(S) {
     const evs = S._entered || [];
     let moved = false;
     for (const c of curious) {
-      const cands = evs.filter((ev) => {
-        if (reacted.has(ev)) return false;
+      // an enter-event triggers EACH curious object in that row/column once —
+      // consumed per (curious object, event) pair, not per event globally
+      let bestI = -1, bd = Infinity;
+      evs.forEach((ev, i) => {
+        if (reacted.has(c.id + ':' + i)) return;
         const e = S.entities.find(x => x.id === ev.id);
-        if (!e || e === c) return false;
+        if (!e || e === c) return;
         const inLineNew = ev.tx === c.x || ev.ty === c.y;          // target cell is in c's row/col
         const wasInLine = ev.fx !== null && (ev.fx === c.x || ev.fy === c.y); // came from outside that line
-        return inLineNew && !wasInLine;
+        if (!(inLineNew && !wasInLine)) return;
+        const d = Math.abs(ev.tx - c.x) + Math.abs(ev.ty - c.y);
+        if (d < bd) { bd = d; bestI = i; }
       });
-      if (!cands.length) continue;
-      let ev = cands[0], bd = Infinity;
-      for (const c2 of cands) {
-        const d = Math.abs(c2.tx - c.x) + Math.abs(c2.ty - c.y);
-        if (d < bd) { bd = d; ev = c2; }
-      }
-      reacted.add(ev);
+      if (bestI < 0) continue;
+      const ev = evs[bestI];
+      reacted.add(c.id + ':' + bestI);
       const t = S.entities.find(x => x.id === ev.id);
       const dx = Math.sign(t.x - c.x), dy = Math.sign(t.y - c.y);
       const dirs = Math.abs(t.x - c.x) >= Math.abs(t.y - c.y)
