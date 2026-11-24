@@ -70,7 +70,7 @@ function createGame(enabled, scenario) {
     { prop: 'WIN' }, { prop: 'WIN' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
-    { prop: 'CURIOUS' },
+    { prop: 'CURIOUS' }, { prop: 'FAST' },
   ];
   const S = {
     entities, supply, numPlayers, enabled,
@@ -80,9 +80,33 @@ function createGame(enabled, scenario) {
     selectedId: null, placeIdx: null,
     log: [], rules: [], _prevRules: [], history: [],
   };
+  syncFixedTiles(S);
   ensureParsed(S);
   S._prevRules = ruleList(S);
   return S;
+}
+
+// Permanent printed tiles in the margin around the board (only with exactly 2
+// active players): top-middle [P2-noun][IS P2], left-middle [P1-noun] over
+// [IS P1], bottom-middle [IS P1], right-middle [IS P2]. They cannot be moved
+// or otherwise interacted with, but tiles on the board can point at them (and
+// the printed nouns can point into the board) to form rules.
+// Coordinates are board coords extended by one margin cell (-1 and 5).
+function syncFixedTiles(S) {
+  S.entities = S.entities.filter(e => !e.fixed);
+  if (S.numPlayers === 2) {
+    const a = activeChars(S);
+    const n0 = CHARACTERS[a[0]].noun, n1 = CHARACTERS[a[1]].noun;
+    S.entities.push(
+      { id: nextId++, kind: 'word', noun: n1, fixed: true, x: 2, y: -1 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS P2', fixed: true, x: 3, y: -1 },
+      { id: nextId++, kind: 'word', noun: n0, fixed: true, x: -1, y: 2 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS P1', fixed: true, x: -1, y: 3 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS P1', fixed: true, x: 2, y: 5 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS P2', fixed: true, x: 5, y: 2 },
+    );
+  }
+  ensureParsed(S);
 }
 
 function newScenario(prev, enabled) {
@@ -132,6 +156,7 @@ function setEnabled(S, ci, on) {
   const remap = oldActive.map((oc) => newActive.indexOf(oc));
   for (const e of S.entities) if (e.kind === 'word' && e.owner !== undefined && e.owner !== null) e.owner = remap[e.owner];
   S.numPlayers = newActive.length;
+  syncFixedTiles(S);
   S.scenario.numPlayers = newActive.length;
   for (const key of ['score', 'wins', 'worldPoints', 'clocks']) {
     const a = S.scenario[key];
@@ -148,7 +173,6 @@ function setEnabled(S, ci, on) {
 
 function parseRules(S) {
   const rules = [{ noun: 'ALL', prop: 'PUSH', owner: null, permanent: true }];
-  activeChars(S).forEach((ci, rank) => rules.push({ noun: CHARACTERS[ci].noun, prop: 'YOU', owner: rank, permanent: true }));
   const propAt = new Map();
   const nounTiles = [];
   for (const e of S.entities) {
@@ -158,9 +182,14 @@ function parseRules(S) {
   }
   for (const n of nounTiles) {
     const r = propAt.get((n.x + 1) + ',' + n.y);
-    if (r) rules.push({ noun: n.noun, prop: r.prop, owner: r.owner });
+    if (r) rules.push({ noun: n.noun, prop: r.prop, owner: r.owner, permanent: !!r.fixed });
     const d = propAt.get(n.x + ',' + (n.y + 1));
-    if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner });
+    if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner, permanent: !!d.fixed });
+  }
+  // with exactly 2 players the printed margin tiles provide the IS Pn defaults;
+  // otherwise (1 or 3+ players) they are implicit
+  if ((S.numPlayers || 0) !== 2) {
+    activeChars(S).forEach((ci, rank) => rules.push({ noun: CHARACTERS[ci].noun, prop: 'YOU', owner: rank, permanent: true }));
   }
   return rules;
 }
@@ -395,8 +424,39 @@ function moveSelected(S, p, dx, dy, pull) {
   return act(S, p, () => {
     if (!canMove(S, sel, dx, dy)) return false;
     doMove(S, sel, dx, dy, pull);
+    // FAST (diary #3): move as many spaces as you like in a single direction
+    if (propsOf(S, sel).FAST) {
+      while (canMove(S, sel, dx, dy)) doMove(S, sel, dx, dy, false);
+    }
     return true;
   });
+}
+
+// FAST with an explicit destination square: slide toward (tx,ty), stop early if blocked
+function fastMoveTo(S, p, dx, dy, tx, ty) {
+  ensureParsed(S);
+  const yours = yourThings(S, p);
+  let sel = S.entities.find(e => e.id === S.selectedId);
+  if (!sel || !yours.includes(sel)) sel = yours[0];
+  if (!sel || !propsOf(S, sel).FAST) return false;
+  return act(S, p, () => {
+    let g = 0;
+    while ((sel.x !== tx || sel.y !== ty) && g++ < 20 && canMove(S, sel, dx, dy)) doMove(S, sel, dx, dy, false);
+    return sel.x === tx && sel.y === ty;
+  });
+}
+
+// cells a FAST thing could slide to in direction (dx,dy) — computed on a clone
+function fastReach(S, sel, dx, dy) {
+  const S2 = { ...S, entities: S.entities.map(e => ({ ...e })), _entered: null };
+  const m = S2.entities.find(e => e.id === sel.id);
+  const cells = [];
+  let g = 0;
+  while (g++ < 20 && canMove(S2, m, dx, dy)) {
+    doMove(S2, m, dx, dy, false);
+    cells.push([m.x, m.y]);
+  }
+  return cells;
 }
 
 // CURIOUS (board game, per design diary #3): when anything ENTERS a CURIOUS
@@ -487,7 +547,7 @@ if (typeof module !== 'undefined' && module.exports) {
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
-    resolveCurious,
+    resolveCurious, fastMoveTo, fastReach, syncFixedTiles,
     RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
@@ -499,14 +559,15 @@ function initUI() {
   let S = createGame();
   let pullOn = false;
   const board = document.getElementById('board');
-  board.style.gridTemplateColumns = `repeat(${W}, var(--cell))`;
+  const EXT = 7; // 5x5 board + 1-cell margin ring with the permanent printed tiles
+  board.style.gridTemplateColumns = `repeat(${EXT}, var(--cell))`;
   const cells = [];
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
+  for (let ry = 0; ry < EXT; ry++) {
+    for (let rx = 0; rx < EXT; rx++) {
       const d = document.createElement('div');
-      d.className = 'cell';
-      d.dataset.x = x; d.dataset.y = y;
-      d.addEventListener('click', () => onCellClick(x, y));
+      d.className = 'cell' + (rx === 0 || ry === 0 || rx === EXT - 1 || ry === EXT - 1 ? ' margin' : '');
+      d.dataset.rx = rx; d.dataset.ry = ry;
+      d.addEventListener('click', () => onCellClick(rx, ry));
       board.appendChild(d);
       cells.push(d);
     }
@@ -517,14 +578,25 @@ function initUI() {
   }
 
   function selected() {
+    const yours = activeSelectable();
     let sel = S.entities.find(e => e.id === S.selectedId);
-    if (!sel || !activeSelectable().includes(sel)) sel = activeSelectable()[0];
+    if (!sel || !yours.includes(sel)) sel = yours[0];
     if (sel) S.selectedId = sel.id;
     return sel;
   }
 
-  function onCellClick(x, y) {
+  function onCellClick(rx, ry) {
     if (S.over || S.scenarioOver) return;
+    const x = rx - 1, y = ry - 1;
+    if (x < 0 || y < 0 || x >= W || y >= H) return; // margin ring is not clickable
+    if (S.fastDir) { // FAST: a tapped square is the destination
+      const sel = selected();
+      if (sel && fastMoveTo(S, S.turn, S.fastDir.dx, S.fastDir.dy, x, y)) {
+        S.fastDir = null;
+      }
+      render();
+      return;
+    }
     if (S.placeIdx !== null) {
       if (place(S, S.turn, S.placeIdx, x, y)) S.placeIdx = null;
       render();
@@ -535,17 +607,56 @@ function initUI() {
     if (mine) { S.selectedId = mine.id; render(); }
   }
 
-  function render() {
-    for (const c of cells) { c.innerHTML = ''; c.className = 'cell'; }
+  function tryMove(dx, dy) {
+    if (S.over || S.scenarioOver) return;
+    const yours = activeSelectable();
+    const curSel = S.entities.find(e => e.id === S.selectedId);
+    if (yours.length > 1 && !yours.includes(curSel)) {
+      log(S, 'multiple things are YOU — tap one (or Tab) to choose which to move');
+      render();
+      return;
+    }
     const sel = selected();
-    const targets = S.placeIdx !== null ? placeTargets(S, S.turn) : new Set();
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const cell = cells[y * W + x];
-        if (RIVER.has(x + ',' + y)) cell.classList.add('water');
-        if (targets.has(x + ',' + y)) cell.classList.add('target');
-        const ents = entitiesAt(S, x, y);
+    if (!sel) return;
+    if (propsOf(S, sel).FAST) { // FAST: ask for a direction, then a destination square
+      S.fastDir = { dx, dy };
+      log(S, `FAST: ${CHARACTERS.find(c => c.noun === sel.type).name} — now tap a highlighted square to slide there (Esc cancels)`);
+      render();
+      return;
+    }
+    moveSelected(S, S.turn, dx, dy, pullOn);
+    render();
+  }
+
+  function render() {
+    for (let i = 0; i < cells.length; i++) {
+      cells[i].innerHTML = '';
+      cells[i].className = 'cell' + (i % EXT === 0 || i / EXT < 1 || i % EXT === EXT - 1 || i / EXT >= EXT - 1 ? ' margin' : '');
+    }
+    const yours = activeSelectable();
+    const curSel = S.entities.find(e => e.id === S.selectedId);
+    const ambiguous = yours.length > 1 && !yours.includes(curSel);
+    const sel = selected();
+    let targets = new Set();
+    if (S.placeIdx !== null) targets = placeTargets(S, S.turn);
+    if (S.fastDir && sel) {
+      for (const [x, y] of fastReach(S, sel, S.fastDir.dx, S.fastDir.dy)) targets.add(x + ',' + y);
+    }
+    const byCell = new Map();
+    for (const e of S.entities) {
+      const k = (e.x + 1) + ',' + (e.y + 1);
+      if (!byCell.has(k)) byCell.set(k, []);
+      byCell.get(k).push(e);
+    }
+    for (let ry = 0; ry < EXT; ry++) {
+      for (let rx = 0; rx < EXT; rx++) {
+        const cell = cells[ry * EXT + rx];
+        const x = rx - 1, y = ry - 1;
+        if (x >= 0 && y >= 0 && x < W && y < H && RIVER.has(x + ',' + y)) cell.classList.add('water');
+        if (x >= 0 && y >= 0 && x < W && y < H && targets.has(x + ',' + y)) cell.classList.add('target');
+        const ents = byCell.get(rx + ',' + ry) || [];
         if (ents.some(e => sel && e.id === sel.id)) cell.classList.add('sel');
+        if (ambiguous && ents.some(e => yours.includes(e))) cell.classList.add('sel'); // highlight all YOUR things to choose from
         if (ents.length > 1) cell.classList.add('stack');
         for (const e of ents) {
           const sp = document.createElement('span');
@@ -553,10 +664,10 @@ function initUI() {
             sp.className = 'ent obj obj-' + e.type;
             sp.textContent = EMOJI[e.type];
           } else if (e.prop) {
-            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.owner !== undefined ? ' own' + e.owner : '');
+            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.owner !== undefined && e.owner !== null ? ' own' + e.owner : '') + (e.fixed ? ' fixed' : '');
             sp.textContent = e.label;
           } else {
-            sp.className = 'ent word noun';
+            sp.className = 'ent word noun' + (e.fixed ? ' fixed' : '');
             sp.textContent = e.noun;
           }
           cell.appendChild(sp);
@@ -688,7 +799,7 @@ function initUI() {
       }
       return;
     }
-    if (e.code === 'Escape') { S.placeIdx = null; render(); return; }
+    if (e.code === 'Escape') { S.placeIdx = null; S.fastDir = null; render(); return; }
     if (e.code === 'KeyC') { challenge(S, S.turn); render(); return; }
     if (/^Digit[1-9]$/.test(e.code)) {
       const i = Number(e.code.slice(5)) - 1;
@@ -697,16 +808,15 @@ function initUI() {
     }
     const m = KEYMAP[e.code];
     if (!m) return;
-    moveSelected(S, S.turn, m[0], m[1], e.shiftKey || pullOn);
-    render();
+    if (S.fastDir) { S.fastDir = { dx: m[0], dy: m[1] }; render(); return; } // re-aim the FAST ray
+    tryMove(m[0], m[1]);
   });
 
   document.querySelectorAll('#dpad button').forEach((b) => {
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      if (S.over || S.scenarioOver) return;
-      moveSelected(S, S.turn, Number(b.dataset.dx), Number(b.dataset.dy), pullOn);
-      render();
+      if (S.fastDir) { S.fastDir = { dx: Number(b.dataset.dx), dy: Number(b.dataset.dy) }; render(); return; }
+      tryMove(Number(b.dataset.dx), Number(b.dataset.dy));
     });
   });
   document.getElementById('btn-pull').addEventListener('click', () => {
@@ -745,6 +855,8 @@ function initUI() {
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // tap, not swipe — let click handle it
     e.preventDefault();
     if (S.over || S.scenarioOver) return;
+    const sel = S.entities.find(e2 => e2.id === S.selectedId) || activeSelectable()[0];
+    if (sel && propsOf(S, sel).FAST) return; // swiping is ignored for FAST — direction key + tap a square instead
     if (Math.abs(dx) > Math.abs(dy)) moveSelected(S, S.turn, Math.sign(dx), 0, pullOn);
     else moveSelected(S, S.turn, 0, Math.sign(dy), pullOn);
     render();

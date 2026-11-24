@@ -14,8 +14,8 @@ assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4]);
 assert.deepStrictEqual([erik(s).x, erik(s).y], [4, 0]);
 assert.ok(rock(s, 0, 0) && rock(s, 4, 4));
 assert.deepStrictEqual(rulesOf(s), ['ALL IS PUSH (default)', 'ERIK IS P2 (default)', 'SAMI IS P1 (default)']);
-assert.strictEqual(s.supply.length, 7, 'DEFAULT + W1L1 + IS CURIOUS tiles (FAST removed)');
-assert.ok(!s.supply.some(t => t.prop === 'FAST'), 'no FAST tile');
+assert.strictEqual(s.supply.length, 8, 'DEFAULT + W1L1 + IS CURIOUS + IS FAST tiles');
+assert.ok(s.supply.some(t => t.prop === 'FAST'), 'one FAST tile');
 assert.ok(s.supply.some(t => t.prop === 'CURIOUS'), 'one CURIOUS tile');
 assert.strictEqual(s.numPlayers, 2);
 console.log('ok 1: setup + default rules');
@@ -297,6 +297,56 @@ G.moveSelected(s, 0, 1, 0, false); // SAMI (1,2)->(2,2): enters col 2, between t
 assert.deepStrictEqual([rockTop.x, rockTop.y], [2, 1], 'top rock moved down toward SAMI');
 assert.deepStrictEqual([rockBot.x, rockBot.y], [2, 3], 'bottom rock moved up toward SAMI');
 console.log('ok 23b: all curious objects in the entered line move, not just one');
+
+// 23c. Permanent margin tiles exist with exactly 2 players, produce the default P-rules once
+const fixed = s => s.entities.filter(e => e.fixed);
+{
+  const g = G.createGame();
+  assert.strictEqual(fixed(g).length, 6, 'six printed tiles in the margin');
+  const coords = fixed(g).map(e => e.x + ',' + e.y).sort();
+  assert.deepStrictEqual(coords, ['-1,2', '-1,3', '2,-1', '2,5', '3,-1', '5,2']);
+  assert.strictEqual(rulesOf(g).filter(r => r === 'SAMI IS P1 (default)').length, 1, 'no duplicate default rules');
+  assert.ok(rulesOf(g).includes('ERIK IS P2 (default)'));
+  // a property placed right of the left-middle P1 noun rules SAMI: place IS WIN at (0,2)
+  const winIdx = g.supply.findIndex(t => t.prop === 'WIN');
+  G.doPlace(g, 0, winIdx, 0, 2);
+  G.ensureParsed(g);
+  assert.ok(rulesOf(g).includes('SAMI IS WIN'), 'printed noun + placed property forms a rule');
+  // a property below the top-middle P2 noun rules ERIK: place IS FAST at (2,0)
+  const fastIdx = g.supply.findIndex(t => t.prop === 'FAST');
+  G.doPlace(g, 0, fastIdx, 2, 0);
+  G.ensureParsed(g);
+  assert.ok(rulesOf(g).includes('ERIK IS FAST'), 'top printed noun points down into the board');
+  console.log('ok 23c: permanent margin tiles + rules through them');
+}
+// 3+ players: no printed tiles, implicit defaults instead
+{
+  const g = G.createGame([true, true, true, false, false]);
+  assert.strictEqual(fixed(g).length, 0, 'no margin tiles with 3 players');
+  assert.strictEqual(rulesOf(g).filter(r => /IS P\d/.test(r)).length, 3);
+  G.setEnabled(g, 2, false); // back to 2 players
+  assert.strictEqual(fixed(g).length, 6, 'margin tiles reappear at 2 players');
+  assert.ok(rulesOf(g).includes('SAMI IS P1 (default)') && rulesOf(g).includes('ERIK IS P2 (default)'));
+  G.setEnabled(g, 2, true); // to 3 again
+  assert.strictEqual(fixed(g).length, 0);
+  console.log('ok 23d: margin tiles only at exactly 2 players');
+}
+// FAST with explicit destination square
+{
+  const g = G.createGame();
+  const fastIdx = g.supply.findIndex(t => t.prop === 'FAST');
+  G.doPlace(g, 0, fastIdx, 0, 2); // right of printed SAMI noun (-1,2) -> SAMI IS FAST
+  G.ensureParsed(g);
+  assert.ok(rulesOf(g).includes('SAMI IS FAST'));
+  const sel = sami(g);
+  g.selectedId = sel.id;
+  const reach = G.fastReach(g, sel, 1, 0);
+  assert.deepStrictEqual(reach[reach.length - 1], [3, 4], 'FAST reach ends before the rock at (4,4)');
+  assert.strictEqual(G.fastMoveTo(g, 0, 1, 0, 3, 4), true, 'FAST slid to tapped square');
+  assert.deepStrictEqual([sel.x, sel.y], [3, 4]);
+  assert.strictEqual(G.fastMoveTo(g, 0, 1, 0, 4, 4), false, 'cannot slide onto/through the rock corner');
+  console.log('ok 23e: FAST direction + destination square');
+}
 
 // 24. River is terrain called RIVER (not a tile, not WATER)
 assert.deepStrictEqual([...G.RIVER].sort(), ['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);

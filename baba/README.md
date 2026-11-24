@@ -22,6 +22,13 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   mid-game (undoable with Z): enabling spawns the figure as close as possible
   to its home corner (corner if free, else closest free cell); disabling removes
   the figure and that character's placed property tiles.
+- **Printed tiles (exactly 2 players):** permanent, unmovable tiles in the
+  margin around the board — top-middle [P2-noun][IS P2], left-middle [P1-noun]
+  over [IS P1], bottom-middle [IS P1], right-middle [IS P2]. They can't be
+  interacted with otherwise, but board tiles pointing at them (or the printed
+  nouns pointing into the board) form rules — e.g. place `IS FAST` right of the
+  left-middle P1 noun for `SAMI IS FAST`. With 1 or 3+ players there are no
+  printed tiles and the `IS Pn` defaults are implicit.
 - **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
   level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
@@ -42,10 +49,18 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **CURIOUS** (board-game keyword, design diary #3): when **anything enters** a
   CURIOUS thing's row or column — i.e. arrives in a cell of that line from outside
   it (placing counts as entering from off-board) — it moves **1 space toward it**.
-  Moving along the same row/column does not trigger it. Effects cascade (a push
-  can make a rock move, which makes another curious thing move, …). One
-  `IS CURIOUS` tile exists and is in the supply here. FAST is not included for
-  now (no character noun tiles exist to write e.g. `SAMI IS FAST`).
+  Moving along the same row/column does not trigger it; every CURIOUS thing in the
+  entered line reacts. Effects cascade (a push can make a rock move, which makes
+  another curious thing move, …). One `IS CURIOUS` tile exists and is in the supply.
+- **FAST** (board-game keyword, diary #3): on its MOVE, a FAST thing slides **as
+  many spaces as you like in a single direction** (until blocked). Because the
+  printed P1/P2 nouns exist (2-player games), `IS FAST` placed next to one does
+  something now — the `IS FAST` tile is in the supply. Controls: press a
+  direction, then tap a highlighted square as the destination (swiping is ignored
+  for FAST to stay unambiguous); otherwise swiping moves one space.
+- **Choosing which YOU moves:** when several things are YOU, you must pick one
+  (tap it or Tab) before moving; only one YOU thing sharing a space with a WIN
+  object is needed to win.
 - **Win:** when an object that is YOU shares a space with a different object
   that is WIN, the YOU object's controller wins. Word tiles never carry
   properties — touching the word "FLAG" does not win; you must touch the actual

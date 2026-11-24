@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>BABA VS KEKE — board game rules</title>
 <style>
-  :root { --cell: min(64px, 16.5vw); }
+  :root { --cell: min(56px, 12vw); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { overscroll-behavior: none; }
   body {
@@ -38,6 +38,7 @@
     border-radius: 4px;
     touch-action: manipulation;
   }
+  .cell.margin { background: #0a0d1a; }
   .cell.water { background: radial-gradient(circle at 50% 40%, #2a6ea6 0%, #1d4e79 70%); }
   .cell.target { background: #1e3a2a; outline: 2px dashed #2ecc71; cursor: pointer; }
   .cell.sel { outline: 3px solid #f1c40f; }
@@ -56,6 +57,8 @@
   .word.prop-win { background: #f1c40f; color: #4a3800; border-radius: 8px; }
   .word.prop-you { background: #2ecc71; color: #06281a; border-radius: 8px; }
   .word.prop-curious { background: #16a085; color: #fff; border-radius: 8px; }
+  .word.prop-fast { background: #e67e22; color: #fff; border-radius: 8px; }
+  .word.fixed { outline: 2px dashed #8b93c9; opacity: .9; }
   .word.own0 { outline: 2px solid #ff6b9d; }
   .word.own1 { outline: 2px solid #4dabf7; }
   #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -99,6 +102,7 @@
   .tile.prop-win { background: #f1c40f; color: #4a3800; }
   .tile.prop-you { background: #2ecc71; color: #06281a; }
   .tile.prop-curious { background: #16a085; color: #fff; }
+  .tile.prop-fast { background: #e67e22; color: #fff; }
   .tile.picked { outline: 3px solid #fff; }
   #overlay {
     position: absolute; inset: 0;
@@ -202,9 +206,13 @@
       by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same
       game</b> — active players become P1, P2, … in the order listed, and new ones spawn as close to
       their corner as possible. The blue river is <b>RIVER</b> terrain (not a tile) — later rules will
-      interact with it. <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column (from
-      outside it), it moves 1 space toward them — effects cascade (push a tile → a rock moves → …).
-      One CURIOUS tile exists, so at most one noun is curious.
+      interact with it. With exactly 2 players, permanent tiles sit in the margin: the P2 noun + IS P2
+      on top, the P1 noun over IS P1 on the left, IS P1 below, IS P2 on the right — you can place
+      properties next to the printed nouns (e.g. IS FAST right of the P1 noun) to rule them.
+      <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column (from outside it), it moves
+      1 space toward them — effects cascade. <b>FAST</b>: press a direction, then tap a highlighted
+      square to slide there (swiping is ignored for FAST). If several things are YOU, tap one (or Tab)
+      to choose which to move. Only one YOU thing sharing a space with WIN is needed to win.
     </div>
   </div>
 </div>
