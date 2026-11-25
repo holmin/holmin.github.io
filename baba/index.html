@@ -147,7 +147,12 @@
     touch-action: manipulation; user-select: none; -webkit-user-select: none;
   }
   .btns button:disabled { opacity: .4; cursor: default; }
-  #players { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; }
+  #players { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #8b93c9; }
+  #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; }
+  #level {
+    background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170; border-radius: 8px;
+    padding: 6px; font-size: 12px; font-weight: 700; max-width: 100%;
+  }
   #players button {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170;
     border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
@@ -207,6 +212,7 @@
       <button id="btn-newgame" title="R">↺ new game (R)</button>
       <button id="btn-newscenario" title="N">⇢ new scenario (N)</button>
     </div>
+    <div id="levelrow"><span>level:</span><select id="level"></select></div>
     <h2>Rules</h2>
     <ul id="rules"></ul>
     <h2>Log</h2>
@@ -228,6 +234,7 @@
       Walk by tapping a <span style="color:#2ecc71">green dashed-outline</span> cell (if your thing is FAST, all squares it can
       slide to are highlighted); placing a tile shows <span style="color:#f1c40f">gold dashed-outline</span> cells instead. The outline never
       changes the cell background, so the river stays visible. Swipe/D-pad/arrows/WASD also still work.
+      The <b>level</b> dropdown picks which TWO rule tiles are in the supply (per the rulebook); <b>ALL RULES (developer)</b> at the bottom is preselected for now.
       <b>Challenge (C):</b> the next player gets 10 actions to win or you win. If you cannot take your
       actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
       by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same
@@ -244,6 +251,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=7"></script>
+<script src="game.js?v=8"></script>
 </body>
 </html>

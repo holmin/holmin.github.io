@@ -542,4 +542,19 @@ G.ensureParsed(s);
 assert.ok(G.isWin(s, s.entities.find(e => e.id === 900)), 'but the word tiles ARE win under TEXT IS WIN');
 console.log('ok 33: TEXT noun (TEXT IS PLAYER 1 -> word tiles movable; TEXT IS WIN works)');
 
+// 34. Levels: each preset supplies only its TWO rule tiles on top of the base tiles; developer option is last + default
+assert.strictEqual(G.LEVELS[G.LEVELS.length - 1].id, 'dev', 'developer option is at the bottom');
+s = G.createGame(undefined, undefined, 'fast-curious');
+assert.strictEqual(s.level, 'fast-curious');
+assert.strictEqual(s.supply.length, 10, 'base 8 + 2 rule tiles');
+assert.ok(s.supply.some(t => t.prop === 'FAST') && s.supply.some(t => t.prop === 'CURIOUS'));
+assert.ok(!s.supply.some(t => t.prop === 'STOP') && !s.supply.some(t => t.prop === 'DEFEAT'));
+assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'base nouns always present');
+assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 2);
+s = G.createGame();
+assert.strictEqual(s.level, 'dev', 'developer level preselected by default');
+assert.strictEqual(s.supply.length, 18, 'developer level has all rules');
+assert.strictEqual(G.LEVELS.filter(l => l.props !== 'ALL').every(l => l.props.length === 2), true, 'every level preset has exactly two rules');
+console.log('ok 34: level presets (two rules each) + ALL RULES developer option last & default');
+
 console.log('\nAll engine tests passed.');

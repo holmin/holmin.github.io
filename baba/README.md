@@ -34,10 +34,13 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   pointing at them (or the printed nouns pointing into the board) form rules
   — e.g. place `IS FAST` right of the left-middle PLAYER-1 noun for `SAMI IS FAST`.
   The printed tiles have no dashed border.
-- **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
-  level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`, 1× `IS CURIOUS`,
-  1× `IS FAST`, 1× each of `IS STOP`, `IS SINK`, `IS MELT`, `IS HOT`, `IS OPEN`,
-  `IS SHUT`, `IS DEFEAT`, `IS WEAK`, and 1× each of the `RIVER` and `TEXT` nouns.
+- **Levels:** per the rulebook each level brings in only **two rule tiles** on
+  top of the base tiles (2× `IS WIN`, 2× `ROCK`, 2× `FLAG`, `RIVER`, `TEXT`).
+  The **level dropdown** offers such two-rule presets (e.g. FAST + CURIOUS,
+  MELT + HOT, OPEN + SHUT, …); the last entry, **ALL RULES (developer)**
+  (all of `IS CURIOUS`, `IS FAST`, `IS STOP`, `IS SINK`, `IS MELT`, `IS HOT`,
+  `IS OPEN`, `IS SHUT`, `IS DEFEAT`, `IS WEAK`), is preselected for now.
+  Changing the level starts a new game with that level's tiles.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
 - **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —

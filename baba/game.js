@@ -25,6 +25,28 @@ const RIVER = new Set(['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '
 const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0], [2, H - 1]];
 function isRiverCell(x, y) { return RIVER.has(x + ',' + y); }
 function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
+
+// Levels (PDF: each level brings in only TWO rule/property tiles on top of the
+// base tiles — flag/rock/win + RIVER/TEXT nouns). The developer option at the
+// BOTTOM of the dropdown has all of them and is preselected for now.
+const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WEAK'];
+const LEVELS = [
+  { id: 'fast-curious', name: 'FAST + CURIOUS', props: ['FAST', 'CURIOUS'] },
+  { id: 'stop-weak', name: 'STOP + WEAK', props: ['STOP', 'WEAK'] },
+  { id: 'sink-defeat', name: 'SINK + DEFEAT', props: ['SINK', 'DEFEAT'] },
+  { id: 'melt-hot', name: 'MELT + HOT', props: ['MELT', 'HOT'] },
+  { id: 'open-shut', name: 'OPEN + SHUT', props: ['OPEN', 'SHUT'] },
+  { id: 'stop-sink', name: 'STOP + SINK', props: ['STOP', 'SINK'] },
+  { id: 'fast-stop', name: 'FAST + STOP', props: ['FAST', 'STOP'] },
+  { id: 'defeat-weak', name: 'DEFEAT + WEAK', props: ['DEFEAT', 'WEAK'] },
+  { id: 'dev', name: 'ALL RULES (developer)', props: 'ALL' },
+];
+function supplyFor(levelId) {
+  const lvl = LEVELS.find(l => l.id === levelId) || LEVELS[LEVELS.length - 1];
+  const head = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'ROCK' }, { noun: 'FLAG' }];
+  const props = lvl.props === 'ALL' ? ALL_PROPS : lvl.props;
+  return head.concat(props.map(p => ({ prop: p })), [{ noun: 'RIVER' }, { noun: 'TEXT' }]);
+}
 function activeChars(S) {
   const out = [];
   for (let i = 0; i < CHARACTERS.length; i++) if (S.enabled[i]) out.push(i);
@@ -47,7 +69,8 @@ function firstFreeCell(entities, nearX, nearY) {
   return [free[0][0], free[0][1]];
 }
 
-function createGame(enabled, scenario) {
+function createGame(enabled, scenario, levelId) {
+  levelId = levelId || 'dev';
   enabled = (enabled && enabled.length === CHARACTERS.length) ? enabled.slice() : DEFAULT_ENABLED.slice();
   const numPlayers = enabled.filter(Boolean).length;
   nextId = 1;
@@ -71,17 +94,9 @@ function createGame(enabled, scenario) {
     const [fx, fy] = firstFreeCell(entities, cx, cy);
     entities.push(obj(CHARACTERS[ci].noun, fx, fy));
   });
-  const supply = [
-    { prop: 'WIN' }, { prop: 'WIN' },
-    { noun: 'ROCK' }, { noun: 'FLAG' },
-    { noun: 'ROCK' }, { noun: 'FLAG' },
-    { prop: 'CURIOUS' }, { prop: 'FAST' },
-    { prop: 'STOP' }, { prop: 'SINK' }, { prop: 'MELT' }, { prop: 'HOT' },
-    { prop: 'OPEN' }, { prop: 'SHUT' }, { prop: 'DEFEAT' }, { prop: 'WEAK' },
-    { noun: 'RIVER' }, { noun: 'TEXT' },
-  ];
+  const supply = supplyFor(levelId);
   const S = {
-    entities, supply, numPlayers, enabled,
+    entities, supply, numPlayers, enabled, level: levelId,
     turn: 0, gameTurn: 0, actionsLeft: 1,
     challenge: null, over: null, scenarioOver: false,
     scenario,
@@ -124,7 +139,7 @@ function syncFixedTiles(S) {
   ensureParsed(S);
 }
 
-function newScenario(prev, enabled) {
+function newScenario(prev, enabled, levelId) {
   enabled = (enabled && enabled.length === CHARACTERS.length) ? enabled : (prev && prev.enabled ? prev.enabled.slice() : DEFAULT_ENABLED.slice());
   const numPlayers = enabled.filter(Boolean).length;
   const sc = {
@@ -138,7 +153,7 @@ function newScenario(prev, enabled) {
   };
   if (prev) prev.worldPoints.forEach((v, i) => { if (i < numPlayers) sc.worldPoints[i] = v; });
   sc.enabled = enabled.slice();
-  return createGame(enabled, sc);
+  return createGame(enabled, sc, levelId);
 }
 
 // Toggle a character on/off in the LIVE game (undoable). Active players are
@@ -253,7 +268,7 @@ function snapshot(S) {
     actionsLeft: S.actionsLeft, challenge: S.challenge, over: S.over,
     scenarioOver: S.scenarioOver, scenario: S.scenario, numPlayers: S.numPlayers, enabled: S.enabled,
     selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
-    river: Array.from(S.river || RIVER),
+    river: Array.from(S.river || RIVER), level: S.level,
   });
 }
 
@@ -657,7 +672,7 @@ if (typeof module !== 'undefined' && module.exports) {
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious, fastMoveTo, fastReach, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
-    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED,
+    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
@@ -665,7 +680,8 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof document !== 'undefined') initUI();
 
 function initUI() {
-  let S = createGame();
+  let levelId = 'dev'; // developer option preselected (it is last in the dropdown)
+  let S = createGame(undefined, undefined, levelId);
   let pullOn = false;
   const board = document.getElementById('board');
   const EXT = 7; // 5x5 board + 1-cell margin ring with the permanent printed tiles
@@ -882,6 +898,7 @@ function initUI() {
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);
     });
+    document.getElementById('level').value = S.level || 'dev';
 
     const ov = document.getElementById('overlay');
     if (S.over || S.scenarioOver) {
@@ -920,12 +937,12 @@ function initUI() {
   window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyR') {
-      S = S.scenarioOver ? newScenario(S.scenario, S.enabled) : createGame(S.enabled, S.scenario);
+      S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
       render();
       return;
     }
     if (e.code === 'KeyN') {
-      S = newScenario(S.scenario, S.enabled);
+      S = newScenario(S.scenario, S.enabled, levelId);
       render();
       return;
     }
@@ -974,10 +991,22 @@ function initUI() {
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
   document.getElementById('btn-clock').addEventListener('click', () => { spendClock(S, S.turn); render(); });
   document.getElementById('btn-newgame').addEventListener('click', () => {
-    S = S.scenarioOver ? newScenario(S.scenario, S.enabled) : createGame(S.enabled, S.scenario);
+    S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
     render();
   });
-  document.getElementById('btn-newscenario').addEventListener('click', () => { S = newScenario(S.scenario, S.enabled); render(); });
+  document.getElementById('btn-newscenario').addEventListener('click', () => { S = newScenario(S.scenario, S.enabled, levelId); render(); });
+  const levelSel = document.getElementById('level');
+  LEVELS.forEach(l => {
+    const o = document.createElement('option');
+    o.value = l.id; o.textContent = l.name;
+    levelSel.appendChild(o);
+  });
+  levelSel.value = levelId;
+  levelSel.addEventListener('change', () => {
+    levelId = levelSel.value;
+    S = createGame(S.enabled, S.scenario, levelId); // changing level starts a new game with that level's tiles
+    render();
+  });
   const pwrap = document.getElementById('players');
   CHARACTERS.forEach((c, i) => {
     const b = document.createElement('button');
