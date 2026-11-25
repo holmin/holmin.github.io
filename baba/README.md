@@ -18,10 +18,10 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   (4,4), then the nearest free cell. Default rules
   (shown as `(default)`, listed below any formed rules): `ALL IS PUSH`, plus one
   `IS Pn` per active character — permanent.
-- **Characters:** Sami 🐻‍❄️ and Erik 🦙 are on by default; Gaba 🐴, Ebba 🦦 and
-  Zaba 🐸 can be toggled on/off (1–5 players; disabling all is allowed while
+- **Characters:** Sami 🐻‍❄️ and Aas 🦙 are on by default; Gaba 🐴, Ebba 🦦,
+  Zaba 🐸 and Minne 🐼 can be toggled on/off (1–6 players; disabling all is allowed while
   selecting). Active players are always **P1, P2, … in the order listed**, so
-  toggling re-ranks them (e.g. disable Sami and Erik becomes P1). Toggling works
+  toggling re-ranks them (e.g. disable Sami and Aas becomes P1). Toggling works
   mid-game (undoable with Z): enabling spawns the figure as close as possible
   to its home corner (corner if free, else closest free cell); disabling removes
   the figure and that character's placed property tiles.
@@ -33,7 +33,9 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   pointing at them (or the printed nouns pointing into the board) form rules
   — e.g. place `IS FAST` right of the left-middle P1 noun for `SAMI IS FAST`.
 - **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
-  level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`.
+  level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`, 1× `IS CURIOUS`,
+  1× `IS FAST`, 1× each of `IS STOP`, `IS SINK`, `IS MELT`, `IS HOT`, `IS OPEN`,
+  `IS SHUT`, `IS DEFEAT`, `IS WEAK`, and 1× `RIVER` (noun).
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
 - **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —
@@ -43,7 +45,7 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   you left is dragged into the vacated cell. A YOU thing may enter the cell of a
   WIN thing (and vice versa) — they stack.
 - **PLACE:** place a level tile from the supply into an empty cell orthogonally
-  adjacent to one of your YOU things (click tile or keys 1–6, then click a
+  adjacent to one of your YOU things (click tile or keys 1–9, 0, q–o, then click a
   green cell).
 - **Rules:** a noun tile forms a rule with a property tile directly to its
   right or below it (its arrows). A noun can point at two properties; a
@@ -61,6 +63,22 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   something now — the `IS FAST` tile is in the supply. Controls: press a
   direction, then tap a highlighted square as the destination (swiping is ignored
   for FAST to stay unambiguous); otherwise swiping moves one space.
+- **Videogame properties** (one tile each in the supply, videogame-faithful):
+  - `STOP` — cannot be entered, pushed or pulled (a YOU thing that is STOP can
+    still move itself voluntarily).
+  - `SHUT` — like STOP, but an `OPEN` thing sharing its cell opens it (then it
+    can be pushed); `OPEN` things can be entered/stacked and are not pushed.
+  - `WEAK` — destroyed when pushed or pulled (the push/pull continues through
+    its cell).
+  - `SINK` — destroyed when it shares a cell with anything else.
+  - `HOT` + `MELT` — MELT things sharing a cell with a HOT thing are destroyed;
+    a thing that is both HOT and MELT melts itself.
+  - `DEFEAT` — destroys YOU things sharing its cell; a player left with no YOU
+    things loses.
+  - `RIVER` is a noun: the river terrain cells count as RIVER, so e.g.
+    `RIVER IS WIN` makes standing on the river win, `RIVER IS DEFEAT` drowns a
+    YOU thing on the river, `RIVER IS SINK` sinks river cells that have an
+    object on them.
 - **Choosing which YOU moves:** when several things are YOU, you must pick one
   (tap it or Tab) before moving; only one YOU thing sharing a space with a WIN
   object is needed to win.
@@ -81,6 +99,9 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 House rule not enforced digitally: the board must look different at the end of
 your turn than at its start (no no-op / exact-reverse turns).
 
+The margin ring around the 5×5 board (where the permanent printed tiles sit)
+has no background color and no gridlines — only the 5×5 grid itself is drawn.
+
 Digital extra: **undo** (U / ↩ button) reverts the last action — move, place,
 challenge, clock spend — including the game/scenario result if the undone action
 ended the game. History is capped at 500 actions per game.
@@ -91,9 +112,9 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
 
 - Move: swipe the board, on-screen D-pad, arrow keys, or WASD; PULL toggle button or
   Shift = also pull; Tab or tap a thing to select which of your YOU things moves
-- Place: tap a supply tile (or keys 1–6), then tap a highlighted cell; Esc cancels
+- Place: tap a supply tile (or keys 1–9, 0, q–o), then tap a highlighted cell; Esc cancels
 - C = challenge · R = new game · N = new scenario · **Z = undo last action**
-- 👥 buttons toggle characters on/off in the current game (1–5 players) — undoable with Z.
+- 👥 buttons toggle characters on/off in the current game (1–6 players) — undoable with Z.
   Player names show with their sprite in the buttons, rules list and log (not on the board/tiles);
   formed (non-default) rules are bold and listed above the defaults
 

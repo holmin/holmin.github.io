@@ -22,23 +22,22 @@
   #board-wrap { position: relative; }
   #board {
     display: grid;
-    gap: 2px;
-    background: #232842;
-    border: 2px solid #343b66;
-    border-radius: 8px;
-    padding: 2px;
+    gap: 0;
+    background: transparent;
     touch-action: none;
   }
   .cell {
     width: var(--cell); height: var(--cell);
     background: #3e7c3a;
+    border: 1px solid #2c5a2c;
     display: flex; flex-wrap: wrap;
     align-items: center; justify-content: center;
     overflow: hidden;
     border-radius: 4px;
     touch-action: manipulation;
   }
-  .cell.margin { background: #6b4a2b; }
+  /* outside the 5x5 grid: no color, no gridlines */
+  .cell.margin { background: transparent; border: none; }
   .cell.water { background: radial-gradient(circle at 50% 40%, #2a6ea6 0%, #1d4e79 70%); }
   .cell.target { background: #1e3a2a; outline: 2px dashed #2ecc71; cursor: pointer; }
   .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; }
@@ -59,6 +58,14 @@
   .word.prop-you { background: #2ecc71; color: #06281a; border-radius: 8px; }
   .word.prop-curious { background: #16a085; color: #fff; border-radius: 8px; }
   .word.prop-fast { background: #e67e22; color: #fff; border-radius: 8px; }
+  .word.prop-stop { background: #bdc3c7; color: #1a1a2e; border-radius: 8px; }
+  .word.prop-sink { background: #0984e3; color: #fff; border-radius: 8px; }
+  .word.prop-melt { background: #74b9ff; color: #1a1a2e; border-radius: 8px; }
+  .word.prop-hot { background: #d63031; color: #fff; border-radius: 8px; }
+  .word.prop-open { background: #55efc4; color: #06281a; border-radius: 8px; }
+  .word.prop-shut { background: #2d3436; color: #fff; border-radius: 8px; }
+  .word.prop-defeat { background: #6c5ce7; color: #fff; border-radius: 8px; }
+  .word.prop-weak { background: #fdcb6e; color: #4a3800; border-radius: 8px; }
   .word.fixed { outline: 2px dashed #8b93c9; opacity: .9; }
   .word.own0 { outline: 2px solid #ff6b9d; }
   .word.own1 { outline: 2px solid #4dabf7; }
@@ -104,6 +111,14 @@
   .tile.prop-you { background: #2ecc71; color: #06281a; }
   .tile.prop-curious { background: #16a085; color: #fff; }
   .tile.prop-fast { background: #e67e22; color: #fff; }
+  .tile.prop-stop { background: #bdc3c7; color: #1a1a2e; }
+  .tile.prop-sink { background: #0984e3; color: #fff; }
+  .tile.prop-melt { background: #74b9ff; color: #1a1a2e; }
+  .tile.prop-hot { background: #d63031; color: #fff; }
+  .tile.prop-open { background: #55efc4; color: #06281a; }
+  .tile.prop-shut { background: #2d3436; color: #fff; }
+  .tile.prop-defeat { background: #6c5ce7; color: #fff; }
+  .tile.prop-weak { background: #fdcb6e; color: #4a3800; }
   .tile.picked { outline: 3px solid #fff; }
   #overlay {
     position: absolute; inset: 0;
@@ -197,11 +212,15 @@
       Turns alternate; the very first turn has <b>1 action</b>, all later turns <b>2 actions</b>.
       An action is a <b>MOVE</b> (swipe the board / D-pad / arrows / WASD, PULL toggle or Shift = also
       pull) of one of your YOU things — tap a thing or Tab to select which — or a <b>PLACE</b> of a
-      level tile into an empty cell next to one of your YOU things (tap tile, then a green cell).
+      level tile into an empty cell next to one of your YOU things (tap tile or keys 1–9, 0, q–o, then a green cell).
       <b>ALL IS PUSH</b> — pushing shoves whole rows/columns of things along; only the board edge stops
       a push. PULL drags just one thing. A rule forms when a noun tile points right or down into a
       property tile. Defaults: <b>ALL IS PUSH</b> plus <b>IS Pn</b> for each enabled character
-      (🐻‍❄️ Sami = P1, 🦙 Erik = P2, …). <b>Win:</b> a YOUR thing (P1's, P2's, …) shares a space with a WIN thing.
+      (🐻‍❄️ Sami = P1, 🦙 Aas = P2, …). Videogame property tiles in the supply: <b>STOP</b> (blocks entry
+      and can't be pushed/pulled), <b>SHUT</b> (same, but an <b>OPEN</b> thing touching it opens it; OPEN things
+      can be entered), <b>WEAK</b> (destroyed when pushed/pulled), <b>SINK</b> (destroyed when sharing a cell),
+      <b>HOT</b>+<b>MELT</b> (melt things touching hot things), <b>DEFEAT</b> (destroys YOU things it touches),
+      plus a <b>RIVER</b> noun (the river cells count as RIVER). <b>Win:</b> a YOUR thing (P1's, P2's, …) shares a space with a WIN thing.
       <b>Challenge (C):</b> the next player gets 10 actions to win or you win. If you cannot take your
       actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
       by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same

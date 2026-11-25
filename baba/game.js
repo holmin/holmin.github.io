@@ -1,16 +1,17 @@
 'use strict';
 
 const W = 5, H = 5, CELL = 64;
-const NOUNS = ['SAMI', 'ERIK', 'GABA', 'EBBA', 'ZABA', 'ROCK', 'FLAG', 'RIVER'];
-const EMOJI = { SAMI: '🐻‍❄️', ERIK: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊' };
+const NOUNS = ['SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER'];
+const EMOJI = { SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊' };
 const CHARACTERS = [
   { noun: 'SAMI', name: 'Sami', emoji: '🐻‍❄️', color: '#ff6b9d' },
-  { noun: 'ERIK', name: 'Erik', emoji: '🦙', color: '#4dabf7' },
+  { noun: 'AAS', name: 'Aas', emoji: '🦙', color: '#4dabf7' },
   { noun: 'GABA', name: 'Gaba', emoji: '🐴', color: '#b388ff' },
   { noun: 'EBBA', name: 'Ebba', emoji: '🦦', color: '#ffd166' },
   { noun: 'ZABA', name: 'Zaba', emoji: '🐸', color: '#7bed9f' },
+  { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
-const DEFAULT_ENABLED = [true, true, false, false, false];
+const DEFAULT_ENABLED = [true, true, false, false, false, false];
 const PLAYER_NOUNS = CHARACTERS.map(c => c.noun);
 const PLAYER_NAMES = CHARACTERS.map(c => c.name);
 const PLAYER_EMOJI = CHARACTERS.map(c => c.emoji);
@@ -19,8 +20,9 @@ const PLAYER_COLORS = CHARACTERS.map(c => c.color);
 // (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5)  ->  stored 0-indexed as (x=col-1, y=row-1).
 // The river is called RIVER (noun 'RIVER'); it is terrain, not a tile — future rules will interact with it.
 const RIVER = new Set(['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
-const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0]]; // home spots for the 5 characters
+const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0], [2, H - 1]]; // home spots for the 6 characters
 function isRiverCell(x, y) { return RIVER.has(x + ',' + y); }
+function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 function activeChars(S) {
   const out = [];
   for (let i = 0; i < CHARACTERS.length; i++) if (S.enabled[i]) out.push(i);
@@ -71,6 +73,9 @@ function createGame(enabled, scenario) {
     { noun: 'ROCK' }, { noun: 'FLAG' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
     { prop: 'CURIOUS' }, { prop: 'FAST' },
+    { prop: 'STOP' }, { prop: 'SINK' }, { prop: 'MELT' }, { prop: 'HOT' },
+    { prop: 'OPEN' }, { prop: 'SHUT' }, { prop: 'DEFEAT' }, { prop: 'WEAK' },
+    { noun: 'RIVER' },
   ];
   const S = {
     entities, supply, numPlayers, enabled,
@@ -79,6 +84,7 @@ function createGame(enabled, scenario) {
     scenario,
     selectedId: null, placeIdx: null,
     log: [], rules: [], _prevRules: [], history: [],
+    river: new Set(RIVER),
   };
   syncFixedTiles(S);
   ensureParsed(S);
@@ -241,6 +247,7 @@ function snapshot(S) {
     actionsLeft: S.actionsLeft, challenge: S.challenge, over: S.over,
     scenarioOver: S.scenarioOver, scenario: S.scenario, numPlayers: S.numPlayers, enabled: S.enabled,
     selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
+    river: Array.from(S.river || RIVER),
   });
 }
 
@@ -253,6 +260,7 @@ function undo(S) {
   if (!S.history || S.history.length === 0) return false;
   const snap = JSON.parse(S.history.shift());
   Object.assign(S, snap);
+  if (Array.isArray(S.river)) S.river = new Set(S.river);
   ensureParsed(S);
   log(S, '↩ undone');
   return true;
@@ -278,6 +286,39 @@ function end(S, winner, reason) {
   log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (P${winner + 1}) ${reason}`);
 }
 
+// Videogame destruction rules, applied after every action (and after CURIOUS
+// cascades): SINK objects are destroyed when they share a cell with anything;
+// MELT objects are destroyed when they touch a HOT object (an object that is
+// both HOT and MELT melts itself); DEFEAT objects destroy YOU objects that
+// share their cell. RIVER is a noun: river cells count as RIVER, so
+// RIVER IS WIN / RIVER IS DEFEAT / RIVER IS SINK affect the terrain itself.
+function resolveDestructive(S) {
+  for (let iter = 0; iter < 10; iter++) {
+    ensureParsed(S);
+    const riverP = S._propMap['RIVER'] || {};
+    const dead = new Set();
+    const riverDead = [];
+    for (const e of S.entities) {
+      if (e.kind !== 'object') continue;
+      const p = propsOf(S, e);
+      const cell = entitiesAt(S, e.x, e.y);
+      if (p.SINK && cell.length > 1) dead.add(e.id);
+      if (p.MELT && (p.HOT || cell.some(o => o !== e && propsOf(S, o).HOT))) dead.add(e.id);
+      if (isYou(S, e) && cell.some(o => o !== e && propsOf(S, o).DEFEAT)) dead.add(e.id);
+      if (isYou(S, e) && riverP.DEFEAT && riverAt(S, e.x, e.y)) dead.add(e.id);
+    }
+    if (riverP.SINK) {
+      for (const k of S.river || []) {
+        const [x, y] = k.split(',').map(Number);
+        if (entitiesAt(S, x, y).length > 0) riverDead.push(k);
+      }
+    }
+    if (!dead.size && !riverDead.length) return;
+    S.entities = S.entities.filter(e => !dead.has(e.id));
+    if (S.river) for (const k of riverDead) S.river.delete(k);
+  }
+}
+
 function resolve(S, actor) {
   ensureParsed(S);
   const rl = ruleList(S);
@@ -285,44 +326,91 @@ function resolve(S, actor) {
   for (const r of S._prevRules) if (!rl.includes(r)) log(S, '➖ ' + r);
   S._prevRules = rl;
 
+  resolveDestructive(S);
+  ensureParsed(S);
+
+  const riverP = S._propMap['RIVER'] || {};
   const winners = new Set();
   for (const e of S.entities) {
     if (!isYou(S, e)) continue;
+    let won = !!(riverP.WIN && riverAt(S, e.x, e.y));
     for (const o of entitiesAt(S, e.x, e.y)) {
-      if (o !== e && isWin(S, o)) winners.add(youOwner(S, e));
+      if (o !== e && isWin(S, o)) won = true;
     }
+    if (won) winners.add(youOwner(S, e));
   }
   if (winners.size === 2) end(S, actor, 'both YOU on WIN — last action wins');
   else if (winners.size === 1) end(S, [...winners][0], 'YOU shared a space with WIN');
+
+  // a player whose YOU things were all destroyed loses (videogame DEFEAT/SINK)
+  if (!S.over && S.numPlayers >= 2) {
+    const alive = [];
+    for (let r = 0; r < S.numPlayers; r++) if (yourThings(S, r).length) alive.push(r);
+    if (alive.length === 0) end(S, actor, 'all YOU things destroyed — last action wins');
+    else if (alive.length < S.numPlayers && S.numPlayers === 2) {
+      const loser = 1 - alive[0];
+      end(S, alive[0], `${charAtRank(S, loser).emoji} ${charAtRank(S, loser).name} has no YOU things left`);
+    }
+  }
 }
 
 function stackable(S, m, o) {
   return (isYou(S, m) && isWin(S, o)) || (isWin(S, m) && isYou(S, o));
 }
 
+// OPEN opens SHUT (videogame-faithful): a SHUT thing is "open" while an OPEN
+// thing shares its cell.
+function openedInCell(S, o) {
+  return entitiesAt(S, o.x, o.y).some(x => x !== o && propsOf(S, x).OPEN);
+}
+function shutBlocked(S, o, entrant) {
+  return propsOf(S, o).SHUT && !openedInCell(S, o) && !propsOf(S, entrant).OPEN;
+}
+
 // Chain push: everything in the path is pushed (ALL IS PUSH); the move only
-// fails if the chain runs into the edge of the board. A YOU mover may still
-// stack onto a WIN thing instead of pushing it.
-function gather(S, m, e, dx, dy, list) {
+// fails if the chain runs into the edge of the board or a STOP / shut thing.
+// A YOU mover may still stack onto a WIN thing instead of pushing it.
+// Videogame properties: STOP = immovable wall; OPEN = can be entered (not
+// pushed) and opens SHUT things it touches; WEAK = destroyed when pushed
+// (collected in `dead`, the chain passes through its cell).
+function gather(S, m, e, dx, dy, list, dead) {
   const tx = e.x + dx, ty = e.y + dy;
   if (tx < 0 || ty < 0 || tx >= W || ty >= H) return false;
-  const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o));
+  const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o) && !dead.has(o));
   for (const o of ents) {
+    const p = propsOf(S, o);
+    if (p.STOP) return false;
+    if (p.SHUT && !openedInCell(S, o)) {
+      if (propsOf(S, e).OPEN) continue; // an OPEN entrant stacks onto the shut thing, opening it
+      return false;
+    }
     if (stackable(S, m, o)) continue;
-    if (!gather(S, m, o, dx, dy, list)) return false;
+    if (p.OPEN) continue; // OPEN things are entered, not pushed
+    if (p.WEAK) {
+      if (!gather(S, m, o, dx, dy, list, dead)) return false;
+      dead.add(o);
+      continue;
+    }
+    if (!gather(S, m, o, dx, dy, list, dead)) return false;
   }
-  for (const o of ents) if (!stackable(S, m, o)) list.push(o);
+  for (const o of ents) {
+    const p = propsOf(S, o);
+    if (stackable(S, m, o) || p.OPEN || p.WEAK) continue;
+    if (p.SHUT && !openedInCell(S, o)) continue; // shut things are never pushed
+    list.push(o);
+  }
   return true;
 }
 
 function canMove(S, m, dx, dy) {
   if (dx === 0 && dy === 0) return false;
-  return gather(S, m, m, dx, dy, []);
+  return gather(S, m, m, dx, dy, [], new Set());
 }
 
 function doMove(S, m, dx, dy, pull) {
   const list = [];
-  if (!gather(S, m, m, dx, dy, list)) return false;
+  const dead = new Set();
+  if (!gather(S, m, m, dx, dy, list, dead)) return false;
   const ox = m.x, oy = m.y;
   const ev = [];
   if (S._entered) {
@@ -335,10 +423,15 @@ function doMove(S, m, dx, dy, pull) {
     const behind = entitiesAt(S, ox - dx, oy - dy);
     if (behind.length > 0) {
       const p = behind[0]; // pull only one thing
-      if (S._entered) ev.push({ id: p.id, fx: p.x, fy: p.y, tx: ox, ty: oy });
-      p.x = ox; p.y = oy;
+      const pp = propsOf(S, p);
+      if (pp.WEAK) dead.add(p); // WEAK breaks when pulled
+      else if (!pp.STOP && !(pp.SHUT && !openedInCell(S, p))) {
+        if (S._entered) ev.push({ id: p.id, fx: p.x, fy: p.y, tx: ox, ty: oy });
+        p.x = ox; p.y = oy;
+      }
     }
   }
+  if (dead.size) S.entities = S.entities.filter(e => !dead.has(e));
   if (S._entered) S._entered.push(...ev); // enter-events (for CURIOUS): from -> to
   return true;
 }
@@ -552,7 +645,8 @@ if (typeof module !== 'undefined' && module.exports) {
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
-    resolveCurious, fastMoveTo, fastReach, syncFixedTiles,
+    resolveCurious, fastMoveTo, fastReach, syncFixedTiles, resolveDestructive,
+    riverAt, openedInCell,
     RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
@@ -654,7 +748,7 @@ function initUI() {
       for (let rx = 0; rx < EXT; rx++) {
         const cell = cells[ry * EXT + rx];
         const x = rx - 1, y = ry - 1;
-        if (x >= 0 && y >= 0 && x < W && y < H && RIVER.has(x + ',' + y)) cell.classList.add('water');
+        if (x >= 0 && y >= 0 && x < W && y < H && riverAt(S, x, y)) cell.classList.add('water');
         if (x >= 0 && y >= 0 && x < W && y < H && targets.has(x + ',' + y)) cell.classList.add('target');
         const ents = byCell.get(rx + ',' + ry) || [];
         if (ents.length > 1) cell.classList.add('stack');
@@ -771,6 +865,9 @@ function initUI() {
     ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
     KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0],
   };
+  // supply tile hotkeys: 1-9, 0, then q e t y u i o
+  const TILEKEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0',
+    'KeyQ', 'KeyE', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO'];
 
   window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
@@ -801,9 +898,9 @@ function initUI() {
     }
     if (e.code === 'Escape') { S.placeIdx = null; S.fastDir = null; render(); return; }
     if (e.code === 'KeyC') { challenge(S, S.turn); render(); return; }
-    if (/^Digit[1-9]$/.test(e.code)) {
-      const i = Number(e.code.slice(5)) - 1;
-      if (i < S.supply.length) { S.placeIdx = S.placeIdx === i ? null : i; render(); }
+    const ti = TILEKEYS.indexOf(e.code);
+    if (ti >= 0) {
+      if (ti < S.supply.length) { S.placeIdx = S.placeIdx === ti ? null : ti; render(); }
       return;
     }
     const m = KEYMAP[e.code];
