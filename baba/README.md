@@ -140,6 +140,7 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
 ## Files
 
 - `index.html` — page, styling, sidebar
-- `game.js` — engine (pure logic, loadable in Node) + DOM UI; minimalistic
-  childish SVG sprites (`SPRITES`) for all characters and objects, Baba-Is-You vibe
+- `game.js` — engine (pure logic, loadable in Node) + DOM UI
+- `img/` — emoji graphics for all characters/objects (Twemoji SVGs, CC BY 4.0,
+  © Twitter, Inc.; shipped locally so no emoji font is needed on the device)
 - `test.js` — engine tests: `node test.js`

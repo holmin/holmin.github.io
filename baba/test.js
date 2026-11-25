@@ -598,17 +598,17 @@ assert.strictEqual(G.moversTo(s, 0, 1, 3).length, 0, 'diagonal cells are never w
 assert.strictEqual(G.moversTo(s, 0, 0, 4).length, 0, 'own YOU cell is not a walk target');
 console.log('ok 37: moversTo (unambiguous vs ambiguous walk targets)');
 
-// 38. sprites exist for every character and object, as distinct inline SVGs
-for (const c of G.CHARACTERS) assert.ok(G.SPRITES[c.noun], 'sprite for ' + c.noun);
-assert.ok(G.SPRITES.ROCK && G.SPRITES.FLAG, 'sprites for ROCK and FLAG');
-const seen = new Set();
-for (const k of Object.keys(G.SPRITES)) {
-  const svg = G.SPRITES[k]();
-  assert.ok(svg.startsWith('<svg') && svg.includes('</svg>'), 'sprite ' + k + ' is an svg');
-  assert.ok(!seen.has(svg), 'sprite ' + k + ' is visually distinct');
-  seen.add(svg);
+// 38. emoji graphics exist as local files for every character and object (no emoji-font dependency)
+const fs = require('fs'), path = require('path');
+for (const c of G.CHARACTERS) {
+  const p = path.join(__dirname, G.SPRITE_IMG[c.noun]);
+  assert.ok(G.SPRITE_IMG[c.noun] && fs.existsSync(p), 'image for ' + c.noun);
+  assert.ok(fs.readFileSync(p, 'utf8').startsWith('<svg'), c.noun + ' image is an svg');
 }
-console.log('ok 38: distinct minimalistic SVG sprites for all characters/objects');
+for (const k of ['ROCK', 'FLAG', 'RIVER', 'TEXT']) {
+  assert.ok(fs.existsSync(path.join(__dirname, G.SPRITE_IMG[k])), 'image for ' + k);
+}
+console.log('ok 38: local emoji graphics (Twemoji SVGs) for all characters/objects');
 
 // 39. a noun can be YOU for multiple players at once: ROCK IS PLAYER 1 + ROCK IS PLAYER 2
 s = G.createGame();

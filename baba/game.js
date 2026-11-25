@@ -12,78 +12,12 @@ const CHARACTERS = [
   { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
 const DEFAULT_ENABLED = [true, true, false, false, false, false];
-// Cute, childish, minimalistic sprites (Baba Is You vibe) as inline SVG — smooth
-// shapes with a thick ink outline, deliberately asymmetric so items read as
-// distinct at a glance.
-const SPRITE_INK = '#1b1b2f';
-const svgWrap = (inner) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${SPRITE_INK}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${inner}</svg>`;
-const dot = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${SPRITE_INK}" stroke="none"/>`;
-const SPRITES = {
-  SAMI: () => svgWrap(` // polar bear
-    <circle cx="7.4" cy="6" r="2.8" fill="#f4faff"/>
-    <circle cx="16.6" cy="5.2" r="2.2" fill="#f4faff"/>
-    <circle cx="7.4" cy="6" r="1.1" fill="#f3b8c8" stroke="none"/>
-    <ellipse cx="12" cy="14" rx="7" ry="6" fill="#f4faff"/>
-    ${dot(9.4, 13, 1)}${dot(14.9, 12.3, 0.9)}
-    <ellipse cx="12.2" cy="15.6" rx="1.3" ry="0.9" fill="${SPRITE_INK}" stroke="none"/>
-    <path d="M12.2 16.5 q0.2 1.4 -1.6 1.6" stroke-width="1.2"/>
-  `),
-  AAS: () => svgWrap(` // llama
-    <ellipse cx="11.5" cy="16" rx="6" ry="5" fill="#e8c07d"/>
-    <rect x="9.6" y="5" width="4.4" height="9.5" rx="2.2" fill="#e8c07d"/>
-    <ellipse cx="12" cy="5" rx="3.6" ry="2.8" fill="#e8c07d"/>
-    <ellipse cx="9.2" cy="2.4" rx="1" ry="1.9" fill="#e8c07d"/>
-    <ellipse cx="14.9" cy="2.9" rx="0.9" ry="1.4" fill="#e8c07d"/>
-    ${dot(10.7, 4.8, 0.8)}${dot(13.7, 4.6, 0.75)}
-    <ellipse cx="12" cy="6.5" rx="1.7" ry="1" fill="#f3d9a8" stroke="none"/>
-  `),
-  GABA: () => svgWrap(` // horse, head up to the right
-    <ellipse cx="10.5" cy="15" rx="6.5" ry="5" fill="#b5793a"/>
-    <circle cx="17.6" cy="8.6" r="3.1" fill="#b5793a"/>
-    <path d="M15.9 5.6 l0.8 -2.5 l1.5 2.1 Z" fill="#b5793a"/>
-    <path d="M18.4 5.9 l1 -2.1 l1.3 1.9 Z" fill="#b5793a"/>
-    <path d="M15.6 6.4 Q13 8.5 12.2 11.5" stroke="#6e4520" stroke-width="2"/>
-    ${dot(18.2, 8, 0.8)}
-    <ellipse cx="19.6" cy="10.4" rx="1.5" ry="1" fill="#d9a066" stroke="none"/>
-  `),
-  EBBA: () => svgWrap(` // otter with tail
-    <ellipse cx="11.5" cy="14.5" rx="7.5" ry="4.6" fill="#8a5a33"/>
-    <path d="M4.6 15.8 L1.6 19.6 L7.2 18.2 Z" fill="#8a5a33"/>
-    <circle cx="17.6" cy="11.4" r="3.4" fill="#8a5a33"/>
-    ${dot(18.7, 10.7, 0.8)}
-    <ellipse cx="19.9" cy="12.8" rx="1.4" ry="1" fill="#d9b38c" stroke="none"/>
-    <ellipse cx="11" cy="15.6" rx="4.6" ry="2.2" fill="#d9b38c" stroke="none"/>
-  `),
-  ZABA: () => svgWrap(` // frog, eyes on top
-    <ellipse cx="12" cy="15" rx="7" ry="5" fill="#6abe30"/>
-    <circle cx="8" cy="8" r="3" fill="#6abe30"/>
-    <circle cx="15.2" cy="7.4" r="2.5" fill="#6abe30"/>
-    <circle cx="8" cy="8" r="1.6" fill="#fff" stroke="none"/>
-    <circle cx="15.2" cy="7.4" r="1.3" fill="#fff" stroke="none"/>
-    ${dot(8.5, 8.2, 0.7)}${dot(14.9, 7.6, 0.6)}
-    <path d="M8 16.5 Q12 19.2 16 16" stroke-width="1.4"/>
-  `),
-  MINNE: () => svgWrap(` // panda
-    <circle cx="7" cy="5.8" r="2.6" fill="${SPRITE_INK}" stroke="none"/>
-    <circle cx="16.8" cy="5.2" r="2.2" fill="${SPRITE_INK}" stroke="none"/>
-    <ellipse cx="12" cy="14" rx="7" ry="6" fill="#ffffff"/>
-    <ellipse cx="9.3" cy="12.8" rx="1.9" ry="2.3" fill="${SPRITE_INK}" stroke="none" transform="rotate(-18 9.3 12.8)"/>
-    <ellipse cx="14.8" cy="12.2" rx="1.7" ry="2.1" fill="${SPRITE_INK}" stroke="none" transform="rotate(14 14.8 12.2)"/>
-    <circle cx="9.7" cy="12.9" r="0.7" fill="#fff" stroke="none"/>
-    <circle cx="14.5" cy="12.4" r="0.65" fill="#fff" stroke="none"/>
-    <ellipse cx="12" cy="15.9" rx="1.1" ry="0.8" fill="${SPRITE_INK}" stroke="none"/>
-  `),
-  ROCK: () => svgWrap(` // lopsided rock
-    <path d="M5 18.5 L4 11.5 L8 5.5 L15.5 4 L20 9.5 L19.5 16.5 L13 20 Z" fill="#8a93a0"/>
-    <path d="M8 5.5 L10.5 11 L9 15.5" stroke="#5a616b" stroke-width="1.2"/>
-    <path d="M15.5 4 L13.5 10 L17 13.5" stroke="#5a616b" stroke-width="1.2"/>
-  `),
-  FLAG: () => svgWrap(` // waving flag
-    <line x1="8" y1="3" x2="8" y2="20.5" stroke="#8a5a33" stroke-width="2.4"/>
-    <path d="M8 3.5 C11.5 2.5 14.5 4.5 19 3.5 L19 9.5 C14.5 10.5 11.5 8.5 8 9.5 Z" fill="#e0393e"/>
-    <ellipse cx="8" cy="21" rx="3" ry="1.1" fill="#8a5a33"/>
-  `),
+// Emoji graphics (Twemoji SVGs, CC BY 4.0 — see README) shipped locally in img/,
+// so the board does not depend on the device having an emoji font.
+const SPRITE_IMG = {
+  SAMI: 'img/sami.svg', AAS: 'img/aas.svg', GABA: 'img/gaba.svg', EBBA: 'img/ebba.svg',
+  ZABA: 'img/zaba.svg', MINNE: 'img/minne.svg', ROCK: 'img/rock.svg', FLAG: 'img/flag.svg',
+  RIVER: 'img/river.svg', TEXT: 'img/text.svg',
 };
 
 const PLAYER_NOUNS = CHARACTERS.map(c => c.noun);
@@ -771,7 +705,7 @@ if (typeof module !== 'undefined' && module.exports) {
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious, fastMoveTo, fastReach, moversTo, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
-    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS, SPRITES,
+    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS, SPRITE_IMG,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
@@ -797,8 +731,8 @@ function initUI() {
     }
   }
 
-  function spriteSVG(type) {
-    return (SPRITES[type] || SPRITES.ROCK)();
+  function spriteImg(type) {
+    return '<img class="spr" src="' + (SPRITE_IMG[type] || SPRITE_IMG.ROCK) + '" alt="' + type + '">';
   }
 
   function activeSelectable() {
@@ -965,7 +899,7 @@ function initUI() {
             sp.className = 'ent obj obj-' + e.type;
             const ch = CHARACTERS.find(c => c.noun === e.type);
             if (ch) { sp.style.background = ch.color + '44'; sp.style.borderRadius = '50%'; }
-            sp.innerHTML = spriteSVG(e.type);
+            sp.innerHTML = spriteImg(e.type);
           } else if (e.prop) {
             sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.owner !== undefined && e.owner !== null ? ' own' + e.owner : '') + (e.fixed ? ' fixed' : '');
             sp.textContent = e.label;
@@ -1160,7 +1094,7 @@ function initUI() {
   const pwrap = document.getElementById('players');
   CHARACTERS.forEach((c, i) => {
     const b = document.createElement('button');
-    b.insertAdjacentHTML('afterbegin', spriteSVG(c.noun));
+    b.insertAdjacentHTML('afterbegin', spriteImg(c.noun));
     b.appendChild(document.createTextNode(' ' + c.name));
     b.title = 'toggle PLAYER (active players become PLAYER 1, PLAYER 2, … in this order)';
     b.addEventListener('click', () => { setEnabled(S, i, !S.enabled[i]); render(); });
