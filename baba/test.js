@@ -598,16 +598,17 @@ assert.strictEqual(G.moversTo(s, 0, 1, 3).length, 0, 'diagonal cells are never w
 assert.strictEqual(G.moversTo(s, 0, 0, 4).length, 0, 'own YOU cell is not a walk target');
 console.log('ok 37: moversTo (unambiguous vs ambiguous walk targets)');
 
-// 38. pixel sprites exist for every character and object, and paint pixels
+// 38. sprites exist for every character and object, as distinct inline SVGs
 for (const c of G.CHARACTERS) assert.ok(G.SPRITES[c.noun], 'sprite for ' + c.noun);
 assert.ok(G.SPRITES.ROCK && G.SPRITES.FLAG, 'sprites for ROCK and FLAG');
+const seen = new Set();
 for (const k of Object.keys(G.SPRITES)) {
-  let painted = 0;
-  const mock = { fillStyle: null, fillRect: (x, y, w, h) => { painted += w * h; } };
-  G.SPRITES[k](mock);
-  assert.ok(painted > 20, 'sprite ' + k + ' paints pixels (' + painted + ')');
+  const svg = G.SPRITES[k]();
+  assert.ok(svg.startsWith('<svg') && svg.includes('</svg>'), 'sprite ' + k + ' is an svg');
+  assert.ok(!seen.has(svg), 'sprite ' + k + ' is visually distinct');
+  seen.add(svg);
 }
-console.log('ok 38: pixel sprites for all characters/objects');
+console.log('ok 38: distinct minimalistic SVG sprites for all characters/objects');
 
 // 39. a noun can be YOU for multiple players at once: ROCK IS PLAYER 1 + ROCK IS PLAYER 2
 s = G.createGame();

@@ -140,7 +140,6 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
 ## Files
 
 - `index.html` — page, styling, sidebar
-- `game.js` — engine (pure logic, loadable in Node) + DOM UI; pixel-art sprites
-  (`SPRITES`, drawn on 16×16 canvases, scaled with `image-rendering: pixelated`)
-  for all characters and objects, Baba-Is-You style
+- `game.js` — engine (pure logic, loadable in Node) + DOM UI; minimalistic
+  childish SVG sprites (`SPRITES`) for all characters and objects, Baba-Is-You vibe
 - `test.js` — engine tests: `node test.js`
