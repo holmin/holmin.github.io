@@ -14,12 +14,12 @@ assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4]);
 assert.deepStrictEqual([aas(s).x, aas(s).y], [4, 0]);
 assert.ok(rock(s, 0, 0) && rock(s, 4, 4));
 assert.deepStrictEqual(rulesOf(s), ['AAS IS PLAYER 2 (default)', 'ALL IS PUSH (default)', 'SAMI IS PLAYER 1 (default)']);
-assert.strictEqual(s.level, G.LEVELS[0].id, 'first level preset is the default');
-assert.strictEqual(s.supply.length, 10, 'default level = base tiles + its two rules (FAST + CURIOUS)');
-assert.ok(s.supply.some(t => t.prop === 'FAST') && s.supply.some(t => t.prop === 'CURIOUS'));
+assert.strictEqual(s.level, 'plain', 'PLAIN level is the default');
+assert.strictEqual(s.supply.length, 6, 'plain level = base tiles only');
 assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 2);
-assert.ok(s.supply.some(t => t.noun === 'RIVER'), 'one RIVER noun tile');
-assert.ok(s.supply.some(t => t.noun === 'TEXT'), 'one TEXT noun tile');
+assert.ok(s.supply.some(t => t.noun === 'ROCK') && s.supply.some(t => t.noun === 'FLAG'));
+assert.ok(!s.supply.some(t => t.prop === 'FAST' || t.prop === 'CURIOUS'), 'no FAST/CURIOUS in plain');
+assert.ok(!s.supply.some(t => t.noun === 'RIVER' || t.noun === 'TEXT'), 'no RIVER/TEXT in plain');
 assert.strictEqual(s.numPlayers, 2);
 console.log('ok 1: setup + default rules');
 
@@ -304,7 +304,7 @@ console.log('ok 23b: all curious objects in the entered line move, not just one'
 // 23c. Permanent margin tiles exist with exactly 2 players, produce the default P-rules once
 const fixed = s => s.entities.filter(e => e.fixed);
 {
-  const g = G.createGame();
+  const g = G.createGame(undefined, undefined, 'dev');
   assert.strictEqual(fixed(g).length, 6, 'six printed tiles in the margin');
   const coords = fixed(g).map(e => e.x + ',' + e.y).sort();
   assert.deepStrictEqual(coords, ['-1,2', '-1,3', '2,-1', '2,5', '3,-1', '5,2']);
@@ -339,7 +339,7 @@ const fixed = s => s.entities.filter(e => e.fixed);
 }
 // FAST with explicit destination square
 {
-  const g = G.createGame();
+  const g = G.createGame(undefined, undefined, 'dev');
   const fastIdx = g.supply.findIndex(t => t.prop === 'FAST');
   G.doPlace(g, 0, fastIdx, 0, 2); // right of printed SAMI noun (-1,2) -> SAMI IS FAST
   G.ensureParsed(g);
@@ -541,24 +541,25 @@ G.ensureParsed(s);
 assert.ok(G.isWin(s, s.entities.find(e => e.id === 900)), 'but the word tiles ARE win under TEXT IS WIN');
 console.log('ok 33: TEXT noun (TEXT IS PLAYER 1 -> word tiles movable; TEXT IS WIN works)');
 
-// 34. Levels: each preset supplies only its TWO rule tiles on top of the base tiles; developer option is last + default
+// 34. Levels: plain default (base only), two-rule presets, developer option last with all rules
+assert.strictEqual(G.LEVELS[0].id, 'plain', 'plain level is first/default');
 assert.strictEqual(G.LEVELS[G.LEVELS.length - 1].id, 'dev', 'developer option is at the bottom');
+s = G.createGame();
+assert.strictEqual(s.level, 'plain');
+assert.strictEqual(s.supply.length, 6);
+assert.ok(!s.supply.some(t => t.prop === 'FAST' || t.prop === 'CURIOUS') && !s.supply.some(t => t.noun === 'TEXT' || t.noun === 'RIVER'));
 s = G.createGame(undefined, undefined, 'fast-curious');
-assert.strictEqual(s.level, 'fast-curious');
 assert.strictEqual(s.supply.length, 10, 'base 8 + 2 rule tiles');
 assert.ok(s.supply.some(t => t.prop === 'FAST') && s.supply.some(t => t.prop === 'CURIOUS'));
 assert.ok(!s.supply.some(t => t.prop === 'STOP') && !s.supply.some(t => t.prop === 'DEFEAT'));
-assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'base nouns always present');
-assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 2);
-s = G.createGame();
-assert.strictEqual(s.level, G.LEVELS[0].id, 'first level preset is the default');
+assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'base nouns present in non-plain levels');
 s = G.createGame(undefined, undefined, 'dev');
-assert.strictEqual(s.level, 'dev');
-assert.strictEqual(s.supply.length, 18, 'developer level has all rules');
-for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WEAK']) {
+assert.strictEqual(s.supply.length, 17, 'developer level has all rules (no WEAK tile)');
+for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT']) {
   assert.ok(s.supply.some(t => t.prop === p), 'developer supply has IS ' + p);
 }
-assert.strictEqual(G.LEVELS.filter(l => l.props !== 'ALL').every(l => l.props.length === 2), true, 'every level preset has exactly two rules');
+assert.ok(!s.supply.some(t => t.prop === 'WEAK'), 'WEAK tile removed');
+assert.strictEqual(G.LEVELS.filter(l => l.props !== 'ALL' && !l.plain).every(l => l.props.length === 2), true, 'every level preset has exactly two rules');
 console.log('ok 34: level presets (two rules each) + ALL RULES developer option last & default');
 
 // 35. TEXT rules do NOT apply to the permanent printed margin tiles

@@ -145,8 +145,9 @@
   }
   .btns button:disabled { opacity: .4; cursor: default; }
   #players { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #8b93c9; }
-  #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; margin-top: 10px; width: 100%; }
-  #levelrow #level { flex: 1; min-width: 0; }
+  #titlerow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; }
+  #levelrow #level { min-width: 0; max-width: 100%; }
   #level {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170; border-radius: 8px;
     padding: 6px; font-size: 12px; font-weight: 700; max-width: 100%;
@@ -175,7 +176,7 @@
     #app { flex-direction: column; align-items: center; }
     #side { display: contents; }
     #side > * { width: min(100%, 420px); }
-    h1 { order: -3; }     /* title on top in the one-column mobile layout */
+    #titlerow { order: -3; }  /* title + level select on top in the one-column mobile layout */
     #turn { order: -2; }  /* status above the board */
     #score { order: -1; }
     body { padding: 8px; }
@@ -201,42 +202,41 @@
         <button id="btn-undo">↩ undo (Z)</button>
       </div>
     </div>
-    <div id="levelrow"><span>level:</span><select id="level"></select></div>
     <div id="tray-wrap">
-      <h3>LEVEL TILES (TAP, THEN PLACE ON MAP)</h3>
+      <h3>RULE TILES (TAP, THEN PLACE ON MAP)</h3>
       <div id="supply"></div>
       <div id="supply-empty">supply empty</div>
     </div>
   </div>
   <div id="side">
-    <h1>BABA <span>VS</span> KEKE</h1>
+    <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><div id="levelrow"><span>level:</span><select id="level"></select></div></div>
     <div id="turn"></div>
     <div id="score"></div>
     <div id="players"><span>👥 players:</span></div>
     <div class="btns">
       <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win (C)">⚔ Challenge (C)</button>
-      <button id="btn-clock" title="Make this scenario best 2 of 3">🕐 spend clock</button>
       <button id="btn-newgame" title="R">↺ new game (R)</button>
     </div>
     <h2>Rules</h2>
     <ul id="rules"></ul>
     <div class="help">
-      <b>Goal:</b> move a thing that is <b>YOU</b> onto a thing that is <b>WIN</b> — sharing a space wins.
-      <b>MOVE</b> one space orthogonally: pushing shoves whole rows/columns along, only the board edge stops a
-      push; with PULL on, one thing from the cell you leave is dragged along. <b>PLACE</b> a level tile into an
-      empty cell next to one of your YOU things. A <b>rule</b> forms when a noun tile's arrow points right or down
-      into a property tile (<b>NOUN IS PROPERTY</b>). <b>Challenge (C):</b> skip your turn — the opponent gets 10
-      actions to win, or you win. If you cannot act, you lose. <b>Z</b> undoes the last action.
-      <b>Differences from the video game (rulebook):</b> everything is always PUSH · adjacent things can always be
-      PULLed · only one YOU thing moves per action · being both YOU and WIN does not win by itself · nouns can never
-      become other nouns · property tiles include the word "is".
+      <b>Goal:</b> move a thing that is <b>YOU</b> onto a thing that is <b>WIN</b>.
+      <b>Challenge (C):</b> skip your turn — the opponent gets 10 actions to win, or you win.
+      <b>Differences from the video game (rulebook):</b>
+      <ul>
+        <li>everything is always PUSH</li>
+        <li>things adjacent to YOU can always be PULLed</li>
+        <li>only one YOU thing moves per action</li>
+        <li>being both YOU and WIN does not win by itself</li>
+        <li>nouns can never become other nouns</li>
+        <li>property tiles include the word "is"</li>
+      </ul>
       <b>Properties:</b>
       <ul>
         <li><b>WIN</b> — a YOU thing sharing a space with it wins.</li>
         <li><b>STOP</b> — can't be entered, pushed or pulled.</li>
         <li><b>SHUT</b> — like STOP, but an OPEN thing touching it opens it.</li>
         <li><b>OPEN</b> — can be entered (not pushed).</li>
-        <li><b>WEAK</b> — destroyed when pushed or pulled.</li>
         <li><b>SINK</b> — destroyed when sharing a cell with anything.</li>
         <li><b>HOT</b> — destroys MELT things it touches.</li>
         <li><b>MELT</b> — destroyed when touching HOT (a HOT+MELT thing melts itself).</li>
@@ -246,9 +246,8 @@
         <li><b>RIVER</b> — noun for the river terrain (e.g. RIVER IS WIN).</li>
         <li><b>TEXT</b> — noun for the word tiles themselves (e.g. TEXT IS PLAYER 1 makes them movable).</li>
       </ul>
-      Word tiles are never the object they name: you win by touching the actual flag object, not the word.
       Controls: tap a bordered thing to select it, then tap a walk cell to move; arrows/WASD/swipe/D-pad also work;
-      keys 1–9, 0, q–p pick a level tile; R = new game.
+      keys 1–9, 0, q–p pick a rule tile; R = new game.
     </div>
     </div>
   </div>

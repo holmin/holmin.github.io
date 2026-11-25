@@ -37,23 +37,23 @@ function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 // Levels (PDF: each level brings in only TWO rule/property tiles on top of the
 // base tiles — flag/rock/win + RIVER/TEXT nouns). The developer option at the
 // BOTTOM of the dropdown has all of them and is preselected for now.
-const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WEAK'];
+const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT'];
 const LEVELS = [
+  { id: 'plain', name: 'PLAIN (base rules only)', props: [], plain: true },
   { id: 'fast-curious', name: 'FAST + CURIOUS', props: ['FAST', 'CURIOUS'] },
-  { id: 'stop-weak', name: 'STOP + WEAK', props: ['STOP', 'WEAK'] },
   { id: 'sink-defeat', name: 'SINK + DEFEAT', props: ['SINK', 'DEFEAT'] },
   { id: 'melt-hot', name: 'MELT + HOT', props: ['MELT', 'HOT'] },
   { id: 'open-shut', name: 'OPEN + SHUT', props: ['OPEN', 'SHUT'] },
   { id: 'stop-sink', name: 'STOP + SINK', props: ['STOP', 'SINK'] },
   { id: 'fast-stop', name: 'FAST + STOP', props: ['FAST', 'STOP'] },
-  { id: 'defeat-weak', name: 'DEFEAT + WEAK', props: ['DEFEAT', 'WEAK'] },
   { id: 'dev', name: 'ALL RULES (developer)', props: 'ALL' },
 ];
 function supplyFor(levelId) {
-  const lvl = LEVELS.find(l => l.id === levelId) || LEVELS[LEVELS.length - 1];
+  const lvl = LEVELS.find(l => l.id === levelId) || LEVELS[0];
   const head = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'ROCK' }, { noun: 'FLAG' }];
-  const props = lvl.props === 'ALL' ? ALL_PROPS : lvl.props;
-  return head.concat(props.map(p => ({ prop: p })), [{ noun: 'RIVER' }, { noun: 'TEXT' }]);
+  const props = lvl.props === 'ALL' ? ALL_PROPS : (lvl.props || []);
+  const nouns = lvl.plain ? [] : [{ noun: 'RIVER' }, { noun: 'TEXT' }];
+  return head.concat(props.map(p => ({ prop: p })), nouns);
 }
 function activeChars(S) {
   const out = [];
@@ -941,21 +941,29 @@ function initUI() {
 
     const sc = S.scenario;
     document.getElementById('score').textContent =
-      `Scenario ${sc.score.join('–')} ${sc.bo3 ? '(best of 3)' : ''} · games ${sc.wins.join('–')} · world pts ${sc.worldPoints.join('–')}`;
+      `Scenario ${sc.score.join('–')} ${sc.bo3 ? '(best of 3)' : ''} · world pts ${sc.worldPoints.join('–')}`;
 
     const ul = document.getElementById('rules');
     ul.innerHTML = '';
     for (const r of ruleList(S)) {
       const li = document.createElement('li');
-      // sprites next to PLAYER names in the rules list (not on board/tiles)
-      const txt = r.replace(/^([A-Z]+)/, (m) => {
-        const c = CHARACTERS.find(c => c.noun === m);
-        return c ? c.emoji + ' ' + m : m;
-      });
-      if (r.endsWith(' (default)')) li.textContent = txt;
-      else { const b = document.createElement('b'); b.textContent = txt; li.appendChild(b); } // formed rules bold, above defaults
+      // emoji graphics next to character nouns in the rules list (not on board/tiles)
+      const m = r.match(/^([A-Z]+)/);
+      const c = m && CHARACTERS.find(cc => cc.noun === m[1]);
+      const label = c ? r.replace(/^([A-Z]+)/, c.noun) : r;
+      const holder = r.endsWith(' (default)') ? li : (() => { const b = document.createElement('b'); li.appendChild(b); return b; })(); // formed rules bold, above defaults
+      if (c) {
+        const img = document.createElement('img');
+        img.className = 'spr'; img.src = SPRITE_IMG[c.noun]; img.alt = c.noun;
+        img.style.cssText = 'width:14px;height:14px;vertical-align:-2px';
+        holder.appendChild(img);
+        holder.appendChild(document.createTextNode(' ' + label));
+      } else {
+        holder.textContent = label;
+      }
       ul.appendChild(li);
     }
+
     const tray = document.getElementById('supply');
     tray.innerHTML = '';
     S.supply.forEach((t, i) => {
@@ -973,8 +981,6 @@ function initUI() {
     document.getElementById('supply-empty').style.display = S.supply.length ? 'none' : 'block';
 
     document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft !== (S.gameTurn === 0 ? 1 : 2);
-    document.getElementById('btn-clock').disabled = S.over || S.scenarioOver || sc.bo3 || sc.clocks.every(c => !c) || sc.score.reduce((a, b) => a + b, 0) > 0;
-    document.getElementById('btn-clock').textContent = sc.bo3 ? '🕐 best of 3 active' : '🕐 spend clock (best of 3)';
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);
     });
@@ -1069,7 +1075,6 @@ function initUI() {
   document.getElementById('btn-undo').addEventListener('click', () => { undo(S); render(); });
 
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
-  document.getElementById('btn-clock').addEventListener('click', () => { spendClock(S, S.turn); render(); });
   document.getElementById('btn-newgame').addEventListener('click', () => {
     S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
     render();
