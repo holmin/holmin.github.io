@@ -692,4 +692,20 @@ assert.strictEqual(G.moveSelected(s, 0, -1, 0, false), true, 'pushed toward the 
 assert.deepStrictEqual([r41d.x, r41d.y], [4, 2], 'wrapped to (4,2), margin tile did not block');
 console.log('ok 41: WRAP (off-grid wraps unless blocked; margin tiles do not block)');
 
+// 42. FAST: moversTo finds slide targets several steps away (so highlighted squares are clickable)
+s = G.createGame(undefined, undefined, 'dev');
+const fastIdx42 = s.supply.findIndex(t => t.prop === 'FAST');
+G.doPlace(s, 0, fastIdx42, 0, 2); // right of printed SAMI noun (-1,2) -> SAMI IS FAST
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('SAMI IS FAST'));
+let m42 = G.moversTo(s, 0, 3, 4);
+assert.strictEqual(m42.length, 1, 'FAST: (3,4) three steps right is a mover target');
+assert.deepStrictEqual([m42[0][1], m42[0][2]], [1, 0]);
+m42 = G.moversTo(s, 0, 0, 1);
+assert.strictEqual(m42.length, 1, 'FAST: (0,1) up the column is a mover target');
+assert.deepStrictEqual([m42[0][1], m42[0][2]], [0, -1]);
+assert.strictEqual(G.moversTo(s, 0, 2, 2).length, 0, 'diagonal is not a target');
+assert.strictEqual(G.moversTo(s, 0, 4, 4).length, 0, 'rock corner is blocked, not a target');
+console.log('ok 42: FAST slide targets beyond one step are clickable movers');
+
 console.log('\nAll engine tests passed.');

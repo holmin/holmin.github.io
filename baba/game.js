@@ -616,13 +616,15 @@ function moversTo(S, p, x, y) {
   const out = [];
   for (const th of yourThings(S, p)) {
     for (const [dx, dy] of DIRS) {
-      const t = walkTarget(S, th, dx, dy);
-      if (!t || t[0] !== x || t[1] !== y) continue;
+      let hit;
       if (propsOf(S, th).FAST) {
-        if (fastReach(S, th, dx, dy).some(([cx, cy]) => cx === x && cy === y)) out.push([th, dx, dy]);
-      } else if (canMove(S, th, dx, dy)) {
-        out.push([th, dx, dy]);
+        // FAST: any cell on the slide ray (even several steps away / wrapped)
+        hit = fastReach(S, th, dx, dy).some(([cx, cy]) => cx === x && cy === y);
+      } else {
+        const t = walkTarget(S, th, dx, dy);
+        hit = !!(t && t[0] === x && t[1] === y && canMove(S, th, dx, dy));
       }
+      if (hit) out.push([th, dx, dy]);
     }
   }
   return out;
@@ -778,10 +780,13 @@ function initUI() {
     if (S.over || S.scenarioOver) return;
     const x = rx - 1, y = ry - 1;
     if (x < 0 || y < 0 || x >= W || y >= H) return; // margin ring is not clickable
-    if (S.fastDir) { // FAST: a tapped square is the destination
+    if (S.fastDir) { // FAST: a tapped square is the destination (armed dir, else the tapped dir)
       const sel = selected();
-      if (sel && fastMoveTo(S, S.turn, S.fastDir.dx, S.fastDir.dy, x, y)) {
-        S.fastDir = null;
+      if (sel) {
+        const tdx = Math.sign(x - sel.x), tdy = Math.sign(y - sel.y);
+        const ok = fastMoveTo(S, S.turn, S.fastDir.dx, S.fastDir.dy, x, y)
+          || ((tdx !== 0) !== (tdy !== 0) && fastMoveTo(S, S.turn, tdx, tdy, x, y));
+        if (ok) S.fastDir = null;
       }
       render();
       return;
