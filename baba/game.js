@@ -86,23 +86,29 @@ function createGame(enabled, scenario) {
   return S;
 }
 
-// Permanent printed tiles in the margin around the board (only with exactly 2
-// active players): top-middle [P2-noun][IS P2], left-middle [P1-noun] over
-// [IS P1], bottom-middle [IS P1], right-middle [IS P2]. They cannot be moved
-// or otherwise interacted with, but tiles on the board can point at them (and
-// the printed nouns can point into the board) to form rules.
+// Permanent printed tiles in the margin around the board. The P1 noun tile
+// (left-middle, over IS P1) and the bottom IS P1 exist whenever at least one
+// character is active; the P2 noun tile (top-middle, next to IS P2) and the
+// right IS P2 exist when at least two are active. They cannot be moved or
+// otherwise interacted with, but tiles on the board can point at them (and the
+// printed nouns can point into the board) to form rules.
 // Coordinates are board coords extended by one margin cell (-1 and 5).
 function syncFixedTiles(S) {
   S.entities = S.entities.filter(e => !e.fixed);
-  if (S.numPlayers === 2) {
-    const a = activeChars(S);
-    const n0 = CHARACTERS[a[0]].noun, n1 = CHARACTERS[a[1]].noun;
+  const a = activeChars(S);
+  if (a.length >= 1) {
+    const n0 = CHARACTERS[a[0]].noun;
     S.entities.push(
-      { id: nextId++, kind: 'word', noun: n1, fixed: true, x: 2, y: -1 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS P2', fixed: true, x: 3, y: -1 },
       { id: nextId++, kind: 'word', noun: n0, fixed: true, x: -1, y: 2 },
       { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS P1', fixed: true, x: -1, y: 3 },
       { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS P1', fixed: true, x: 2, y: 5 },
+    );
+  }
+  if (a.length >= 2) {
+    const n1 = CHARACTERS[a[1]].noun;
+    S.entities.push(
+      { id: nextId++, kind: 'word', noun: n1, fixed: true, x: 2, y: -1 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS P2', fixed: true, x: 3, y: -1 },
       { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS P2', fixed: true, x: 5, y: 2 },
     );
   }
@@ -186,11 +192,10 @@ function parseRules(S) {
     const d = propAt.get(n.x + ',' + (n.y + 1));
     if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner, permanent: !!d.fixed });
   }
-  // with exactly 2 players the printed margin tiles provide the IS Pn defaults;
-  // otherwise (1 or 3+ players) they are implicit
-  if ((S.numPlayers || 0) !== 2) {
-    activeChars(S).forEach((ci, rank) => rules.push({ noun: CHARACTERS[ci].noun, prop: 'YOU', owner: rank, permanent: true }));
-  }
+  // printed margin tiles cover P1 (always) and P2 (2+ players); P3+ are implicit
+  activeChars(S).forEach((ci, rank) => {
+    if (rank >= 2) rules.push({ noun: CHARACTERS[ci].noun, prop: 'YOU', owner: rank, permanent: true });
+  });
   return rules;
 }
 
@@ -633,9 +638,6 @@ function initUI() {
       cells[i].innerHTML = '';
       cells[i].className = 'cell' + (i % EXT === 0 || i / EXT < 1 || i % EXT === EXT - 1 || i / EXT >= EXT - 1 ? ' margin' : '');
     }
-    const yours = activeSelectable();
-    const curSel = S.entities.find(e => e.id === S.selectedId);
-    const ambiguous = yours.length > 1 && !yours.includes(curSel);
     const sel = selected();
     let targets = new Set();
     if (S.placeIdx !== null) targets = placeTargets(S, S.turn);
@@ -655,8 +657,6 @@ function initUI() {
         if (x >= 0 && y >= 0 && x < W && y < H && RIVER.has(x + ',' + y)) cell.classList.add('water');
         if (x >= 0 && y >= 0 && x < W && y < H && targets.has(x + ',' + y)) cell.classList.add('target');
         const ents = byCell.get(rx + ',' + ry) || [];
-        if (ents.some(e => sel && e.id === sel.id)) cell.classList.add('sel');
-        if (ambiguous && ents.some(e => yours.includes(e))) cell.classList.add('sel'); // highlight all YOUR things to choose from
         if (ents.length > 1) cell.classList.add('stack');
         for (const e of ents) {
           const sp = document.createElement('span');

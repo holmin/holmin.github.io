@@ -319,17 +319,20 @@ const fixed = s => s.entities.filter(e => e.fixed);
   assert.ok(rulesOf(g).includes('ERIK IS FAST'), 'top printed noun points down into the board');
   console.log('ok 23c: permanent margin tiles + rules through them');
 }
-// 3+ players: no printed tiles, implicit defaults instead
+// printed noun tiles: P1 noun always, P2 noun when >=2 players
 {
   const g = G.createGame([true, true, true, false, false]);
-  assert.strictEqual(fixed(g).length, 0, 'no margin tiles with 3 players');
-  assert.strictEqual(rulesOf(g).filter(r => /IS P\d/.test(r)).length, 3);
-  G.setEnabled(g, 2, false); // back to 2 players
-  assert.strictEqual(fixed(g).length, 6, 'margin tiles reappear at 2 players');
-  assert.ok(rulesOf(g).includes('SAMI IS P1 (default)') && rulesOf(g).includes('ERIK IS P2 (default)'));
-  G.setEnabled(g, 2, true); // to 3 again
-  assert.strictEqual(fixed(g).length, 0);
-  console.log('ok 23d: margin tiles only at exactly 2 players');
+  assert.strictEqual(fixed(g).length, 6, 'both printed nouns at 3 players');
+  assert.strictEqual(rulesOf(g).filter(r => /IS P\d/.test(r)).length, 3, 'P3 default is implicit');
+  G.setEnabled(g, 2, false);
+  G.setEnabled(g, 1, false); // down to 1 player
+  assert.strictEqual(fixed(g).length, 3, 'only the P1 noun tile + IS P1s at 1 player');
+  assert.deepStrictEqual(fixed(g).map(e => e.x + ',' + e.y).sort(), ['-1,2', '-1,3', '2,5']);
+  assert.deepStrictEqual(rulesOf(g).filter(r => /IS P\d/.test(r)), ['SAMI IS P1 (default)']);
+  G.setEnabled(g, 1, true); // back to 2
+  assert.strictEqual(fixed(g).length, 6);
+  assert.ok(rulesOf(g).includes('ERIK IS P2 (default)'));
+  console.log('ok 23d: printed noun tiles follow player count (P1 always, P2 at 2+)');
 }
 // FAST with explicit destination square
 {
