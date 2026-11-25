@@ -47,6 +47,8 @@ const LEVELS = [
   { id: 'stop-sink', name: 'STOP + SINK', props: ['STOP', 'SINK'] },
   { id: 'fast-stop', name: 'FAST + STOP', props: ['FAST', 'STOP'] },
   { id: 'wrap-stop', name: 'WRAP + STOP', props: ['WRAP', 'STOP'] },
+  { id: 'thirsty-scared', name: 'THIRSTY + SCARED', props: ['THIRSTY', 'SCARED'] },
+  { id: 'strong-sheep', name: 'STRONG + SHEEP', props: ['STRONG', 'SHEEP'] },
   { id: 'dev', name: 'ALL RULES (developer)', props: 'ALL' },
 ];
 function supplyFor(levelId) {

@@ -39,9 +39,10 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   top of the base tiles (2× `IS WIN`, 2× `ROCK`, 2× `FLAG`, `RIVER`, `TEXT`).
   The **level dropdown** (next to the BABA VS KEKE title) offers a **PLAIN** level
   (base tiles only: 2× `IS WIN`, 2× `ROCK`, 2× `FLAG` — no FAST/CURIOUS/RIVER/TEXT) as
-  the default, plus two-rule presets (e.g. FAST + CURIOUS, MELT + HOT, OPEN + SHUT, …);
-  the last entry, **ALL RULES (developer)**, sits at the bottom. Changing the level
-  starts a new game with that level's tiles.
+  the default, plus two-rule presets (FAST + CURIOUS, SINK + DEFEAT, MELT + HOT,
+  OPEN + SHUT, STOP + SINK, FAST + STOP, WRAP + STOP, THIRSTY + SCARED,
+  STRONG + SHEEP); the last entry, **ALL RULES (developer)**, sits at the bottom.
+  Changing the level starts a new game with that level's tiles.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
 - **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —

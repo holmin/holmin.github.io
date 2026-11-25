@@ -566,6 +566,15 @@ for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN'
   assert.ok(s.supply.some(t => t.prop === p), 'developer supply has IS ' + p);
 }
 assert.ok(!s.supply.some(t => t.prop === 'WEAK'), 'WEAK tile removed');
+s = G.createGame(undefined, undefined, 'thirsty-scared');
+assert.strictEqual(s.supply.length, 10);
+assert.ok(s.supply.some(t => t.prop === 'THIRSTY') && s.supply.some(t => t.prop === 'SCARED'), 'THIRSTY + SCARED preset');
+s = G.createGame(undefined, undefined, 'strong-sheep');
+assert.strictEqual(s.supply.length, 10);
+assert.ok(s.supply.some(t => t.prop === 'STRONG') && s.supply.some(t => t.prop === 'SHEEP'), 'STRONG + SHEEP preset');
+for (const p of ['THIRSTY', 'STRONG', 'SCARED', 'SHEEP']) {
+  assert.ok(G.LEVELS.some(l => l.props !== 'ALL' && !l.plain && l.props.includes(p)), 'new rule IS ' + p + ' is used in some level preset');
+}
 assert.strictEqual(G.LEVELS.filter(l => l.props !== 'ALL' && !l.plain).every(l => l.props.length === 2), true, 'every level preset has exactly two rules');
 console.log('ok 34: level presets (two rules each) + ALL RULES developer option last & default');
 

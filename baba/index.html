@@ -56,6 +56,7 @@
   .word.noun::before { content: '▶'; position: absolute; right: 1px; top: 50%; transform: translateY(-50%); font-size: calc(var(--cell) * .12); opacity: .6; }
   .word.noun::after { content: '▼'; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: calc(var(--cell) * .12); opacity: .6; }
   .word[class*="prop-"], .tile[class*="prop-"] { background: #e67e22; color: #fff; border-radius: 8px; }
+  .word.prop-win, .tile.prop-win { background: #ffd700; color: #4a3b00; }
   .ent.sel { box-shadow: 0 0 0 2px var(--selc, #f1c40f); border-radius: 50%; }
   .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
   #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -236,6 +237,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=26"></script>
+<script src="game.js?v=27"></script>
 </body>
 </html>
