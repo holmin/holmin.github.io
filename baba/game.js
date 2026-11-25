@@ -751,8 +751,10 @@ function initUI() {
     // tap a highlighted cell to walk there; if several of your things could go
     // there, that is ambiguous -> choose the thing first
     const movers = moversTo(S, S.turn, x, y);
-    if (movers.length === 1) {
-      const [th, dx, dy] = movers[0];
+    const explicit = yours.find(e => e.id === S.selectedId);
+    const mv = explicit ? movers.find(([th]) => th === explicit) : (movers.length === 1 ? movers[0] : null);
+    if (mv) {
+      const [th, dx, dy] = mv;
       S.selectedId = th.id;
       if (propsOf(S, th).FAST) fastMoveTo(S, S.turn, dx, dy, x, y);
       else moveSelected(S, S.turn, dx, dy, pullOn);
@@ -815,16 +817,26 @@ function initUI() {
     const ownYouCell = (x, y) => entitiesAt(S, x, y).some(e => turnYous.includes(e));
     if (S.placeIdx !== null) ptargets = placeTargets(S, S.turn);
     else {
-      // show ALL walkable tiles of ALL your things (no choosing needed up front)
-      for (const y of turnYous) {
-        if (propsOf(S, y).FAST) {
+      const walkCells = (th) => {
+        const cells = [];
+        if (propsOf(S, th).FAST) {
           // FAST: every square it can slide to, in all 4 directions
-          for (const [dx, dy] of DIRS) for (const [cx, cy] of fastReach(S, y, dx, dy)) if (!ownYouCell(cx, cy)) targets.add(cx + ',' + cy);
+          for (const [dx, dy] of DIRS) for (const [cx, cy] of fastReach(S, th, dx, dy)) cells.push([cx, cy]);
         } else {
-          for (const [dx, dy] of DIRS) {
-            const tx = y.x + dx, ty = y.y + dy;
-            if (canMove(S, y, dx, dy) && !ownYouCell(tx, ty)) targets.add(tx + ',' + ty);
-          }
+          for (const [dx, dy] of DIRS) if (canMove(S, th, dx, dy)) cells.push([th.x + dx, th.y + dy]);
+        }
+        return cells;
+      };
+      const explicit = turnYous.find(e => e.id === S.selectedId);
+      if (explicit) {
+        // a thing is chosen: show all its walk tiles (no ambiguity anymore)
+        for (const [cx, cy] of walkCells(explicit)) if (!ownYouCell(cx, cy)) targets.add(cx + ',' + cy);
+      } else {
+        // no thing chosen: show only squares EXACTLY ONE of your things can reach;
+        // contested squares are not shown at all — choose the thing first
+        for (let cy = 0; cy < H; cy++) for (let cx = 0; cx < W; cx++) {
+          if (ownYouCell(cx, cy)) continue;
+          if (moversTo(S, S.turn, cx, cy).length === 1) targets.add(cx + ',' + cy);
         }
       }
     }
