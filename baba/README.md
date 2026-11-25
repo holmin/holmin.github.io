@@ -45,11 +45,14 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
 - **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —
-  pushing shoves the whole row/column of things along (chain push); only the
-  board edge stops a push, and then the whole move fails. Hold **Shift** (or the
-  PULL toggle) while moving to also **PULL** — exactly one thing from the cell
-  you left is dragged into the vacated cell. A YOU thing may enter the cell of a
-  WIN thing (and vice versa) — they stack.
+  but only **one thing** can be pushed per move, unless the mover is **STRONG**
+  (then the whole chain is pushed). A STRONG push against the board edge shoves
+  the thing **off the board (destroyed)**, unless it is WRAP (then it wraps).
+  Without STRONG the edge stops the push and the whole move fails. Hold
+  **Shift** (or the PULL toggle) while moving to also **PULL** — exactly one
+  thing from the cell you left is dragged into the vacated cell (SCARED things
+  cannot be pulled). A YOU thing may enter the cell of a WIN thing (and vice
+  versa) — they stack.
 - **PLACE:** place a level tile from the supply into an empty cell orthogonally
   adjacent to one of your YOU things (click tile or keys 1–9, 0, q–p, then click a
   green cell).
@@ -59,10 +62,25 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   the PLAYER who placed them.
 - **CURIOUS** (board-game keyword, design diary #3): when **anything enters** a
   CURIOUS thing's row or column — i.e. arrives in a cell of that line from outside
-  it (placing counts as entering from off-board) — it moves **1 space toward it**.
-  Moving along the same row/column does not trigger it; every CURIOUS thing in the
-  entered line reacts. Effects cascade (a push can make a rock move, which makes
-  another curious thing move, …). One `IS CURIOUS` tile exists and is in the supply.
+  it — it moves **1 space toward it**. Moving along the same row/column does not
+  trigger it; every CURIOUS thing in the entered line reacts. **Placing a tile
+  does NOT count as entering** (official FAQ): a freshly placed rule triggers
+  only from the next action on. Effects cascade (a push can make a rock move,
+  which makes another curious thing move, …); if resolving one action runs
+  **100 steps** (infinite loop), the **player who last took an action loses**.
+  One `IS CURIOUS` tile exists and is in the supply.
+- **THIRSTY**: at the **end of the turn**, a THIRSTY thing that is not on the
+  river moves to the **closest river cell** (orthogonal steps). If several
+  river cells are equally close, the player whose turn ended chooses the target
+  (tap a highlighted water cell).
+- **STRONG**: can push **several things at once** (chain push), and pushes
+  things against the board edge **off the board — destroyed** (unless the
+  thing is WRAP, which wraps instead).
+- **SCARED**: when something **moves directly next to it** (edge-adjacent, not
+  diagonal), it **flees as far as possible in the opposite direction**. SCARED
+  things **cannot be pulled**.
+- **SHEEP**: when a SHEEP thing **moves**, every other SHEEP thing moves the
+  **same amount in the same direction**, if its destination cell is free.
 - **WRAP**: when pushed or moved outside the grid, a WRAP thing wraps to the
   opposite side — unless that side is blocked. Pushing/walking toward one of the
   permanent printed tiles in the margin also wraps (they never block it).

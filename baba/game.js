@@ -37,7 +37,7 @@ function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 // Levels (PDF: each level brings in only TWO rule/property tiles on top of the
 // base tiles — flag/rock/win + RIVER/TEXT nouns). The developer option at the
 // BOTTOM of the dropdown has all of them and is preselected for now.
-const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP'];
+const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP', 'THIRSTY', 'STRONG', 'SCARED', 'SHEEP'];
 const LEVELS = [
   { id: 'plain', name: 'PLAIN (base rules only)', props: [], plain: true },
   { id: 'fast-curious', name: 'FAST + CURIOUS', props: ['FAST', 'CURIOUS'] },
@@ -65,6 +65,9 @@ function charAtRank(S, rank) { return CHARACTERS[activeChars(S)[rank]]; }
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 let nextId = 1;
+// UI hook for THIRSTY ties (set once by the UI; null in tests -> first option)
+let UI_THIRSTY_CHOOSER = null;
+function setThirstyChooser(fn) { UI_THIRSTY_CHOOSER = fn; }
 const obj = (type, x, y) => ({ id: nextId++, kind: 'object', type, x, y });
 const nounTile = (noun, x, y) => ({ id: nextId++, kind: 'word', noun, x, y });
 const propTile = (prop, owner, x, y) => ({ id: nextId++, kind: 'word', prop, label: 'IS ' + prop, owner, x, y });
@@ -114,6 +117,7 @@ function createGame(enabled, scenario, levelId) {
     selectedId: null, placeIdx: null,
     log: [], rules: [], _prevRules: [], history: [],
     river: new Set(RIVER),
+    _loopSteps: 0, _thirstyPending: [], _thirstyChooser: UI_THIRSTY_CHOOSER,
   };
   syncFixedTiles(S);
   ensureParsed(S);
@@ -335,8 +339,22 @@ function end(S, winner, reason) {
 // both HOT and MELT melts itself); DEFEAT objects destroy YOU objects that
 // share their cell. RIVER is a noun: river cells count as RIVER, so
 // RIVER IS WIN / RIVER IS DEFEAT / RIVER IS SINK affect the terrain itself.
-function resolveDestructive(S) {
-  for (let iter = 0; iter < 10; iter++) {
+// Infinite-loop ruling (FAQ): if resolving one action runs 100 steps, the
+// player who last took an action loses.
+function bumpLoop(S, actor) {
+  if (S.over) return true;
+  S._loopSteps = (S._loopSteps || 0) + 1;
+  if (S._loopSteps >= 100) {
+    const a = (actor === undefined || actor === null) ? S.turn : actor;
+    end(S, S.numPlayers === 2 ? 1 - a : null, 'infinite loop (100 steps) — the last action loses');
+    return true;
+  }
+  return false;
+}
+
+function resolveDestructive(S, actor) {
+  for (;;) {
+    if (bumpLoop(S, actor)) return;
     ensureParsed(S);
     const riverP = S._propMap['RIVER'] || {};
     const dead = new Set();
@@ -369,7 +387,7 @@ function resolve(S, actor) {
   for (const r of S._prevRules) if (!rl.includes(r)) log(S, '➖ ' + r);
   S._prevRules = rl;
 
-  resolveDestructive(S);
+  resolveDestructive(S, actor);
   ensureParsed(S);
 
   const riverP = S._propMap['RIVER'] || {};
@@ -425,9 +443,12 @@ function gather(S, m, e, dx, dy, list, dead) {
   let tx = e.x + dx, ty = e.y + dy;
   if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
     // WRAP: off the grid -> wrap to the other side (the printed margin tiles
-    // outside the grid never block this); otherwise the edge blocks the move
-    if (!propsOf(S, e).WRAP) return false;
-    tx = wrapCoord(tx, W); ty = wrapCoord(ty, H);
+    // outside the grid never block this); otherwise the edge blocks the move,
+    // unless the mover is STRONG: a pushed thing at the border is shoved off
+    // the board and destroyed
+    if (propsOf(S, e).WRAP) { tx = wrapCoord(tx, W); ty = wrapCoord(ty, H); }
+    else if (e !== m && propsOf(S, m).STRONG) { dead.add(e); return true; }
+    else return false;
   }
   const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o) && !dead.has(o));
   for (const o of ents) {
@@ -448,7 +469,7 @@ function gather(S, m, e, dx, dy, list, dead) {
   }
   for (const o of ents) {
     const p = propsOf(S, o);
-    if (stackable(S, m, o) || enterableProp(p) || p.WEAK) continue;
+    if (dead.has(o) || stackable(S, m, o) || enterableProp(p) || p.WEAK) continue;
     if (p.SHUT && !openedInCell(S, o)) continue; // shut things are never pushed
     list.push(o);
   }
@@ -457,13 +478,18 @@ function gather(S, m, e, dx, dy, list, dead) {
 
 function canMove(S, m, dx, dy) {
   if (dx === 0 && dy === 0) return false;
-  return gather(S, m, m, dx, dy, [], new Set());
+  const list = [], dead = new Set();
+  if (!gather(S, m, m, dx, dy, list, dead)) return false;
+  // only ONE thing may be pushed per move, unless the mover is STRONG
+  if (list.length + dead.size > 1 && !propsOf(S, m).STRONG) return false;
+  return true;
 }
 
 function doMove(S, m, dx, dy, pull) {
   const list = [];
   const dead = new Set();
   if (!gather(S, m, m, dx, dy, list, dead)) return false;
+  if (list.length + dead.size > 1 && !propsOf(S, m).STRONG) return false;
   const ox = m.x, oy = m.y;
   // apply WRAP when a moved thing leaves the grid
   const stepX = (e, v) => (v < 0 || v >= W) && propsOf(S, e).WRAP ? wrapCoord(v, W) : v;
@@ -475,20 +501,45 @@ function doMove(S, m, dx, dy, pull) {
   }
   for (const o of list) { o.x = stepX(o, o.x + dx); o.y = stepY(o, o.y + dy); }
   m.x = stepX(m, m.x + dx); m.y = stepY(m, m.y + dy);
+  let pulled = null;
   if (pull) {
     const behind = entitiesAt(S, ox - dx, oy - dy);
     if (behind.length > 0) {
       const p = behind[0]; // pull only one thing
       const pp = propsOf(S, p);
       if (pp.WEAK) dead.add(p); // WEAK breaks when pulled
-      else if (!pp.STOP && !(pp.SHUT && !openedInCell(S, p))) {
+      else if (!pp.STOP && !pp.SCARED && !(pp.SHUT && !openedInCell(S, p))) { // SCARED things cannot be pulled
         if (S._entered) ev.push({ id: p.id, fx: p.x, fy: p.y, tx: ox, ty: oy });
         p.x = ox; p.y = oy;
+        pulled = p;
       }
     }
   }
   if (dead.size) S.entities = S.entities.filter(e => !dead.has(e));
-  if (S._entered) S._entered.push(...ev); // enter-events (for CURIOUS): from -> to
+  // SHEEP: when a SHEEP thing moves, every other SHEEP thing moves the same
+  // amount in the same direction, if its destination cell is free (no pushing)
+  if (S._entered) {
+    const movedIds = new Set([m.id, ...list.map(o => o.id)]);
+    if (pulled) movedIds.add(pulled.id);
+    const movers = [[m, dx, dy]].concat(list.map(o => [o, dx, dy]));
+    if (pulled) movers.push([pulled, -dx, -dy]);
+    for (const [e, edx, edy] of movers) {
+      if (!S.entities.includes(e) || !propsOf(S, e).SHEEP) continue;
+      for (const o of S.entities.slice()) {
+        if (o === e || movedIds.has(o.id) || !propsOf(S, o).SHEEP) continue;
+        let tx = o.x + edx, ty = o.y + edy;
+        if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
+          if (!propsOf(S, o).WRAP) continue;
+          tx = wrapCoord(tx, W); ty = wrapCoord(ty, H);
+        }
+        if (entitiesAt(S, tx, ty).some(x => x !== o)) continue; // occupied -> not possible
+        ev.push({ id: o.id, fx: o.x, fy: o.y, tx, ty });
+        o.x = tx; o.y = ty;
+        movedIds.add(o.id);
+      }
+    }
+  }
+  if (S._entered) S._entered.push(...ev); // enter-events (for CURIOUS/SCARED): from -> to
   return true;
 }
 
@@ -514,7 +565,8 @@ function doPlace(S, p, idx, x, y) {
   const e = t.prop ? propTile(t.prop, p, x, y) : nounTile(t.noun, x, y);
   S.entities.push(e);
   S.supply.splice(idx, 1);
-  if (S._entered) S._entered.push({ id: e.id, fx: null, fy: null, tx: x, ty: y }); // placed = enters from off-board
+  // FAQ: placing a tile does NOT count as entering — a freshly placed rule
+  // (e.g. CURIOUS) only triggers from the next action on
   return e;
 }
 
@@ -540,13 +592,15 @@ function act(S, p, fn) {
   if (S.turn !== p || S.actionsLeft <= 0) return false;
   const before = snapshot(S);
   S._entered = [];
+  S._loopSteps = 0;
+  S._thirstyPending = [];
   if (!fn()) { S._entered = []; return false; }
   pushHistory(S, before);
   S.actionsLeft--;
   resolve(S, p);
   if (!S.over) {
-    resolveCurious(S); // CURIOUS reacts to everything that entered this action
-    resolve(S, p);     // curious movement may have changed rules / created a WIN
+    resolveCascade(S, p); // CURIOUS/SCARED react to everything that entered this action
+    resolve(S, p);        // their movement may have changed rules / created a WIN
   }
   S._entered = [];
   if (S.challenge) {
@@ -556,13 +610,17 @@ function act(S, p, fn) {
       else S.actionsLeft = 1;
     }
   } else if (!S.over && S.actionsLeft <= 0) {
+    // THIRSTY triggers at the end of the turn
+    resolveThirsty(S, p);
+    if (!S.over) { resolveCascade(S, p); resolve(S, p); }
+    S._entered = [];
     S.turn = (S.turn + 1) % S.numPlayers;
     S.gameTurn++;
     S.actionsLeft = S.gameTurn === 0 ? 1 : 2;
     S.selectedId = null;
     S.placeIdx = null;
   }
-  if (!S.over && S.numPlayers > 0 && !hasLegalAction(S, S.turn)) {
+  if (!S.over && !(S._thirstyPending && S._thirstyPending.length) && S.numPlayers > 0 && !hasLegalAction(S, S.turn)) {
     const ch = charAtRank(S, S.turn);
     end(S, (S.turn + 1) % S.numPlayers, `${ch.emoji} ${ch.name} cannot take an action`);
   }
@@ -645,24 +703,28 @@ function fastReach(S, sel, dx, dy) {
 
 // CURIOUS (board game, per design diary #3): when anything ENTERS a CURIOUS
 // object's row or column — i.e. arrives in a cell of that row/column from
-// outside it (placing counts as entering from off-board) — the CURIOUS thing
-// moves 1 space towards it. Merely moving along the same row/column does NOT
-// trigger it. Effects cascade: a push can make a rock move, which makes
-// another curious thing move, ... Each enter-event triggers at most one step.
-function resolveCurious(S) {
-  const reacted = new Set(); // enter-events already consumed
-  for (let iter = 0; iter < 50; iter++) {
+// outside it (placing does NOT count as entering, per the FAQ) — the CURIOUS
+// thing moves 1 space towards it. Merely moving along the same row/column
+// does NOT trigger it. SCARED: when something moves directly next to a SCARED
+// thing (edge-adjacent, not diagonal, and not merely moving within adjacency),
+// it flees as far as possible in the opposite direction. Effects cascade
+// (a push can make a rock move, which makes another curious thing move, ...);
+// each enter-event triggers each reactive thing at most once; 100 resolution
+// steps in one action = the last actor loses (see bumpLoop).
+function resolveCascade(S, actor) {
+  const reactedC = new Set(), reactedS = new Set(); // enter-events already consumed
+  for (;;) {
+    if (bumpLoop(S, actor)) return;
     ensureParsed(S);
-    const curious = S.entities.filter(e => e.kind === 'object' && propsOf(S, e).CURIOUS);
-    if (!curious.length) return;
     const evs = S._entered || [];
     let moved = false;
+    const curious = S.entities.filter(e => !e.fixed && propsOf(S, e).CURIOUS);
     for (const c of curious) {
       // an enter-event triggers EACH curious object in that row/column once —
       // consumed per (curious object, event) pair, not per event globally
       let bestI = -1, bd = Infinity;
       evs.forEach((ev, i) => {
-        if (reacted.has(c.id + ':' + i)) return;
+        if (reactedC.has(c.id + ':' + i)) return;
         const e = S.entities.find(x => x.id === ev.id);
         if (!e || e === c) return;
         const inLineNew = ev.tx === c.x || ev.ty === c.y;          // target cell is in c's row/col
@@ -673,7 +735,7 @@ function resolveCurious(S) {
       });
       if (bestI < 0) continue;
       const ev = evs[bestI];
-      reacted.add(c.id + ':' + bestI);
+      reactedC.add(c.id + ':' + bestI);
       const t = S.entities.find(x => x.id === ev.id);
       const dx = Math.sign(t.x - c.x), dy = Math.sign(t.y - c.y);
       const dirs = Math.abs(t.x - c.x) >= Math.abs(t.y - c.y)
@@ -684,8 +746,107 @@ function resolveCurious(S) {
         if (canMove(S, c, mx, my)) { doMove(S, c, mx, my, false); moved = true; break; }
       }
     }
+    const scared = S.entities.filter(e => !e.fixed && propsOf(S, e).SCARED);
+    for (const c of scared) {
+      let bestI = -1, bd = Infinity;
+      evs.forEach((ev, i) => {
+        if (reactedS.has(c.id + ':' + i)) return;
+        const e = S.entities.find(x => x.id === ev.id);
+        if (!e || e === c) return;
+        const newAdj = Math.abs(ev.tx - c.x) + Math.abs(ev.ty - c.y) === 1;   // ended up directly next to it
+        const wasAdj = ev.fx !== null && Math.abs(ev.fx - c.x) + Math.abs(ev.fy - c.y) === 1;
+        if (!(newAdj && !wasAdj)) return;
+        const d = Math.abs(ev.tx - c.x) + Math.abs(ev.ty - c.y);
+        if (d < bd) { bd = d; bestI = i; }
+      });
+      if (bestI < 0) continue;
+      const ev = evs[bestI];
+      reactedS.add(c.id + ':' + bestI);
+      const fdx = Math.sign(c.x - ev.tx), fdy = Math.sign(c.y - ev.ty); // flee in the opposite direction
+      if (fdx === 0 && fdy === 0) continue;
+      while (!bumpLoop(S, actor) && canMove(S, c, fdx, fdy)) { doMove(S, c, fdx, fdy, false); moved = true; }
+    }
     if (!moved) return;
   }
+}
+function resolveCurious(S, actor) { resolveCascade(S, actor); }
+
+// THIRSTY: at the end of a turn, a THIRSTY thing that is not on the river moves
+// to the closest river cell (orthogonal steps). If several river cells are
+// equally close, the player chooses the target — the UI defers via
+// S._thirstyPending + pickThirsty (S._thirstyChooser returns null); the engine
+// default is the first option.
+function thirstyOptions(S, e) {
+  const river = S.river || RIVER;
+  if (!river || !river.size) return [];
+  let bd = Infinity;
+  const opts = [];
+  for (const k of river) {
+    const [x, y] = k.split(',').map(Number);
+    const d = Math.abs(x - e.x) + Math.abs(y - e.y);
+    if (d < bd) { bd = d; opts.length = 0; opts.push([x, y]); }
+    else if (d === bd) opts.push([x, y]);
+  }
+  opts.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  return opts;
+}
+function moveToward(S, e, tx, ty, actor) {
+  let g = 0;
+  while (!riverAt(S, e.x, e.y) && g++ < 10) {
+    if (bumpLoop(S, actor)) return;
+    const dist = (x, y) => Math.abs(tx - x) + Math.abs(ty - y);
+    const d0 = dist(e.x, e.y);
+    const cands = DIRS
+      .map(([dx, dy]) => [dx, dy, dist(e.x + dx, e.y + dy)])
+      .filter(([, , d]) => d < d0)
+      .sort((a, b) => (Math.abs(a[0]) - Math.abs(b[0])) || (a[2] - b[2])); // horizontal step first
+    let stepped = false;
+    for (const [dx, dy] of cands) {
+      if (canMove(S, e, dx, dy)) { doMove(S, e, dx, dy, false); stepped = true; break; }
+    }
+    if (!stepped) return;
+  }
+}
+function resolveThirsty(S, actor) {
+  ensureParsed(S);
+  for (const e of S.entities.slice()) {
+    if (S.over) return;
+    if (e.fixed || !propsOf(S, e).THIRSTY) continue;
+    if (riverAt(S, e.x, e.y)) continue;
+    const opts = thirstyOptions(S, e);
+    if (!opts.length) continue;
+    let target = opts[0];
+    if (opts.length > 1 && typeof S._thirstyChooser === 'function') {
+      const c = S._thirstyChooser(opts.map(o => o.slice()), e);
+      if (c == null) {
+        S._thirstyPending = S._thirstyPending || [];
+        if (!S._thirstyPending.some(q => q.eid === e.id)) S._thirstyPending.push({ eid: e.id, options: opts, actor });
+        continue;
+      }
+      target = c;
+    }
+    moveToward(S, e, target[0], target[1], actor);
+  }
+}
+// UI hook: the player picked one of the tied closest river cells for a THIRSTY thing
+function pickThirsty(S, eid, tx, ty) {
+  const pend = S._thirstyPending || [];
+  const i = pend.findIndex(q => q.eid === eid);
+  if (i < 0) return false;
+  const q = pend.splice(i, 1)[0];
+  const e = S.entities.find(x => x.id === eid);
+  if (!e) return false;
+  S._loopSteps = 0;
+  if (!S._entered) S._entered = [];
+  moveToward(S, e, tx, ty, q.actor);
+  if (!S.over) { resolveCascade(S, q.actor); resolve(S, q.actor); resolveThirsty(S, q.actor); }
+  if (!S.over) { resolveCascade(S, q.actor); resolve(S, q.actor); }
+  S._entered = [];
+  if (!S.over && !(S._thirstyPending && S._thirstyPending.length) && S.numPlayers > 0 && !hasLegalAction(S, S.turn)) {
+    const ch = charAtRank(S, S.turn);
+    end(S, (S.turn + 1) % S.numPlayers, `${ch.emoji} ${ch.name} cannot take an action`);
+  }
+  return true;
 }
 
 function place(S, p, idx, x, y) {
@@ -731,7 +892,8 @@ if (typeof module !== 'undefined' && module.exports) {
     propsOf, isYou, isWin, youOwner, youOwners, isYouBy, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
-    resolveCurious, fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
+    resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
+    fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
     RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS, SPRITE_IMG,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
@@ -741,6 +903,7 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof document !== 'undefined') initUI();
 
 function initUI() {
+  setThirstyChooser(() => null); // THIRSTY ties defer to a tap on a highlighted water cell
   let levelId = LEVELS[0].id; // first level preset preselected; ALL RULES (developer) is last in the dropdown
   let S = createGame(undefined, undefined, levelId);
   let pullOn = false;
@@ -780,6 +943,12 @@ function initUI() {
     if (S.over || S.scenarioOver) return;
     const x = rx - 1, y = ry - 1;
     if (x < 0 || y < 0 || x >= W || y >= H) return; // margin ring is not clickable
+    if (S._thirstyPending && S._thirstyPending.length) { // THIRSTY tie: tap one of the highlighted water cells
+      const q = S._thirstyPending[0];
+      if (q.options.some(([ox, oy]) => ox === x && oy === y)) pickThirsty(S, q.eid, x, y);
+      render();
+      return;
+    }
     if (S.fastDir) { // FAST: a tapped square is the destination (armed dir, else the tapped dir)
       const sel = selected();
       if (sel) {
@@ -845,6 +1014,7 @@ function initUI() {
 
   function tryMove(dx, dy) {
     if (S.over || S.scenarioOver) return;
+    if (S._thirstyPending && S._thirstyPending.length) return; // THIRSTY choice first
     const sel = pickMover(dx, dy);
     if (sel === 'ambiguous') {
       log(S, 'multiple things are YOU — tap one of your highlighted things (or Tab) to choose which to move first');
@@ -912,6 +1082,7 @@ function initUI() {
         if (!contested) for (const k of walkable) targets.add(k);
       }
     }
+    if (S._thirstyPending && S._thirstyPending.length) for (const [ox, oy] of S._thirstyPending[0].options) targets.add(ox + ',' + oy);
     const byCell = new Map();
     for (const e of S.entities) {
       const k = (e.x + 1) + ',' + (e.y + 1);
@@ -967,6 +1138,7 @@ function initUI() {
       turnEl.textContent = 'no players enabled — toggle someone on above';
     } else {
       turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (PLAYER ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
+      if (S._thirstyPending && S._thirstyPending.length) turnEl.innerHTML += ' — <b>THIRSTY</b>: tap a highlighted water cell';
     }
 
     const sc = S.scenario;
@@ -1068,6 +1240,7 @@ function initUI() {
       return;
     }
     if (S.over || S.scenarioOver) return;
+    if (S._thirstyPending && S._thirstyPending.length) return; // THIRSTY choice first (tap a highlighted water cell)
     if (e.code === 'Tab') {
       const list = activeSelectable();
       if (list.length) {
@@ -1144,6 +1317,7 @@ function initUI() {
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // tap, not swipe — let click handle it
     e.preventDefault();
     if (S.over || S.scenarioOver) return;
+    if (S._thirstyPending && S._thirstyPending.length) return; // THIRSTY choice first
     const dirx = Math.abs(dx) > Math.abs(dy) ? Math.sign(dx) : 0;
     const diry = dirx === 0 ? Math.sign(dy) : 0;
     const sel = pickMover(dirx, diry);

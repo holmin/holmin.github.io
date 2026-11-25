@@ -201,10 +201,12 @@
       <b>Challenge (C):</b> skip your turn — the opponent gets 10 actions to win, or you win.<br>
       <b>Differences from the video game:</b>
       <ul>
-        <li>everything is always PUSH</li>
-        <li>things adjacent to YOU can always be PULLed</li>
+        <li>everything is always PUSH, but only one thing per move (unless it is STRONG)</li>
+        <li>things adjacent to YOU can always be PULLed (unless SCARED)</li>
         <li>only one YOU thing moves per action</li>
         <li>being both YOU and WIN does not win by itself</li>
+        <li>placing a tile does not trigger CURIOUS/SCARED — only the next action does</li>
+        <li>a rule loop of 100 steps = the last actor loses</li>
         <li>nouns can never become other nouns</li>
         <li>property tiles include the word "is"</li>
       </ul>
@@ -221,6 +223,10 @@
         <li><b>CURIOUS</b> — when anything enters its row/column, it steps 1 space toward it (effects cascade).</li>
         <li><b>FAST</b> — slides as many spaces as you like in one direction.</li>
         <li><b>WRAP</b> — pushed/moved off the grid, it wraps to the other side (unless blocked); the printed margin tiles don't block it.</li>
+        <li><b>THIRSTY</b> — at the end of the turn, if not on the river, it moves to the closest river cell (you choose if several are equally close).</li>
+        <li><b>STRONG</b> — can push several things at once; a thing pushed against the board edge is pushed off and destroyed (WRAP wraps instead).</li>
+        <li><b>SCARED</b> — when something moves directly next to it (not diagonally), it flees as far as possible away; it cannot be pulled.</li>
+        <li><b>SHEEP</b> — when a SHEEP thing moves, all other SHEEP things move the same amount in the same direction if possible.</li>
         <li><b>RIVER</b> — noun for the river terrain (e.g. RIVER IS WIN).</li>
         <li><b>TEXT</b> — noun for the word tiles themselves (e.g. TEXT IS PLAYER 1 makes them movable).</li>
       </ul>
@@ -230,6 +236,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=25"></script>
+<script src="game.js?v=26"></script>
 </body>
 </html>

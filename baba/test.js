@@ -46,20 +46,27 @@ assert.deepStrictEqual([sami(s).x, sami(s).y], [1, 4]);
 assert.ok(rock(s, 2, 4), 'rock pushed');
 console.log('ok 3: push');
 
-// 4. Chain push works; only the edge stops it
+// 4. Push: only ONE thing per move unless the mover is STRONG (then chains work)
 s = G.createGame();
 const r4 = rock(s, 0, 0); r4.x = 1; r4.y = 4;
+s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true);
+assert.deepStrictEqual([sami(s).x, sami(s).y], [1, 4]);
+assert.ok(rock(s, 2, 4), 'single rock pushed');
+s = G.createGame();
+const r4a = rock(s, 0, 0); r4a.x = 1; r4a.y = 4;
 s.entities.push({ id: 999, kind: 'object', type: 'ROCK', x: 2, y: 4 });
 s.selectedId = sami(s).id;
+assert.strictEqual(G.canMove(s, sami(s), 1, 0), false, 'cannot push two things without STRONG');
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), false, 'move rejected');
+s.entities.push({ id: 900, kind: 'word', noun: 'SAMI', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'STRONG', label: 'IS STRONG', owner: 0, x: 1, y: 2 });
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('SAMI IS STRONG'));
+assert.strictEqual(G.canMove(s, sami(s), 1, 0), true, 'STRONG can push multiple things');
 G.moveSelected(s, 0, 1, 0, false);
-assert.ok(rock(s, 2, 4) && rock(s, 3, 4), 'both rocks chain-pushed');
-s = G.createGame();
-const r4c = rock(s, 0, 0); r4c.x = 1; r4c.y = 4;
-s.entities.push({ id: 998, kind: 'object', type: 'ROCK', x: 2, y: 4 });
-s.entities.push({ id: 997, kind: 'object', type: 'ROCK', x: 3, y: 4 });
-const r4d = rock(s, 4, 4); r4d.x = 4; r4d.y = 4;
-assert.strictEqual(G.canMove(s, sami(s), 1, 0), false, 'edge stops the chain');
-console.log('ok 4: chain push + edge stop');
+assert.ok(rock(s, 2, 4) && rock(s, 3, 4), 'both rocks chain-pushed with STRONG');
+console.log('ok 4: one push per move unless STRONG (chain push)');
 
 // 5. Rule formation right/down
 s = G.createGame();
@@ -554,8 +561,8 @@ assert.ok(s.supply.some(t => t.prop === 'FAST') && s.supply.some(t => t.prop ===
 assert.ok(!s.supply.some(t => t.prop === 'STOP') && !s.supply.some(t => t.prop === 'DEFEAT'));
 assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'base nouns present in non-plain levels');
 s = G.createGame(undefined, undefined, 'dev');
-assert.strictEqual(s.supply.length, 18, 'developer level has all rules (no WEAK tile)');
-for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP']) {
+assert.strictEqual(s.supply.length, 22, 'developer level has all rules (no WEAK tile)');
+for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP', 'THIRSTY', 'STRONG', 'SCARED', 'SHEEP']) {
   assert.ok(s.supply.some(t => t.prop === p), 'developer supply has IS ' + p);
 }
 assert.ok(!s.supply.some(t => t.prop === 'WEAK'), 'WEAK tile removed');
@@ -575,7 +582,7 @@ assert.ok(!G.yourThings(s, 0).some(e => e.fixed), 'fixed tiles never in yourThin
 assert.ok(G.yourThings(s, 0).some(e => e.kind === 'word' && !e.fixed), 'placed word tiles are');
 console.log('ok 35: TEXT does not apply to the printed margin tiles');
 
-// 36. PDF glossary: "anything that is placed into ... a space is considered entering that space" — placing DOES trigger CURIOUS
+// 36. FAQ: placing a tile does NOT count as entering — a freshly placed CURIOUS rule triggers only from the next action
 s = G.createGame();
 s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
 s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 3, y: 3 });
@@ -583,9 +590,14 @@ const r36 = rock(s, 0, 0); r36.x = 1; r36.y = 0; // curious rock in column 1
 G.ensureParsed(s);
 s.selectedId = sami(s).id;
 const flagNounIdx = s.supply.findIndex(t => t.noun === 'FLAG');
-assert.strictEqual(G.place(s, 0, flagNounIdx, 1, 4), true, 'placed FLAG noun at (1,4), adjacent to SAMI, entering column 1');
-assert.deepStrictEqual([r36.x, r36.y], [1, 1], 'curious rock moved toward the just-placed tile (PDF: placing = entering)');
-console.log('ok 36: placing counts as entering (PDF glossary) -> CURIOUS triggers');
+assert.strictEqual(G.place(s, 0, flagNounIdx, 1, 4), true, 'placed FLAG noun at (1,4), adjacent to SAMI');
+assert.deepStrictEqual([r36.x, r36.y], [1, 0], 'placing does NOT trigger CURIOUS (FAQ: not until the next action)');
+s.selectedId = aas(s).id;
+G.moveSelected(s, 1, -1, 0, false); G.moveSelected(s, 1, -1, 0, false); // P2's turn (moves within row 0: no trigger)
+s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true, 'SAMI steps into column 1 (pushing the FLAG word)');
+assert.deepStrictEqual([r36.x, r36.y], [1, 1], 'the next action triggers the freshly placed rule');
+console.log('ok 36: placing does not trigger CURIOUS (FAQ) — the next action does');
 
 // 37. moversTo: which YOUR things can walk to a tapped cell (axis-aligned only)
 s = G.createGame();
@@ -707,5 +719,143 @@ assert.deepStrictEqual([m42[0][1], m42[0][2]], [0, -1]);
 assert.strictEqual(G.moversTo(s, 0, 2, 2).length, 0, 'diagonal is not a target');
 assert.strictEqual(G.moversTo(s, 0, 4, 4).length, 0, 'rock corner is blocked, not a target');
 console.log('ok 42: FAST slide targets beyond one step are clickable movers');
+
+// 43. STRONG: a thing pushed against the border is pushed off and destroyed (unless it is WRAP)
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'SAMI', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'STRONG', label: 'IS STRONG', owner: 0, x: 1, y: 2 });
+const r43 = rock(s, 0, 0); r43.x = 0; r43.y = 3;
+sami(s).x = 1; sami(s).y = 3; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+assert.strictEqual(G.moveSelected(s, 0, -1, 0, false), true, 'STRONG pushes the rock off the left edge');
+assert.ok(!s.entities.includes(r43), 'rock pushed off the board is destroyed');
+assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 3]);
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'SAMI', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'STRONG', label: 'IS STRONG', owner: 0, x: 1, y: 2 });
+s.entities.push({ id: 902, kind: 'word', noun: 'ROCK', x: 0, y: 1 });
+s.entities.push({ id: 903, kind: 'word', prop: 'WRAP', label: 'IS WRAP', owner: 0, x: 1, y: 1 });
+const r43b = rock(s, 0, 0); r43b.x = 0; r43b.y = 3;
+const r43c = rock(s, 4, 4); r43c.x = 4; r43c.y = 0; // keep the wrap destination (4,3) free
+sami(s).x = 1; sami(s).y = 3; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+assert.strictEqual(G.moveSelected(s, 0, -1, 0, false), true);
+assert.deepStrictEqual([r43b.x, r43b.y], [4, 3], 'WRAP thing wraps off the edge instead of being destroyed');
+console.log('ok 43: STRONG pushes border things off the board (destroyed unless WRAP)');
+
+// 44. infinite loop: 100 resolution steps in one action -> the last actor loses
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 3, y: 3 });
+const r44 = rock(s, 0, 0); r44.x = 1; r44.y = 0;
+G.ensureParsed(s);
+s._loopSteps = 0;
+s._entered = [{ id: sami(s).id, fx: 0, fy: 4, tx: 1, ty: 4 }];
+G.resolveCurious(s, 0);
+assert.deepStrictEqual([r44.x, r44.y], [1, 1], 'normal cascade still works');
+assert.ok(!s.over);
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 3, y: 3 });
+G.ensureParsed(s);
+s._loopSteps = 99;
+s._entered = [{ id: sami(s).id, fx: 0, fy: 4, tx: 1, ty: 4 }];
+G.resolveCurious(s, 0);
+assert.ok(s.over && s.over.winner === 1 && /infinite loop/.test(s.over.reason), '100 steps = last actor (PLAYER 1) loses: ' + (s.over && s.over.reason));
+console.log('ok 44: infinite loop (100 steps) -> the last actor loses');
+
+// 45. THIRSTY: at the end of the turn, moves to the closest river cell; ties are offered to the player
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'THIRSTY', label: 'IS THIRSTY', owner: 0, x: 3, y: 3 });
+const r45 = rock(s, 0, 0); r45.x = 4; r45.y = 2;
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('ROCK IS THIRSTY'));
+s.selectedId = sami(s).id;
+G.moveSelected(s, 0, 1, 0, false); // P1's only first-turn action -> end of turn -> THIRSTY
+assert.deepStrictEqual([r45.x, r45.y], [4, 3], 'thirsty rock moved to the closest river cell (4,3)');
+assert.ok(G.riverAt(s, r45.x, r45.y));
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'THIRSTY', label: 'IS THIRSTY', owner: 0, x: 3, y: 3 });
+const r45b = rock(s, 0, 0); r45b.x = 3; r45b.y = 2; // equally close to (2,2) and (3,3)
+G.ensureParsed(s);
+let chosen45 = null;
+s._thirstyChooser = (opts) => { chosen45 = opts; return opts[1]; };
+s.selectedId = sami(s).id;
+G.moveSelected(s, 0, 1, 0, false);
+assert.strictEqual(chosen45.length, 2, 'two equally close river cells offered');
+assert.deepStrictEqual([r45b.x, r45b.y], [3, 3], 'player chose the second option');
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'THIRSTY', label: 'IS THIRSTY', owner: 0, x: 3, y: 3 });
+const r45c = rock(s, 0, 0); r45c.x = 3; r45c.y = 2;
+G.ensureParsed(s);
+s._thirstyChooser = () => null; // UI defers
+s.selectedId = sami(s).id;
+G.moveSelected(s, 0, 1, 0, false);
+assert.ok(s._thirstyPending && s._thirstyPending.length === 1, 'tie deferred to the player');
+assert.deepStrictEqual([r45c.x, r45c.y], [3, 2], 'not moved before the choice');
+assert.strictEqual(G.pickThirsty(s, r45c.id, 2, 2), true);
+assert.deepStrictEqual([r45c.x, r45c.y], [2, 2], 'picked water cell applied');
+assert.ok(!s._thirstyPending.length, 'queue drained');
+console.log('ok 45: THIRSTY (end of turn -> closest river; player chooses on ties)');
+
+// 46. SCARED: something moving directly next to it -> flees as far as possible away; diagonal doesn't scare; cannot be pulled
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SCARED', label: 'IS SCARED', owner: 0, x: 3, y: 3 });
+const f46 = s.entities.find(e => e.type === 'FLAG'); f46.x = 2; f46.y = 2;
+sami(s).x = 0; sami(s).y = 2; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+G.moveSelected(s, 0, 1, 0, false); // SAMI steps to (1,2), directly next to the flag
+assert.deepStrictEqual([f46.x, f46.y], [4, 2], 'scared flag fled as far as possible in the opposite direction');
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SCARED', label: 'IS SCARED', owner: 0, x: 3, y: 3 });
+const f46b = s.entities.find(e => e.type === 'FLAG'); f46b.x = 2; f46b.y = 2;
+sami(s).x = 0; sami(s).y = 3; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+G.moveSelected(s, 0, 1, 0, false); // (1,3) is diagonal to (2,2)
+assert.deepStrictEqual([f46b.x, f46b.y], [2, 2], 'diagonal adjacency does not scare');
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SCARED', label: 'IS SCARED', owner: 0, x: 3, y: 3 });
+const f46c = s.entities.find(e => e.type === 'FLAG'); f46c.x = 0; f46c.y = 4;
+sami(s).x = 1; sami(s).y = 4; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, true), true, 'move with pull');
+assert.deepStrictEqual([sami(s).x, sami(s).y], [2, 4]);
+assert.deepStrictEqual([f46c.x, f46c.y], [0, 4], 'SCARED thing was not pulled');
+s = G.createGame();
+const r46 = rock(s, 0, 0); r46.x = 0; r46.y = 4;
+sami(s).x = 1; sami(s).y = 4; s.selectedId = sami(s).id;
+G.moveSelected(s, 0, 1, 0, true);
+assert.deepStrictEqual([r46.x, r46.y], [1, 4], 'control: a normal rock IS pulled into the vacated cell');
+console.log('ok 46: SCARED (flees when something moves next to it; not diagonal; cannot be pulled)');
+
+// 47. SHEEP: when a sheep thing moves, other sheep things move the same amount in the same direction if possible
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SHEEP', label: 'IS SHEEP', owner: 0, x: 3, y: 3 });
+const r47a = rock(s, 0, 0); r47a.x = 1; r47a.y = 4;
+const r47b = rock(s, 4, 4); r47b.x = 3; r47b.y = 1;
+sami(s).x = 0; sami(s).y = 4; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+G.moveSelected(s, 0, 1, 0, false); // SAMI pushes sheep rock A (1,4)->(2,4)
+assert.deepStrictEqual([r47a.x, r47a.y], [2, 4], 'pushed sheep rock moved');
+assert.deepStrictEqual([r47b.x, r47b.y], [4, 1], 'the other sheep rock moved the same direction');
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SHEEP', label: 'IS SHEEP', owner: 0, x: 3, y: 3 });
+const rA2 = rock(s, 0, 0); rA2.x = 1; rA2.y = 4;
+const rB2 = rock(s, 4, 4); rB2.x = 3; rB2.y = 1;
+const f47 = s.entities.find(e => e.type === 'FLAG'); f47.x = 4; f47.y = 1; // block (4,1)
+sami(s).x = 0; sami(s).y = 4; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+G.moveSelected(s, 0, 1, 0, false);
+assert.deepStrictEqual([rA2.x, rA2.y], [2, 4]);
+assert.deepStrictEqual([rB2.x, rB2.y], [3, 1], 'blocked sheep rock did not move');
+console.log('ok 47: SHEEP (echo move when a sheep thing moves, if possible)');
 
 console.log('\nAll engine tests passed.');
