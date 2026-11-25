@@ -143,6 +143,7 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
 
 - `index.html` — page, styling, sidebar
 - `game.js` — engine (pure logic, loadable in Node) + DOM UI
-- `img/` — emoji graphics for all characters/objects (Twemoji SVGs, CC BY 4.0,
-  © Twitter, Inc.; shipped locally so no emoji font is needed on the device)
+- `img/` — emoji graphics for all characters/objects (Noto Color Emoji 128px PNGs,
+  © Google LLC, Apache License 2.0; shipped locally so no emoji font is needed on
+  the device)
 - `test.js` — engine tests: `node test.js`

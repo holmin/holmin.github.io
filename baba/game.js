@@ -12,12 +12,12 @@ const CHARACTERS = [
   { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
 const DEFAULT_ENABLED = [true, true, false, false, false, false];
-// Emoji graphics (Twemoji SVGs, CC BY 4.0 — see README) shipped locally in img/,
-// so the board does not depend on the device having an emoji font.
+// Emoji graphics (Noto Color Emoji 128px PNGs, Apache-2.0 — see README) shipped
+// locally in img/, so the board does not depend on the device having an emoji font.
 const SPRITE_IMG = {
-  SAMI: 'img/sami.svg', AAS: 'img/aas.svg', GABA: 'img/gaba.svg', EBBA: 'img/ebba.svg',
-  ZABA: 'img/zaba.svg', MINNE: 'img/minne.svg', ROCK: 'img/rock.svg', FLAG: 'img/flag.svg',
-  RIVER: 'img/river.svg', TEXT: 'img/text.svg',
+  SAMI: 'img/sami.png', AAS: 'img/aas.png', GABA: 'img/gaba.png', EBBA: 'img/ebba.png',
+  ZABA: 'img/zaba.png', MINNE: 'img/minne.png', ROCK: 'img/rock.png', FLAG: 'img/flag.png',
+  RIVER: 'img/river.png', TEXT: 'img/text.png',
 };
 
 const PLAYER_NOUNS = CHARACTERS.map(c => c.noun);

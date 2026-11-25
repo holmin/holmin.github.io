@@ -602,17 +602,19 @@ assert.strictEqual(G.moversTo(s, 0, 1, 3).length, 0, 'diagonal cells are never w
 assert.strictEqual(G.moversTo(s, 0, 0, 4).length, 0, 'own YOU cell is not a walk target');
 console.log('ok 37: moversTo (unambiguous vs ambiguous walk targets)');
 
-// 38. emoji graphics exist as local files for every character and object (no emoji-font dependency)
+// 38. emoji graphics exist as local PNG files for every character and object (no emoji-font dependency)
 const fs = require('fs'), path = require('path');
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 for (const c of G.CHARACTERS) {
   const p = path.join(__dirname, G.SPRITE_IMG[c.noun]);
   assert.ok(G.SPRITE_IMG[c.noun] && fs.existsSync(p), 'image for ' + c.noun);
-  assert.ok(fs.readFileSync(p, 'utf8').startsWith('<svg'), c.noun + ' image is an svg');
+  assert.ok(fs.readFileSync(p).subarray(0, 8).equals(PNG_MAGIC), c.noun + ' image is a PNG');
 }
 for (const k of ['ROCK', 'FLAG', 'RIVER', 'TEXT']) {
-  assert.ok(fs.existsSync(path.join(__dirname, G.SPRITE_IMG[k])), 'image for ' + k);
+  const p = path.join(__dirname, G.SPRITE_IMG[k]);
+  assert.ok(fs.existsSync(p) && fs.readFileSync(p).subarray(0, 8).equals(PNG_MAGIC), 'PNG for ' + k);
 }
-console.log('ok 38: local emoji graphics (Twemoji SVGs) for all characters/objects');
+console.log('ok 38: local emoji graphics (Noto Color Emoji PNGs) for all characters/objects');
 
 // 39. a noun can be YOU for multiple players at once: ROCK IS PLAYER 1 + ROCK IS PLAYER 2
 s = G.createGame();
