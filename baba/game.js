@@ -956,14 +956,6 @@ function initUI() {
       else { const b = document.createElement('b'); b.textContent = txt; li.appendChild(b); } // formed rules bold, above defaults
       ul.appendChild(li);
     }
-    const lg = document.getElementById('log');
-    lg.innerHTML = '';
-    for (const m of S.log) {
-      const li = document.createElement('li');
-      li.textContent = m;
-      lg.appendChild(li);
-    }
-
     const tray = document.getElementById('supply');
     tray.innerHTML = '';
     S.supply.forEach((t, i) => {

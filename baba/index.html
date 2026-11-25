@@ -72,13 +72,13 @@
   #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   #dpad {
     display: grid;
-    grid-template-columns: repeat(3, 52px);
-    grid-template-rows: repeat(2, 52px);
-    gap: 6px;
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(2, 40px);
+    gap: 4px;
     touch-action: none;
   }
   #dpad button {
-    font-size: 20px; border-radius: 12px; border: 1px solid #3a4170;
+    font-size: 15px; border-radius: 10px; border: 1px solid #3a4170;
     background: #2a3050; color: #dfe3ff; touch-action: none; user-select: none;
     -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   }
@@ -145,7 +145,8 @@
   }
   .btns button:disabled { opacity: .4; cursor: default; }
   #players { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #8b93c9; }
-  #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; }
+  #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; margin-top: 10px; width: 100%; }
+  #levelrow #level { flex: 1; min-width: 0; }
   #level {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170; border-radius: 8px;
     padding: 6px; font-size: 12px; font-weight: 700; max-width: 100%;
@@ -174,7 +175,8 @@
     #app { flex-direction: column; align-items: center; }
     #side { display: contents; }
     #side > * { width: min(100%, 420px); }
-    #turn { order: -2; }  /* status above the board in the one-column mobile layout */
+    h1 { order: -3; }     /* title on top in the one-column mobile layout */
+    #turn { order: -2; }  /* status above the board */
     #score { order: -1; }
     body { padding: 8px; }
   }
@@ -201,7 +203,7 @@
     </div>
     <div id="levelrow"><span>level:</span><select id="level"></select></div>
     <div id="tray-wrap">
-      <h3>Level tiles (tap, then tap a gold cell)</h3>
+      <h3>LEVEL TILES (TAP, THEN PLACE ON MAP)</h3>
       <div id="supply"></div>
       <div id="supply-empty">supply empty</div>
     </div>
@@ -218,8 +220,6 @@
     </div>
     <h2>Rules</h2>
     <ul id="rules"></ul>
-    <h2>Log</h2>
-    <ul id="log"></ul>
     <div class="help">
       <b>Goal:</b> move a thing that is <b>YOU</b> onto a thing that is <b>WIN</b> — sharing a space wins.
       <b>MOVE</b> one space orthogonally: pushing shoves whole rows/columns along, only the board edge stops a
@@ -253,6 +253,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=20"></script>
+<script src="game.js?v=21"></script>
 </body>
 </html>
