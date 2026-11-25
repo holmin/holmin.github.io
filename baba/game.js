@@ -832,12 +832,17 @@ function initUI() {
         // a thing is chosen: show all its walk tiles (no ambiguity anymore)
         for (const [cx, cy] of walkCells(explicit)) if (!ownYouCell(cx, cy)) targets.add(cx + ',' + cy);
       } else {
-        // no thing chosen: show only squares EXACTLY ONE of your things can reach;
-        // contested squares are not shown at all — choose the thing first
+        // no thing chosen: if ANY square is reachable by 2+ of your things, show NO
+        // walk tiles at all — choose the thing first; otherwise show all walkable ones
+        let contested = false;
+        const walkable = [];
         for (let cy = 0; cy < H; cy++) for (let cx = 0; cx < W; cx++) {
           if (ownYouCell(cx, cy)) continue;
-          if (moversTo(S, S.turn, cx, cy).length === 1) targets.add(cx + ',' + cy);
+          const n = moversTo(S, S.turn, cx, cy).length;
+          if (n > 1) contested = true;
+          if (n >= 1) walkable.push(cx + ',' + cy);
         }
+        if (!contested) for (const k of walkable) targets.add(k);
       }
     }
     const byCell = new Map();

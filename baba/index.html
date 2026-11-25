@@ -233,10 +233,10 @@
       themselves (e.g. <b>TEXT IS PLAYER 1</b> makes all word tiles PLAYER 1's YOU things, so you can move them). <b>Win:</b> a YOUR thing (PLAYER 1's, PLAYER 2's, …) shares a space with a WIN thing.
       Walk by tapping a <span style="color:#2ecc71">green dashed-outline</span> cell (if your thing is FAST, all squares it can
       slide to are highlighted); placing a tile shows <span style="color:#f1c40f">gold dashed-outline</span> cells instead. The outline never
-      changes the cell background, so the river stays visible. Green cells are squares exactly ONE of your things can walk
-      to — tap to move there directly. A square several of your things could reach is not shown at all: tap the bordered
-      thing (or Tab) to choose which one moves, then its tiles appear. A cell containing your own thing always selects it,
-      it is never a walk target. Swipe/D-pad/arrows/WASD also still work.
+      changes the cell background, so the river stays visible. Green cells are walk targets — tap to move there. If ANY
+      square could be reached by several of your things, NO walk cells are shown until you tap the bordered thing (or Tab)
+      to choose which one moves; then its tiles appear. A cell containing your own thing always selects it, it is never a
+      walk target. Swipe/D-pad/arrows/WASD also still work.
       The <b>level</b> dropdown picks which TWO rule tiles are in the supply (per the rulebook); <b>ALL RULES (developer)</b> at the bottom is preselected for now.
       <b>Challenge (C):</b> the next player gets 10 actions to win or you win. If you cannot take your
       actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
@@ -254,6 +254,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=12"></script>
+<script src="game.js?v=13"></script>
 </body>
 </html>
