@@ -40,7 +40,8 @@
   /* outside the 5x5 grid: no color, no gridlines */
   .cell.margin { background: transparent; border: none; }
   .cell.water { background: radial-gradient(circle at 50% 40%, #2a6ea6 0%, #1d4e79 70%); }
-  .cell.target { outline: 2px dashed #2ecc71; outline-offset: -2px; cursor: pointer; }
+  .cell.target { outline: 2px dashed #2ecc71; outline-offset: -2px; cursor: pointer; }   /* walk to (green) */
+  .cell.ptarget { outline: 2px dashed #f1c40f; outline-offset: -2px; cursor: pointer; } /* place a tile (gold) */
   .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; }
   .cell.stack .ent { width: 50%; height: 50%; font-size: calc(var(--cell) * .34); }
   .cell.stack .ent.word { font-size: calc(var(--cell) * .14); }
@@ -214,25 +215,28 @@
       Turns alternate; the very first turn has <b>1 action</b>, all later turns <b>2 actions</b>.
       An action is a <b>MOVE</b> (swipe the board / D-pad / arrows / WASD, PULL toggle or Shift = also
       pull) of one of your YOU things — tap a thing or Tab to select which — or a <b>PLACE</b> of a
-      level tile into an empty cell next to one of your YOU things (tap tile or keys 1–9, 0, q–o, then a green cell).
+      level tile into an empty cell next to one of your YOU things (tap tile or keys 1–9, 0, q–p, then a green cell).
       <b>ALL IS PUSH</b> — pushing shoves whole rows/columns of things along; only the board edge stops
       a push. PULL drags just one thing. A rule forms when a noun tile points right or down into a
-      property tile. Defaults: <b>ALL IS PUSH</b> plus <b>IS Player n</b> for each enabled character
-      (🐻‍❄️ Sami = Player 1, 🦙 Aas = Player 2, …). Videogame property tiles in the supply: <b>STOP</b> (blocks entry
+      property tile. Defaults: <b>ALL IS PUSH</b> plus <b>IS PLAYER n</b> for each enabled character
+      (🐻‍❄️ SAMI = PLAYER 1, 🦙 AAS = PLAYER 2, …). Videogame property tiles in the supply: <b>STOP</b> (blocks entry
       and can't be pushed/pulled), <b>SHUT</b> (same, but an <b>OPEN</b> thing touching it opens it; OPEN things
       can be entered), <b>WEAK</b> (destroyed when pushed/pulled), <b>SINK</b> (destroyed when sharing a cell),
       <b>HOT</b>+<b>MELT</b> (melt things touching hot things), <b>DEFEAT</b> (destroys YOU things it touches),
-      plus a <b>RIVER</b> noun (the river cells count as RIVER). <b>Win:</b> a YOUR thing (Player 1's, Player 2's, …) shares a space with a WIN thing.
-      Walk by tapping a dashed-outline cell next to your thing (same highlight as place targets — the cell background never changes, so the river stays visible); swipe/D-pad/arrows/WASD also still work.
+      plus <b>RIVER</b> and <b>TEXT</b> nouns — RIVER rules the river terrain, and TEXT rules the word tiles
+      themselves (e.g. <b>TEXT IS PLAYER 1</b> makes all word tiles PLAYER 1's YOU things, so you can move them). <b>Win:</b> a YOUR thing (PLAYER 1's, PLAYER 2's, …) shares a space with a WIN thing.
+      Walk by tapping a <span style="color:#2ecc71">green dashed-outline</span> cell (if your thing is FAST, all squares it can
+      slide to are highlighted); placing a tile shows <span style="color:#f1c40f">gold dashed-outline</span> cells instead. The outline never
+      changes the cell background, so the river stays visible. Swipe/D-pad/arrows/WASD also still work.
       <b>Challenge (C):</b> the next player gets 10 actions to win or you win. If you cannot take your
       actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
       by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same
-      game</b> — active players become Player 1, Player 2, … in the order listed, and new ones spawn as
-      close to their rank's corner as possible (Player 1 lower-left, Player 2 upper-right, …). The blue river is <b>RIVER</b> terrain (not a tile) — later rules will
-      interact with it. Permanent tiles always sit in the margin: the Player-1 noun over IS Player 1 on the
-      left and IS Player 1 below (plus the Player-2 noun + IS Player 2 on top and IS Player 2 on the right
+      game</b> — active players become PLAYER 1, PLAYER 2, … in the order listed, and new ones spawn as
+      close to their rank's corner as possible (PLAYER 1 lower-left, PLAYER 2 upper-right, …). The blue river is <b>RIVER</b> terrain (not a tile) — later rules will
+      interact with it. Permanent tiles always sit in the margin: the PLAYER-1 noun over IS PLAYER 1 on the
+      left and IS PLAYER 1 below (plus the PLAYER-2 noun + IS PLAYER 2 on top and IS PLAYER 2 on the right
       whenever 2+ characters are active) — you can place properties next to the printed nouns (e.g. IS FAST right of the
-      Player-1 noun) to rule them.
+      PLAYER-1 noun) to rule them.
       <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column (from outside it), it moves
       1 space toward them — effects cascade. <b>FAST</b>: press a direction, then tap a highlighted
       square to slide there (swiping is ignored for FAST). If several things are YOU, tap one (or Tab)
@@ -240,6 +244,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=4"></script>
+<script src="game.js?v=7"></script>
 </body>
 </html>

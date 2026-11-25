@@ -13,13 +13,14 @@ let s = G.createGame();
 assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4]);
 assert.deepStrictEqual([aas(s).x, aas(s).y], [4, 0]);
 assert.ok(rock(s, 0, 0) && rock(s, 4, 4));
-assert.deepStrictEqual(rulesOf(s), ['AAS IS Player 2 (default)', 'ALL IS PUSH (default)', 'SAMI IS Player 1 (default)']);
-assert.strictEqual(s.supply.length, 17, 'DEFAULT + W1L1 + CURIOUS/FAST + STOP/SINK/MELT/HOT/OPEN/SHUT/DEFEAT/WEAK + RIVER noun');
+assert.deepStrictEqual(rulesOf(s), ['AAS IS PLAYER 2 (default)', 'ALL IS PUSH (default)', 'SAMI IS PLAYER 1 (default)']);
+assert.strictEqual(s.supply.length, 18, 'DEFAULT + W1L1 + CURIOUS/FAST + STOP/SINK/MELT/HOT/OPEN/SHUT/DEFEAT/WEAK + RIVER/TEXT nouns');
 for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WEAK']) {
   assert.ok(s.supply.some(t => t.prop === p), 'supply has IS ' + p);
 }
 assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 2);
 assert.ok(s.supply.some(t => t.noun === 'RIVER'), 'one RIVER noun tile');
+assert.ok(s.supply.some(t => t.noun === 'TEXT'), 'one TEXT noun tile');
 assert.strictEqual(s.numPlayers, 2);
 console.log('ok 1: setup + default rules');
 
@@ -183,8 +184,8 @@ const gaba17 = s.entities.find(e => e.type === 'GABA');
 const ebba17 = s.entities.find(e => e.type === 'EBBA');
 assert.ok(gaba17 && Math.abs(gaba17.x) + Math.abs(gaba17.y) <= 1, 'GABA near corner (0,0)');
 assert.ok(ebba17 && Math.abs(ebba17.x - 4) + Math.abs(ebba17.y - 4) <= 1, 'EBBA near corner (4,4)');
-assert.deepStrictEqual(rulesOf(s).filter(r => /IS Player \d/.test(r)),
-  ['AAS IS Player 2 (default)', 'EBBA IS Player 4 (default)', 'GABA IS Player 3 (default)', 'SAMI IS Player 1 (default)']);
+assert.deepStrictEqual(rulesOf(s).filter(r => /IS PLAYER \d/.test(r)),
+  ['AAS IS PLAYER 2 (default)', 'EBBA IS PLAYER 4 (default)', 'GABA IS PLAYER 3 (default)', 'SAMI IS PLAYER 1 (default)']);
 s.selectedId = sami(s).id;
 G.moveSelected(s, 0, 1, 0, false);
 assert.strictEqual(s.turn, 1);
@@ -198,11 +199,11 @@ s = G.createGame();
 assert.strictEqual(G.setEnabled(s, 0, false), true);
 assert.strictEqual(s.numPlayers, 1);
 assert.ok(!s.entities.some(e => e.type === 'SAMI'), 'SAMI figure removed');
-assert.ok(rulesOf(s).includes('AAS IS Player 1 (default)'), 'AAS re-ranked to P1');
+assert.ok(rulesOf(s).includes('AAS IS PLAYER 1 (default)'), 'AAS re-ranked to P1');
 assert.ok(!rulesOf(s).some(r => r.startsWith('SAMI')));
 G.setEnabled(s, 2, true); // Gaba in -> AAS P1, GABA P2
 assert.strictEqual(s.numPlayers, 2);
-assert.ok(rulesOf(s).includes('GABA IS Player 2 (default)'));
+assert.ok(rulesOf(s).includes('GABA IS PLAYER 2 (default)'));
 const g18 = s.entities.find(e => e.type === 'GABA');
 assert.ok(g18 && Math.abs(g18.x - 4) + Math.abs(g18.y) <= 1, 'GABA spawned near (4,0) — player 2 corner (rank-based)');
 G.setEnabled(s, 1, false);
@@ -213,7 +214,7 @@ assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), false, 'no one can move wi
 assert.ok(!s.over, 'no spurious game-over with 0 players');
 G.setEnabled(s, 0, true);
 assert.strictEqual(s.numPlayers, 1);
-assert.ok(rulesOf(s).includes('SAMI IS Player 1 (default)'));
+assert.ok(rulesOf(s).includes('SAMI IS PLAYER 1 (default)'));
 console.log('ok 18: toggle re-ranking + disable-all');
 
 // 19. Undo restores toggles
@@ -308,8 +309,8 @@ const fixed = s => s.entities.filter(e => e.fixed);
   assert.strictEqual(fixed(g).length, 6, 'six printed tiles in the margin');
   const coords = fixed(g).map(e => e.x + ',' + e.y).sort();
   assert.deepStrictEqual(coords, ['-1,2', '-1,3', '2,-1', '2,5', '3,-1', '5,2']);
-  assert.strictEqual(rulesOf(g).filter(r => r === 'SAMI IS Player 1 (default)').length, 1, 'no duplicate default rules');
-  assert.ok(rulesOf(g).includes('AAS IS Player 2 (default)'));
+  assert.strictEqual(rulesOf(g).filter(r => r === 'SAMI IS PLAYER 1 (default)').length, 1, 'no duplicate default rules');
+  assert.ok(rulesOf(g).includes('AAS IS PLAYER 2 (default)'));
   // a property placed right of the left-middle P1 noun rules SAMI: place IS WIN at (0,2)
   const winIdx = g.supply.findIndex(t => t.prop === 'WIN');
   G.doPlace(g, 0, winIdx, 0, 2);
@@ -326,15 +327,15 @@ const fixed = s => s.entities.filter(e => e.fixed);
 {
   const g = G.createGame([true, true, true, false, false, false]);
   assert.strictEqual(fixed(g).length, 6, 'both printed nouns at 3 players');
-  assert.strictEqual(rulesOf(g).filter(r => /IS Player \d/.test(r)).length, 3, 'P3 default is implicit');
+  assert.strictEqual(rulesOf(g).filter(r => /IS PLAYER \d/.test(r)).length, 3, 'P3 default is implicit');
   G.setEnabled(g, 2, false);
   G.setEnabled(g, 1, false); // down to 1 player
-  assert.strictEqual(fixed(g).length, 3, 'only the P1 noun tile + IS Player 1s at 1 player');
+  assert.strictEqual(fixed(g).length, 3, 'only the P1 noun tile + IS PLAYER 1s at 1 player');
   assert.deepStrictEqual(fixed(g).map(e => e.x + ',' + e.y).sort(), ['-1,2', '-1,3', '2,5']);
-  assert.deepStrictEqual(rulesOf(g).filter(r => /IS Player \d/.test(r)), ['SAMI IS Player 1 (default)']);
+  assert.deepStrictEqual(rulesOf(g).filter(r => /IS PLAYER \d/.test(r)), ['SAMI IS PLAYER 1 (default)']);
   G.setEnabled(g, 1, true); // back to 2
   assert.strictEqual(fixed(g).length, 6);
-  assert.ok(rulesOf(g).includes('AAS IS Player 2 (default)'));
+  assert.ok(rulesOf(g).includes('AAS IS PLAYER 2 (default)'));
   console.log('ok 23d: printed noun tiles follow player count (P1 always, P2 at 2+)');
 }
 // FAST with explicit destination square
@@ -358,7 +359,7 @@ const fixed = s => s.entities.filter(e => e.fixed);
 assert.deepStrictEqual([...G.RIVER].sort(), ['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
 assert.ok(G.isRiverCell(0, 0) && G.isRiverCell(2, 1) && G.isRiverCell(4, 4));
 assert.ok(!G.isRiverCell(1, 2));
-assert.ok(G.NOUNS.includes('RIVER') && G.NOUNS.includes('AAS') && G.NOUNS.includes('MINNE') && !G.NOUNS.includes('WATER') && !G.NOUNS.includes('ERIK'));
+assert.ok(G.NOUNS.includes('RIVER') && G.NOUNS.includes('TEXT') && G.NOUNS.includes('AAS') && G.NOUNS.includes('MINNE') && !G.NOUNS.includes('WATER') && !G.NOUNS.includes('ERIK'));
 console.log('ok 24: river = RIVER terrain cells + noun list');
 
 // 25. STOP: blocks entry and cannot be pushed/pulled; a YOU thing that is STOP can still move itself
@@ -501,7 +502,7 @@ s = G.createGame([true, true, true, true, true, true]);
 const minne = s.entities.find(e => e.type === 'MINNE');
 assert.ok(minne && Math.abs(minne.x - 2) + Math.abs(minne.y - 4) <= 1, 'MINNE (panda) spawns near (2,4)');
 assert.ok(G.CHARACTERS.some(c => c.noun === 'MINNE' && c.emoji === '🐼'));
-assert.ok(G.CHARACTERS.some(c => c.noun === 'AAS' && c.name === 'Aas'));
+assert.ok(G.CHARACTERS.some(c => c.noun === 'AAS' && c.name === 'AAS'));
 assert.ok(!G.CHARACTERS.some(c => c.noun === 'ERIK'));
 console.log('ok 31: RIVER noun rules + Minne');
 
@@ -516,5 +517,29 @@ G.setEnabled(s, 5, true); // add MINNE -> player 3 -> corner (0,0) area (rock si
 const minne32 = s.entities.find(e => e.type === 'MINNE');
 assert.ok(Math.abs(minne32.x) + Math.abs(minne32.y) <= 1, 'third player near (0,0)');
 console.log('ok 32: spawn corners follow player rank (opposite diagonals first)');
+
+// 33. TEXT as a noun: TEXT IS PLAYER 1 makes word tiles that player's YOU things (movable)
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'TEXT', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'YOU', label: 'IS YOU', owner: 0, x: 1, y: 2 });
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('TEXT IS PLAYER 1'), 'TEXT IS PLAYER 1 rule forms');
+assert.ok(G.yourThings(s, 0).some(e => e.kind === 'word'), 'word tiles are Player 1 YOU things');
+s.entities.push({ id: 902, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+G.ensureParsed(s);
+s.selectedId = 902;
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true, 'can move a word tile when TEXT IS PLAYER 1');
+assert.deepStrictEqual([s.entities.find(e => e.id === 902).x, s.entities.find(e => e.id === 902).y], [3, 3], 'word tile moved');
+// words are still not the objects they name: FLAG IS WIN does not make the word FLAG win
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 0, y: 4 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 1, y: 4 });
+G.ensureParsed(s);
+assert.ok(!G.isWin(s, s.entities.find(e => e.id === 900)), 'word FLAG is not WIN under FLAG IS WIN');
+s.entities.push({ id: 902, kind: 'word', noun: 'TEXT', x: 3, y: 0 });
+s.entities.push({ id: 903, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 4, y: 0 });
+G.ensureParsed(s);
+assert.ok(G.isWin(s, s.entities.find(e => e.id === 900)), 'but the word tiles ARE win under TEXT IS WIN');
+console.log('ok 33: TEXT noun (TEXT IS PLAYER 1 -> word tiles movable; TEXT IS WIN works)');
 
 console.log('\nAll engine tests passed.');

@@ -1,15 +1,15 @@
 'use strict';
 
 const W = 5, H = 5, CELL = 64;
-const NOUNS = ['SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER'];
-const EMOJI = { SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊' };
+const NOUNS = ['SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER', 'TEXT'];
+const EMOJI = { SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊', TEXT: '🔤' };
 const CHARACTERS = [
-  { noun: 'SAMI', name: 'Sami', emoji: '🐻‍❄️', color: '#ff6b9d' },
-  { noun: 'AAS', name: 'Aas', emoji: '🦙', color: '#4dabf7' },
-  { noun: 'GABA', name: 'Gaba', emoji: '🐴', color: '#b388ff' },
-  { noun: 'EBBA', name: 'Ebba', emoji: '🦦', color: '#ffd166' },
-  { noun: 'ZABA', name: 'Zaba', emoji: '🐸', color: '#7bed9f' },
-  { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
+  { noun: 'SAMI', name: 'SAMI', emoji: '🐻‍❄️', color: '#ff6b9d' },
+  { noun: 'AAS', name: 'AAS', emoji: '🦙', color: '#4dabf7' },
+  { noun: 'GABA', name: 'GABA', emoji: '🐴', color: '#b388ff' },
+  { noun: 'EBBA', name: 'EBBA', emoji: '🦦', color: '#ffd166' },
+  { noun: 'ZABA', name: 'ZABA', emoji: '🐸', color: '#7bed9f' },
+  { noun: 'MINNE', name: 'MINNE', emoji: '🐼', color: '#b2bec3' },
 ];
 const DEFAULT_ENABLED = [true, true, false, false, false, false];
 const PLAYER_NOUNS = CHARACTERS.map(c => c.noun);
@@ -20,7 +20,7 @@ const PLAYER_COLORS = CHARACTERS.map(c => c.color);
 // (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5)  ->  stored 0-indexed as (x=col-1, y=row-1).
 // The river is called RIVER (noun 'RIVER'); it is terrain, not a tile — future rules will interact with it.
 const RIVER = new Set(['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
-// Home spots BY PLAYER RANK: player 1 lower-left, player 2 upper-right (opposite
+// Home spots BY PLAYER RANK: PLAYER 1 lower-left, PLAYER 2 upper-right (opposite
 // diagonals), then the other corners, then edge midpoints.
 const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0], [2, H - 1]];
 function isRiverCell(x, y) { return RIVER.has(x + ',' + y); }
@@ -65,7 +65,7 @@ function createGame(enabled, scenario) {
     obj('FLAG', 2, 2),
   ];
   // each enabled character spawns as close as possible to the home corner of its
-  // rank (Player 1 lower-left, player 2 upper-right, ...) — corner if free, else nearest free cell
+  // rank (PLAYER 1 lower-left, PLAYER 2 upper-right, ...) — corner if free, else nearest free cell
   activeChars({ enabled }).forEach((ci, rank) => {
     const [cx, cy] = HOME_CORNERS[rank];
     const [fx, fy] = firstFreeCell(entities, cx, cy);
@@ -78,7 +78,7 @@ function createGame(enabled, scenario) {
     { prop: 'CURIOUS' }, { prop: 'FAST' },
     { prop: 'STOP' }, { prop: 'SINK' }, { prop: 'MELT' }, { prop: 'HOT' },
     { prop: 'OPEN' }, { prop: 'SHUT' }, { prop: 'DEFEAT' }, { prop: 'WEAK' },
-    { noun: 'RIVER' },
+    { noun: 'RIVER' }, { noun: 'TEXT' },
   ];
   const S = {
     entities, supply, numPlayers, enabled,
@@ -109,16 +109,16 @@ function syncFixedTiles(S) {
     const n0 = CHARACTERS[a[0]].noun;
     S.entities.push(
       { id: nextId++, kind: 'word', noun: n0, fixed: true, x: -1, y: 2 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS Player 1', fixed: true, x: -1, y: 3 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS Player 1', fixed: true, x: 2, y: 5 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS PLAYER 1', fixed: true, x: -1, y: 3 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS PLAYER 1', fixed: true, x: 2, y: 5 },
     );
   }
   if (a.length >= 2) {
     const n1 = CHARACTERS[a[1]].noun;
     S.entities.push(
       { id: nextId++, kind: 'word', noun: n1, fixed: true, x: 2, y: -1 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS Player 2', fixed: true, x: 3, y: -1 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS Player 2', fixed: true, x: 5, y: 2 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS PLAYER 2', fixed: true, x: 3, y: -1 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS PLAYER 2', fixed: true, x: 5, y: 2 },
     );
   }
   ensureParsed(S);
@@ -157,7 +157,7 @@ function setEnabled(S, ci, on) {
     const [cx, cy] = HOME_CORNERS[rank];
     const [fx, fy] = firstFreeCell(S.entities, cx, cy);
     S.entities.push(obj(c.noun, fx, fy));
-    log(S, `${c.emoji} ${c.name} (Player ${rank + 1}) drops in at ${fx},${fy}`);
+    log(S, `${c.emoji} ${c.name} (PLAYER ${rank + 1}) drops in at ${fx},${fy}`);
   } else {
     S.entities = S.entities.filter((e) => {
       if (e.kind === 'object' && e.type === c.noun) return false;
@@ -202,7 +202,7 @@ function parseRules(S) {
     const d = propAt.get(n.x + ',' + (n.y + 1));
     if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner, permanent: !!d.fixed });
   }
-  // printed margin tiles cover Player 1 (always) and Player 2 (2+ players); Player 3+ are implicit
+  // printed margin tiles cover PLAYER 1 (always) and PLAYER 2 (2+ players); PLAYER 3+ are implicit
   activeChars(S).forEach((ci, rank) => {
     if (rank >= 2) rules.push({ noun: CHARACTERS[ci].noun, prop: 'YOU', owner: rank, permanent: true });
   });
@@ -223,7 +223,7 @@ function ensureParsed(S) {
 
 function ruleList(S) {
   const fmt = (r) => {
-    const prop = r.prop === 'YOU' && r.owner !== null && r.owner !== undefined ? 'Player ' + (r.owner + 1) : r.prop;
+    const prop = r.prop === 'YOU' && r.owner !== null && r.owner !== undefined ? 'PLAYER ' + (r.owner + 1) : r.prop;
     return r.noun + ' IS ' + prop + (r.permanent ? ' (default)' : '');
   };
   // formed (non-default) rules first, default rules below
@@ -231,10 +231,12 @@ function ruleList(S) {
     .concat(S.rules.filter(r => r.permanent).map(fmt).sort());
 }
 
-const typeOf = (e) => (e.kind === 'object' ? e.type : e.noun);
-// Word tiles are just rule text: they never carry properties themselves
-// (videogame-faithful: you win by touching the actual FLAG object, not the word "FLAG").
-function propsOf(S, e) { if (e.kind === 'word') return {}; return S._propMap[e.type] || {}; }
+// Word tiles are TEXT: they carry whatever `TEXT IS ...` rules say (so
+// `TEXT IS PLAYER n` makes them that player's YOU things, movable), but they
+// are never the object they name — you win by touching the actual FLAG object,
+// not the word "FLAG" (unless TEXT IS WIN).
+const typeOf = (e) => (e.kind === 'object' ? e.type : 'TEXT');
+function propsOf(S, e) { return S._propMap[typeOf(e)] || {}; }
 function isYou(S, e) { return !!propsOf(S, e).YOU; }
 function isWin(S, e) { return !!propsOf(S, e).WIN; }
 function youOwner(S, e) { return S._youOwner[typeOf(e)]; }
@@ -287,7 +289,7 @@ function end(S, winner, reason) {
     }
   }
   const wch = winner === null ? null : charAtRank(S, winner);
-  log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (Player ${winner + 1}) ${reason}`);
+  log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (PLAYER ${winner + 1}) ${reason}`);
 }
 
 // Videogame destruction rules, applied after every action (and after CURIOUS
@@ -346,7 +348,7 @@ function resolve(S, actor) {
   if (winners.size === 2) end(S, actor, 'both YOU on WIN — last action wins');
   else if (winners.size === 1) end(S, [...winners][0], 'YOU shared a space with WIN');
 
-  // a player whose YOU things were all destroyed loses (videogame DEFEAT/SINK)
+  // a PLAYER whose YOU things were all destroyed loses (videogame DEFEAT/SINK)
   if (!S.over && S.numPlayers >= 2) {
     const alive = [];
     for (let r = 0; r < S.numPlayers; r++) if (yourThings(S, r).length) alive.push(r);
@@ -643,7 +645,7 @@ function spendClock(S, p) {
   pushHistory(S, snapshot(S));
   sc.bo3 = true;
   sc.clocks[p] = false;
-  log(S, `🕐 Player ${p + 1} spends their clock — this scenario is best 2 of 3`);
+  log(S, `🕐 PLAYER ${p + 1} spends their clock — this scenario is best 2 of 3`);
   return true;
 }
 
@@ -687,7 +689,7 @@ function initUI() {
   function selected() {
     const yours = activeSelectable();
     let sel = S.entities.find(e => e.id === S.selectedId);
-    // with multiple YOUs there is no implicit choice — the player must tap one (or Tab)
+    // with multiple YOUs there is no implicit choice — the PLAYER must tap one (or Tab)
     if (!sel || !yours.includes(sel)) sel = yours.length === 1 ? yours[0] : null;
     if (sel) S.selectedId = sel.id;
     return sel;
@@ -720,7 +722,12 @@ function initUI() {
       return;
     }
     if (!sel) return;
-    // tap a highlighted neighbour cell to walk there (same highlight as place targets)
+    // tap a highlighted cell to walk there
+    if (propsOf(S, sel).FAST) {
+      const dx = Math.sign(x - sel.x), dy = Math.sign(y - sel.y);
+      if ((dx !== 0 || dy !== 0) && fastMoveTo(S, S.turn, dx, dy, x, y)) { render(); return; }
+      return;
+    }
     for (const [dx, dy] of DIRS) {
       if (sel.x + dx === x && sel.y + dy === y && canMove(S, sel, dx, dy)) {
         moveSelected(S, S.turn, dx, dy, pullOn);
@@ -761,12 +768,17 @@ function initUI() {
     // one) — also shows which things can be picked when there are multiple YOUs
     const turnYous = (!S.over && !S.scenarioOver && S.numPlayers > 0) ? yourThings(S, S.turn) : [];
     const turnChar = S.numPlayers > 0 ? charAtRank(S, S.turn) : null;
-    let targets = new Set();
-    if (S.placeIdx !== null) targets = placeTargets(S, S.turn);
-    else if (S.fastDir && sel) {
-      for (const [x, y] of fastReach(S, sel, S.fastDir.dx, S.fastDir.dy)) targets.add(x + ',' + y);
-    } else if (sel) {
-      for (const [dx, dy] of DIRS) if (canMove(S, sel, dx, dy)) targets.add((sel.x + dx) + ',' + (sel.y + dy));
+    let targets = new Set();  // walk targets (green outline)
+    let ptargets = new Set(); // place targets (gold outline)
+    if (S.placeIdx !== null) ptargets = placeTargets(S, S.turn);
+    else if (sel) {
+      if (propsOf(S, sel).FAST) {
+        // FAST: highlight every square it can slide to, in all 4 directions,
+        // as soon as YOU IS FAST is active
+        for (const [dx, dy] of DIRS) for (const [x, y] of fastReach(S, sel, dx, dy)) targets.add(x + ',' + y);
+      } else {
+        for (const [dx, dy] of DIRS) if (canMove(S, sel, dx, dy)) targets.add((sel.x + dx) + ',' + (sel.y + dy));
+      }
     }
     const byCell = new Map();
     for (const e of S.entities) {
@@ -779,6 +791,7 @@ function initUI() {
         const cell = cells[ry * EXT + rx];
         const x = rx - 1, y = ry - 1;
         if (x >= 0 && y >= 0 && x < W && y < H && riverAt(S, x, y)) cell.classList.add('water');
+        if (x >= 0 && y >= 0 && x < W && y < H && ptargets.has(x + ',' + y)) cell.classList.add('ptarget');
         if (x >= 0 && y >= 0 && x < W && y < H && targets.has(x + ',' + y)) cell.classList.add('target');
         const ents = byCell.get(rx + ',' + ry) || [];
         if (ents.length > 1) cell.classList.add('stack');
@@ -811,15 +824,15 @@ function initUI() {
       const wch = w === null ? null : charAtRank(S, w);
       turnEl.innerHTML = w === null
         ? `🤝 DRAW — ${S.over.reason}`
-        : `<span style="color:${wch.color}">${wch.emoji} ${wch.name} (Player ${w + 1}) WINS</span> — ${S.over.reason}`;
+        : `<span style="color:${wch.color}">${wch.emoji} ${wch.name} (PLAYER ${w + 1}) WINS</span> — ${S.over.reason}`;
     } else if (S.challenge) {
       const opp = (S.challenge.challenger + 1) % S.numPlayers;
       const och = charAtRank(S, opp);
-      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${och.emoji} ${och.name} (Player ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
+      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${och.emoji} ${och.name} (PLAYER ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
     } else if (!cur) {
       turnEl.textContent = 'no players enabled — toggle someone on above';
     } else {
-      turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (Player ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
+      turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (PLAYER ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
     }
 
     const sc = S.scenario;
@@ -830,7 +843,7 @@ function initUI() {
     ul.innerHTML = '';
     for (const r of ruleList(S)) {
       const li = document.createElement('li');
-      // sprites next to player names in the rules list (not on board/tiles)
+      // sprites next to PLAYER names in the rules list (not on board/tiles)
       const txt = r.replace(/^([A-Z]+)/, (m) => {
         const c = CHARACTERS.find(c => c.noun === m);
         return c ? c.emoji + ' ' + m : m;
@@ -879,7 +892,7 @@ function initUI() {
         const wch = w === null ? null : charAtRank(S, w);
         html += w === null
           ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
-          : `<div class="big" style="color:${wch.color}">${wch.emoji} ${wch.name} (Player ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
+          : `<div class="big" style="color:${wch.color}">${wch.emoji} ${wch.name} (PLAYER ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
         html += `<div class="sub">R = next game${S.scenarioOver ? '' : ' · N = new scenario'}</div>`;
       }
       if (S.scenarioOver) {
@@ -887,7 +900,7 @@ function initUI() {
         for (let i = 1; i < sc.score.length; i++) if (sc.score[i] > sc.score[w === null ? 0 : w]) w = i;
         if (w !== null && sc.score.filter(v => v === sc.score[w]).length > 1) w = null;
         const wch = w === null ? null : charAtRank(S, w);
-        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? wch.emoji + ' ' + wch.name + ' (Player ' + (w + 1) + ')' : 'tie'}</div>`;
+        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? wch.emoji + ' ' + wch.name + ' (PLAYER ' + (w + 1) + ')' : 'tie'}</div>`;
         html += `<div class="sub">N = new scenario · R = replay</div>`;
       }
       ov.innerHTML = html;
@@ -902,7 +915,7 @@ function initUI() {
   };
   // supply tile hotkeys: 1-9, 0, then q e t y u i o
   const TILEKEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0',
-    'KeyQ', 'KeyE', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO'];
+    'KeyQ', 'KeyE', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'];
 
   window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
@@ -969,7 +982,7 @@ function initUI() {
   CHARACTERS.forEach((c, i) => {
     const b = document.createElement('button');
     b.textContent = `${c.emoji} ${c.name}`;
-    b.title = 'toggle player (active players become Player 1, Player 2, … in this order)';
+    b.title = 'toggle PLAYER (active players become PLAYER 1, PLAYER 2, … in this order)';
     b.addEventListener('click', () => { setEnabled(S, i, !S.enabled[i]); render(); });
     pwrap.appendChild(b);
   });
