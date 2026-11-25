@@ -732,39 +732,55 @@ function initUI() {
     const yours = activeSelectable();
     const mine = entitiesAt(S, x, y).find(e => yours.includes(e));
     if (mine) { S.selectedId = mine.id; render(); return; } // tap a YOUR thing to select it
-    const sel = selected();
-    if (yours.length > 1 && !sel) {
+    // tap a highlighted cell to walk there; if several of your things could go
+    // there, that is ambiguous -> choose the thing first
+    const movers = [];
+    for (const y of yours) {
+      const dx = Math.sign(x - y.x), dy = Math.sign(y - y.y);
+      if (dx === 0 && dy === 0) continue;
+      if (propsOf(S, y).FAST) {
+        if (fastReach(S, y, dx, dy).some(([cx, cy]) => cx === x && cy === y)) movers.push([y, dx, dy]);
+      } else if (Math.abs(x - y.x) + Math.abs(y - y.y) === 1 && canMove(S, y, dx, dy)) {
+        movers.push([y, dx, dy]);
+      }
+    }
+    if (movers.length === 1) {
+      const [y, dx, dy] = movers[0];
+      S.selectedId = y.id;
+      if (propsOf(S, y).FAST) fastMoveTo(S, S.turn, dx, dy, x, y);
+      else moveSelected(S, S.turn, dx, dy, pullOn);
+      render();
+      return;
+    }
+    if (movers.length > 1) {
+      log(S, 'several of your things can walk there — tap the one to move first (or Tab)');
+      render();
+    }
+  }
+
+  // which YOUR thing moves in direction (dx,dy): the explicit selection if set,
+  // else the unique thing that can move that way — no ambiguity, no choosing needed
+  function pickMover(dx, dy) {
+    const yours = activeSelectable();
+    if (!yours.length) return null;
+    const cur = S.entities.find(e => e.id === S.selectedId);
+    if (cur && yours.includes(cur)) return cur;
+    if (yours.length === 1) return yours[0];
+    const movers = yours.filter(y => canMove(S, y, dx, dy));
+    if (movers.length === 1) return movers[0];
+    return movers.length === 0 ? null : 'ambiguous';
+  }
+
+  function tryMove(dx, dy) {
+    if (S.over || S.scenarioOver) return;
+    const sel = pickMover(dx, dy);
+    if (sel === 'ambiguous') {
       log(S, 'multiple things are YOU — tap one of your highlighted things (or Tab) to choose which to move first');
       render();
       return;
     }
     if (!sel) return;
-    // tap a highlighted cell to walk there
-    if (propsOf(S, sel).FAST) {
-      const dx = Math.sign(x - sel.x), dy = Math.sign(y - sel.y);
-      if ((dx !== 0 || dy !== 0) && fastMoveTo(S, S.turn, dx, dy, x, y)) { render(); return; }
-      return;
-    }
-    for (const [dx, dy] of DIRS) {
-      if (sel.x + dx === x && sel.y + dy === y && canMove(S, sel, dx, dy)) {
-        moveSelected(S, S.turn, dx, dy, pullOn);
-        render();
-        return;
-      }
-    }
-  }
-
-  function tryMove(dx, dy) {
-    if (S.over || S.scenarioOver) return;
-    const yours = activeSelectable();
-    const curSel = S.entities.find(e => e.id === S.selectedId);
-    if (yours.length > 1 && !yours.includes(curSel)) {
-      log(S, 'multiple things are YOU — tap one (or Tab) to choose which to move');
-      render();
-      return;
-    }
-    const sel = selected();
-    if (!sel) return;
+    S.selectedId = sel.id;
     if (propsOf(S, sel).FAST) { // FAST: ask for a direction, then a destination square
       S.fastDir = { dx, dy };
       log(S, `FAST: ${CHARACTERS.find(c => c.noun === sel.type).name} — now tap a highlighted square to slide there (Esc cancels)`);
@@ -791,15 +807,17 @@ function initUI() {
     // tapping it selects that thing instead (unambiguous controls)
     const ownYouCell = (x, y) => entitiesAt(S, x, y).some(e => turnYous.includes(e));
     if (S.placeIdx !== null) ptargets = placeTargets(S, S.turn);
-    else if (sel) {
-      if (propsOf(S, sel).FAST) {
-        // FAST: highlight every square it can slide to, in all 4 directions,
-        // as soon as YOU IS FAST is active
-        for (const [dx, dy] of DIRS) for (const [x, y] of fastReach(S, sel, dx, dy)) if (!ownYouCell(x, y)) targets.add(x + ',' + y);
-      } else {
-        for (const [dx, dy] of DIRS) {
-          const tx = sel.x + dx, ty = sel.y + dy;
-          if (canMove(S, sel, dx, dy) && !ownYouCell(tx, ty)) targets.add(tx + ',' + ty);
+    else {
+      // show ALL walkable tiles of ALL your things (no choosing needed up front)
+      for (const y of turnYous) {
+        if (propsOf(S, y).FAST) {
+          // FAST: every square it can slide to, in all 4 directions
+          for (const [dx, dy] of DIRS) for (const [cx, cy] of fastReach(S, y, dx, dy)) if (!ownYouCell(cx, cy)) targets.add(cx + ',' + cy);
+        } else {
+          for (const [dx, dy] of DIRS) {
+            const tx = y.x + dx, ty = y.y + dy;
+            if (canMove(S, y, dx, dy) && !ownYouCell(tx, ty)) targets.add(tx + ',' + ty);
+          }
         }
       }
     }
@@ -1036,17 +1054,18 @@ function initUI() {
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // tap, not swipe — let click handle it
     e.preventDefault();
     if (S.over || S.scenarioOver) return;
-    const yours = activeSelectable();
-    const curSel = S.entities.find(e2 => e2.id === S.selectedId);
-    if (yours.length > 1 && !yours.includes(curSel)) {
+    const dirx = Math.abs(dx) > Math.abs(dy) ? Math.sign(dx) : 0;
+    const diry = dirx === 0 ? Math.sign(dy) : 0;
+    const sel = pickMover(dirx, diry);
+    if (sel === 'ambiguous') {
       log(S, 'multiple things are YOU — tap one of your highlighted things (or Tab) to choose which to move first');
       render();
       return;
     }
-    const sel = curSel && yours.includes(curSel) ? curSel : yours[0];
-    if (sel && propsOf(S, sel).FAST) return; // swiping is ignored for FAST — direction key + tap a square instead
-    if (Math.abs(dx) > Math.abs(dy)) moveSelected(S, S.turn, Math.sign(dx), 0, pullOn);
-    else moveSelected(S, S.turn, 0, Math.sign(dy), pullOn);
+    if (!sel) { render(); return; }
+    S.selectedId = sel.id;
+    if (propsOf(S, sel).FAST) return; // swiping is ignored for FAST — direction key + tap a square instead
+    moveSelected(S, S.turn, dirx, diry, pullOn);
     render();
   }, { passive: false });
 

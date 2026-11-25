@@ -127,9 +127,10 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
 - Move: tap/click a green dashed-outline cell to walk there (the highlight never
   changes the cell background, so the river stays visible), or swipe the board,
   on-screen D-pad, arrow keys, WASD; PULL toggle button or Shift = also pull.
-  Tap one of your bordered things to select it — a cell containing your own thing
-  always selects it, never walks onto it. With multiple YOUs, tap one (or Tab) to
-  choose which moves first
+  All walkable tiles of all your things are highlighted at once; tap a tile only one
+  thing can reach and it moves there directly (no choosing needed) — if several could
+  reach it, tap the thing (or Tab) first. A cell containing your own thing always
+  selects it, never walks onto it
 - Place: tap a supply tile (or keys 1–9, 0, q–p), then tap a highlighted cell; Esc cancels
 - C = challenge · R = new game · N = new scenario · **Z = undo last action**
 - 👥 buttons toggle characters on/off in the current game (1–6 players) — undoable with Z.
