@@ -1131,15 +1131,15 @@ function initUI() {
       const wch = w === null ? null : charAtRank(S, w);
       turnEl.innerHTML = w === null
         ? `🤝 DRAW — ${S.over.reason}`
-        : `<span style="color:${wch.color}">${wch.emoji} ${wch.name} (PLAYER ${w + 1}) WINS</span> — ${S.over.reason}`;
+        : `<span style="color:${wch.color}">${spriteImg(wch.noun)} ${wch.name} (PLAYER ${w + 1}) WINS</span> — ${S.over.reason}`;
     } else if (S.challenge) {
       const opp = (S.challenge.challenger + 1) % S.numPlayers;
       const och = charAtRank(S, opp);
-      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${och.emoji} ${och.name} (PLAYER ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
+      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${spriteImg(och.noun)} ${och.name} (PLAYER ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
     } else if (!cur) {
       turnEl.textContent = 'no players enabled — toggle someone on above';
     } else {
-      turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (PLAYER ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
+      turnEl.innerHTML = `<span style="color:${cur.color}">${spriteImg(cur.noun)} ${cur.name} (PLAYER ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
       if (S._thirstyPending && S._thirstyPending.length) turnEl.innerHTML += ' — <b>THIRSTY</b>: tap a highlighted water cell';
     }
 
@@ -1199,7 +1199,7 @@ function initUI() {
         const wch = w === null ? null : charAtRank(S, w);
         html += w === null
           ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
-          : `<div class="big" style="color:${wch.color}">${wch.emoji} ${wch.name} (PLAYER ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
+          : `<div class="big" style="color:${wch.color}">${spriteImg(wch.noun)} ${wch.name} (PLAYER ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
         html += `<div class="sub">R = next game${S.scenarioOver ? '' : ' · N = new scenario'}</div>`;
       }
       if (S.scenarioOver) {
@@ -1207,7 +1207,7 @@ function initUI() {
         for (let i = 1; i < sc.score.length; i++) if (sc.score[i] > sc.score[w === null ? 0 : w]) w = i;
         if (w !== null && sc.score.filter(v => v === sc.score[w]).length > 1) w = null;
         const wch = w === null ? null : charAtRank(S, w);
-        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? wch.emoji + ' ' + wch.name + ' (PLAYER ' + (w + 1) + ')' : 'tie'}</div>`;
+        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? spriteImg(wch.noun) + ' ' + wch.name + ' (PLAYER ' + (w + 1) + ')' : 'tie'}</div>`;
         html += `<div class="sub">N = new scenario · R = replay</div>`;
       }
       ov.innerHTML = html;
