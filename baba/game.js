@@ -746,15 +746,27 @@ function initUI() {
       return;
     }
     const yours = activeSelectable();
+    const explicit = yours.find(e => e.id === S.selectedId);
+    // a thing is already selected: tapping a cell it can walk to (even one holding
+    // another of your YOUs — it gets pushed) walks there instead of selecting
+    if (explicit) {
+      const mv = moversTo(S, S.turn, x, y).find(([th]) => th === explicit);
+      if (mv) {
+        const [th, dx, dy] = mv;
+        if (propsOf(S, th).FAST) fastMoveTo(S, S.turn, dx, dy, x, y);
+        else moveSelected(S, S.turn, dx, dy, pullOn);
+        render();
+        return;
+      }
+    }
+    // otherwise tapping one of your things selects it
     const mine = entitiesAt(S, x, y).find(e => yours.includes(e));
-    if (mine) { S.selectedId = mine.id; render(); return; } // tap a YOUR thing to select it
+    if (mine) { S.selectedId = mine.id; render(); return; }
     // tap a highlighted cell to walk there; if several of your things could go
     // there, that is ambiguous -> choose the thing first
     const movers = moversTo(S, S.turn, x, y);
-    const explicit = yours.find(e => e.id === S.selectedId);
-    const mv = explicit ? movers.find(([th]) => th === explicit) : (movers.length === 1 ? movers[0] : null);
-    if (mv) {
-      const [th, dx, dy] = mv;
+    if (movers.length === 1) {
+      const [th, dx, dy] = movers[0];
       S.selectedId = th.id;
       if (propsOf(S, th).FAST) fastMoveTo(S, S.turn, dx, dy, x, y);
       else moveSelected(S, S.turn, dx, dy, pullOn);
@@ -829,8 +841,9 @@ function initUI() {
       };
       const explicit = turnYous.find(e => e.id === S.selectedId);
       if (explicit) {
-        // a thing is chosen: show all its walk tiles (no ambiguity anymore)
-        for (const [cx, cy] of walkCells(explicit)) if (!ownYouCell(cx, cy)) targets.add(cx + ',' + cy);
+        // a thing is chosen: show all its walk tiles (no ambiguity anymore) —
+        // including cells holding another of your YOUs it can walk onto (push)
+        for (const [cx, cy] of walkCells(explicit)) targets.add(cx + ',' + cy);
       } else {
         // no thing chosen: if ANY square is reachable by 2+ of your things, show NO
         // walk tiles at all — choose the thing first; otherwise show all walkable ones

@@ -235,8 +235,9 @@
       slide to are highlighted); placing a tile shows <span style="color:#f1c40f">gold dashed-outline</span> cells instead. The outline never
       changes the cell background, so the river stays visible. Green cells are walk targets — tap to move there. If ANY
       square could be reached by several of your things, NO walk cells are shown until you tap the bordered thing (or Tab)
-      to choose which one moves; then its tiles appear. A cell containing your own thing always selects it, it is never a
-      walk target. Swipe/D-pad/arrows/WASD also still work.
+      to choose which one moves; then its tiles appear. With nothing selected, tapping one of your things selects it; once
+      one is selected, tapping another of your things that it can walk to walks (pushes) there instead. Swipe/D-pad/arrows/
+      WASD also still work.
       The <b>level</b> dropdown picks which TWO rule tiles are in the supply (per the rulebook); <b>ALL RULES (developer)</b> at the bottom is preselected for now.
       <b>Challenge (C):</b> the next player gets 10 actions to win or you win. If you cannot take your
       actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
@@ -254,6 +255,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=13"></script>
+<script src="game.js?v=14"></script>
 </body>
 </html>
