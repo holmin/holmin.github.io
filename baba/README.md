@@ -19,10 +19,10 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   possible (corner if free, else nearest free cell). Default rules
   (shown as `(default)`, listed below any formed rules): `ALL IS PUSH`, plus one
   `IS PLAYER n` per active character — permanent.
-- **Characters:** SAMI 🐻‍❄️ and AAS 🦙 are on by default; GABA 🐴, EBBA 🦦,
-  ZABA 🐸 and MINNE 🐼 can be toggled on/off (1–6 players; disabling all is allowed while
+- **Characters:** Sami 🐻‍❄️ and Aas 🦙 are on by default; Gaba 🐴, Ebba 🦦,
+  Zaba 🐸 and Minne 🐼 can be toggled on/off (1–6 players; disabling all is allowed while
   selecting). Active players are always **PLAYER 1, PLAYER 2, … in the order listed**, so
-  toggling re-ranks them (e.g. disable SAMI and AAS becomes PLAYER 1). Toggling works
+  toggling re-ranks them (e.g. disable Sami and Aas becomes PLAYER 1). Toggling works
   mid-game (undoable with Z): enabling spawns the figure as close as possible
   to its rank's corner (corner if free, else closest free cell); disabling removes
   the figure and that character's placed property tiles.
@@ -89,7 +89,8 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   - `TEXT` is a noun for the word tiles themselves: they carry whatever
     `TEXT IS …` rules say. `TEXT IS PLAYER n` makes all word tiles that
     player's YOU things — you can select and move them like figures (and any
-    other TEXT rule, e.g. `TEXT IS WIN`, applies to the words too).
+    other TEXT rule, e.g. `TEXT IS WIN`, applies to the words too). TEXT rules never
+    apply to the permanent printed tiles in the margin.
     Word tiles are still never the object they name: `FLAG IS WIN` does not
     make the word "FLAG" a WIN object.
 - **Choosing which YOU moves:** when several things are YOU, you must pick one
@@ -123,10 +124,12 @@ ended the game. History is capped at 500 actions per game.
 
 Works with touch or mouse/keyboard; the board scales to the screen width.
 
-- Move: tap/click a dashed-outline cell next to your thing (the highlight never
+- Move: tap/click a green dashed-outline cell to walk there (the highlight never
   changes the cell background, so the river stays visible), or swipe the board,
-  on-screen D-pad, arrow keys, WASD; PULL toggle button or Shift = also pull;
-  with multiple YOUs, tap one (or Tab) to choose which moves first
+  on-screen D-pad, arrow keys, WASD; PULL toggle button or Shift = also pull.
+  Tap one of your bordered things to select it — a cell containing your own thing
+  always selects it, never walks onto it. With multiple YOUs, tap one (or Tab) to
+  choose which moves first
 - Place: tap a supply tile (or keys 1–9, 0, q–p), then tap a highlighted cell; Esc cancels
 - C = challenge · R = new game · N = new scenario · **Z = undo last action**
 - 👥 buttons toggle characters on/off in the current game (1–6 players) — undoable with Z.

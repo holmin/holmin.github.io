@@ -4,12 +4,12 @@ const W = 5, H = 5, CELL = 64;
 const NOUNS = ['SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER', 'TEXT'];
 const EMOJI = { SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊', TEXT: '🔤' };
 const CHARACTERS = [
-  { noun: 'SAMI', name: 'SAMI', emoji: '🐻‍❄️', color: '#ff6b9d' },
-  { noun: 'AAS', name: 'AAS', emoji: '🦙', color: '#4dabf7' },
-  { noun: 'GABA', name: 'GABA', emoji: '🐴', color: '#b388ff' },
-  { noun: 'EBBA', name: 'EBBA', emoji: '🦦', color: '#ffd166' },
-  { noun: 'ZABA', name: 'ZABA', emoji: '🐸', color: '#7bed9f' },
-  { noun: 'MINNE', name: 'MINNE', emoji: '🐼', color: '#b2bec3' },
+  { noun: 'SAMI', name: 'Sami', emoji: '🐻‍❄️', color: '#ff6b9d' },
+  { noun: 'AAS', name: 'Aas', emoji: '🦙', color: '#4dabf7' },
+  { noun: 'GABA', name: 'Gaba', emoji: '🐴', color: '#b388ff' },
+  { noun: 'EBBA', name: 'Ebba', emoji: '🦦', color: '#ffd166' },
+  { noun: 'ZABA', name: 'Zaba', emoji: '🐸', color: '#7bed9f' },
+  { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
 const DEFAULT_ENABLED = [true, true, false, false, false, false];
 const PLAYER_NOUNS = CHARACTERS.map(c => c.noun);
@@ -249,9 +249,10 @@ function ruleList(S) {
 // Word tiles are TEXT: they carry whatever `TEXT IS ...` rules say (so
 // `TEXT IS PLAYER n` makes them that player's YOU things, movable), but they
 // are never the object they name — you win by touching the actual FLAG object,
-// not the word "FLAG" (unless TEXT IS WIN).
-const typeOf = (e) => (e.kind === 'object' ? e.type : 'TEXT');
-function propsOf(S, e) { return S._propMap[typeOf(e)] || {}; }
+// not the word "FLAG" (unless TEXT IS WIN). The permanent printed tiles in the
+// margin are exempt: TEXT rules never apply to them.
+const typeOf = (e) => (e.kind === 'object' ? e.type : (e.fixed ? null : 'TEXT'));
+function propsOf(S, e) { const t = typeOf(e); return t ? (S._propMap[t] || {}) : {}; }
 function isYou(S, e) { return !!propsOf(S, e).YOU; }
 function isWin(S, e) { return !!propsOf(S, e).WIN; }
 function youOwner(S, e) { return S._youOwner[typeOf(e)]; }
@@ -786,14 +787,20 @@ function initUI() {
     const turnChar = S.numPlayers > 0 ? charAtRank(S, S.turn) : null;
     let targets = new Set();  // walk targets (green outline)
     let ptargets = new Set(); // place targets (gold outline)
+    // a cell containing one of your own YOU things is never a walk target —
+    // tapping it selects that thing instead (unambiguous controls)
+    const ownYouCell = (x, y) => entitiesAt(S, x, y).some(e => turnYous.includes(e));
     if (S.placeIdx !== null) ptargets = placeTargets(S, S.turn);
     else if (sel) {
       if (propsOf(S, sel).FAST) {
         // FAST: highlight every square it can slide to, in all 4 directions,
         // as soon as YOU IS FAST is active
-        for (const [dx, dy] of DIRS) for (const [x, y] of fastReach(S, sel, dx, dy)) targets.add(x + ',' + y);
+        for (const [dx, dy] of DIRS) for (const [x, y] of fastReach(S, sel, dx, dy)) if (!ownYouCell(x, y)) targets.add(x + ',' + y);
       } else {
-        for (const [dx, dy] of DIRS) if (canMove(S, sel, dx, dy)) targets.add((sel.x + dx) + ',' + (sel.y + dy));
+        for (const [dx, dy] of DIRS) {
+          const tx = sel.x + dx, ty = sel.y + dy;
+          if (canMove(S, sel, dx, dy) && !ownYouCell(tx, ty)) targets.add(tx + ',' + ty);
+        }
       }
     }
     const byCell = new Map();

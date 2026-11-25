@@ -502,7 +502,7 @@ s = G.createGame([true, true, true, true, true, true]);
 const minne = s.entities.find(e => e.type === 'MINNE');
 assert.ok(minne && Math.abs(minne.x - 2) + Math.abs(minne.y - 4) <= 1, 'MINNE (panda) spawns near (2,4)');
 assert.ok(G.CHARACTERS.some(c => c.noun === 'MINNE' && c.emoji === '🐼'));
-assert.ok(G.CHARACTERS.some(c => c.noun === 'AAS' && c.name === 'AAS'));
+assert.ok(G.CHARACTERS.some(c => c.noun === 'AAS' && c.name === 'Aas'));
 assert.ok(!G.CHARACTERS.some(c => c.noun === 'ERIK'));
 console.log('ok 31: RIVER noun rules + Minne');
 
@@ -556,5 +556,30 @@ assert.strictEqual(s.level, 'dev', 'developer level preselected by default');
 assert.strictEqual(s.supply.length, 18, 'developer level has all rules');
 assert.strictEqual(G.LEVELS.filter(l => l.props !== 'ALL').every(l => l.props.length === 2), true, 'every level preset has exactly two rules');
 console.log('ok 34: level presets (two rules each) + ALL RULES developer option last & default');
+
+// 35. TEXT rules do NOT apply to the permanent printed margin tiles
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'TEXT', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'YOU', label: 'IS YOU', owner: 0, x: 1, y: 2 });
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('TEXT IS PLAYER 1'));
+const fixedTiles = s.entities.filter(e => e.fixed);
+assert.strictEqual(fixedTiles.length, 6);
+assert.ok(fixedTiles.every(e => !G.isYou(s, e)), 'printed margin tiles are not YOU under TEXT IS PLAYER 1');
+assert.ok(!G.yourThings(s, 0).some(e => e.fixed), 'fixed tiles never in yourThings');
+assert.ok(G.yourThings(s, 0).some(e => e.kind === 'word' && !e.fixed), 'placed word tiles are');
+console.log('ok 35: TEXT does not apply to the printed margin tiles');
+
+// 36. PDF glossary: "anything that is placed into ... a space is considered entering that space" — placing DOES trigger CURIOUS
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 3, y: 3 });
+const r36 = rock(s, 0, 0); r36.x = 1; r36.y = 0; // curious rock in column 1
+G.ensureParsed(s);
+s.selectedId = sami(s).id;
+const flagNounIdx = s.supply.findIndex(t => t.noun === 'FLAG');
+assert.strictEqual(G.place(s, 0, flagNounIdx, 1, 4), true, 'placed FLAG noun at (1,4), adjacent to SAMI, entering column 1');
+assert.deepStrictEqual([r36.x, r36.y], [1, 1], 'curious rock moved toward the just-placed tile (PDF: placing = entering)');
+console.log('ok 36: placing counts as entering (PDF glossary) -> CURIOUS triggers');
 
 console.log('\nAll engine tests passed.');
