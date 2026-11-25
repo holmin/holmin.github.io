@@ -13,28 +13,27 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   notation (row,col) cells (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5).
   The river is terrain called **RIVER** (not a tile, not WATER) — future rules
   will interact with it. Rocks in two corners, flag in the center. Spawning is by
-  player rank: player 1 in the lower-left corner (0,4), player 2 in the
+  Player rank: Player 1 in the lower-left corner (0,4), Player 2 in the
   upper-right corner (4,0) — opposite diagonals; extra players near the other
   corners (0,0) and (4,4), then edge midpoints (2,0), (2,4) — as close as
   possible (corner if free, else nearest free cell). Default rules
   (shown as `(default)`, listed below any formed rules): `ALL IS PUSH`, plus one
-  `IS player n` per active character — permanent.
+  `IS Player n` per active character — permanent.
 - **Characters:** Sami 🐻‍❄️ and Aas 🦙 are on by default; Gaba 🐴, Ebba 🦦,
   Zaba 🐸 and Minne 🐼 can be toggled on/off (1–6 players; disabling all is allowed while
-  selecting). Active players are always **player 1, player 2, … in the order listed**, so
-  toggling re-ranks them (e.g. disable Sami and Aas becomes player 1). Toggling works
+  selecting). Active players are always **Player 1, Player 2, … in the order listed**, so
+  toggling re-ranks them (e.g. disable Sami and Aas becomes Player 1). Toggling works
   mid-game (undoable with Z): enabling spawns the figure as close as possible
   to its rank's corner (corner if free, else closest free cell); disabling removes
   the figure and that character's placed property tiles.
 - **Printed tiles (any player count):** permanent, unmovable tiles in the
-  margin around the board — left-middle [player-1-noun] over [IS player 1] and
-  bottom-middle [IS player 1] whenever at least 1 character is active, plus
-  top-middle [player-2-noun][IS player 2] and right-middle [IS player 2] whenever 2+
+  margin around the board — left-middle [Player-1-noun] over [IS Player 1] and
+  bottom-middle [IS Player 1] whenever at least 1 character is active, plus
+  top-middle [Player-2-noun][IS Player 2] and right-middle [IS Player 2] whenever 2+
   characters are active. They can't be interacted with otherwise, but board tiles
   pointing at them (or the printed nouns pointing into the board) form rules
-  — e.g. place `IS FAST` right of the left-middle player-1 noun for `SAMI IS FAST`.
-  The printed noun tiles have no dashed border; only the printed `IS player n`
-  tiles are dashed.
+  — e.g. place `IS FAST` right of the left-middle Player-1 noun for `SAMI IS FAST`.
+  The printed tiles have no dashed border.
 - **Scenario:** DEFAULT + WORLD 1: LEVEL 1 ("More Rock, More Flag") — the
   level-tile supply is 2× `IS WIN`, 2× `ROCK`, 2× `FLAG`, 1× `IS CURIOUS`,
   1× `IS FAST`, 1× each of `IS STOP`, `IS SINK`, `IS MELT`, `IS HOT`, `IS OPEN`,
@@ -62,7 +61,7 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   another curious thing move, …). One `IS CURIOUS` tile exists and is in the supply.
 - **FAST** (board-game keyword, diary #3): on its MOVE, a FAST thing slides **as
   many spaces as you like in a single direction** (until blocked). Because the
-  printed player-1/player-2 noun tiles exist, `IS FAST` placed next to one does
+  printed Player-1/Player-2 noun tiles exist, `IS FAST` placed next to one does
   something now — the `IS FAST` tile is in the supply. Controls: press a
   direction, then tap a highlighted square as the destination (swiping is ignored
   for FAST to stay unambiguous); otherwise swiping moves one space.
@@ -73,7 +72,9 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
     can be pushed); `OPEN` things can be entered/stacked and are not pushed.
   - `WEAK` — destroyed when pushed or pulled (the push/pull continues through
     its cell).
-  - `SINK` — destroyed when it shares a cell with anything else.
+  - `SINK`, `DEFEAT`, `MELT` imply **not-push**: such a thing is never pushed
+    (despite `ALL IS PUSH`) — you enter its cell and stack, which is what makes
+    them trigger. `SINK` — destroyed when it shares a cell with anything else.
   - `HOT` + `MELT` — MELT things sharing a cell with a HOT thing are destroyed;
     a thing that is both HOT and MELT melts itself.
   - `DEFEAT` — destroys YOU things sharing its cell; a player left with no YOU
@@ -113,8 +114,10 @@ ended the game. History is capped at 500 actions per game.
 
 Works with touch or mouse/keyboard; the board scales to the screen width.
 
-- Move: swipe the board, on-screen D-pad, arrow keys, or WASD; PULL toggle button or
-  Shift = also pull; Tab or tap a thing to select which of your YOU things moves
+- Move: tap/click a dashed-outline cell next to your thing (the highlight never
+  changes the cell background, so the river stays visible), or swipe the board,
+  on-screen D-pad, arrow keys, WASD; PULL toggle button or Shift = also pull;
+  with multiple YOUs, tap one (or Tab) to choose which moves first
 - Place: tap a supply tile (or keys 1–9, 0, q–o), then tap a highlighted cell; Esc cancels
 - C = challenge · R = new game · N = new scenario · **Z = undo last action**
 - 👥 buttons toggle characters on/off in the current game (1–6 players) — undoable with Z.

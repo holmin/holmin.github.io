@@ -65,7 +65,7 @@ function createGame(enabled, scenario) {
     obj('FLAG', 2, 2),
   ];
   // each enabled character spawns as close as possible to the home corner of its
-  // rank (player 1 lower-left, player 2 upper-right, ...) — corner if free, else nearest free cell
+  // rank (Player 1 lower-left, player 2 upper-right, ...) — corner if free, else nearest free cell
   activeChars({ enabled }).forEach((ci, rank) => {
     const [cx, cy] = HOME_CORNERS[rank];
     const [fx, fy] = firstFreeCell(entities, cx, cy);
@@ -109,16 +109,16 @@ function syncFixedTiles(S) {
     const n0 = CHARACTERS[a[0]].noun;
     S.entities.push(
       { id: nextId++, kind: 'word', noun: n0, fixed: true, x: -1, y: 2 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS player 1', fixed: true, x: -1, y: 3 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS player 1', fixed: true, x: 2, y: 5 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS Player 1', fixed: true, x: -1, y: 3 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS Player 1', fixed: true, x: 2, y: 5 },
     );
   }
   if (a.length >= 2) {
     const n1 = CHARACTERS[a[1]].noun;
     S.entities.push(
       { id: nextId++, kind: 'word', noun: n1, fixed: true, x: 2, y: -1 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS player 2', fixed: true, x: 3, y: -1 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS player 2', fixed: true, x: 5, y: 2 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS Player 2', fixed: true, x: 3, y: -1 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS Player 2', fixed: true, x: 5, y: 2 },
     );
   }
   ensureParsed(S);
@@ -157,7 +157,7 @@ function setEnabled(S, ci, on) {
     const [cx, cy] = HOME_CORNERS[rank];
     const [fx, fy] = firstFreeCell(S.entities, cx, cy);
     S.entities.push(obj(c.noun, fx, fy));
-    log(S, `${c.emoji} ${c.name} (player ${rank + 1}) drops in at ${fx},${fy}`);
+    log(S, `${c.emoji} ${c.name} (Player ${rank + 1}) drops in at ${fx},${fy}`);
   } else {
     S.entities = S.entities.filter((e) => {
       if (e.kind === 'object' && e.type === c.noun) return false;
@@ -202,7 +202,7 @@ function parseRules(S) {
     const d = propAt.get(n.x + ',' + (n.y + 1));
     if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner, permanent: !!d.fixed });
   }
-  // printed margin tiles cover P1 (always) and P2 (2+ players); P3+ are implicit
+  // printed margin tiles cover Player 1 (always) and Player 2 (2+ players); Player 3+ are implicit
   activeChars(S).forEach((ci, rank) => {
     if (rank >= 2) rules.push({ noun: CHARACTERS[ci].noun, prop: 'YOU', owner: rank, permanent: true });
   });
@@ -223,7 +223,7 @@ function ensureParsed(S) {
 
 function ruleList(S) {
   const fmt = (r) => {
-    const prop = r.prop === 'YOU' && r.owner !== null && r.owner !== undefined ? 'player ' + (r.owner + 1) : r.prop;
+    const prop = r.prop === 'YOU' && r.owner !== null && r.owner !== undefined ? 'Player ' + (r.owner + 1) : r.prop;
     return r.noun + ' IS ' + prop + (r.permanent ? ' (default)' : '');
   };
   // formed (non-default) rules first, default rules below
@@ -287,7 +287,7 @@ function end(S, winner, reason) {
     }
   }
   const wch = winner === null ? null : charAtRank(S, winner);
-  log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (player ${winner + 1}) ${reason}`);
+  log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (Player ${winner + 1}) ${reason}`);
 }
 
 // Videogame destruction rules, applied after every action (and after CURIOUS
@@ -370,13 +370,17 @@ function openedInCell(S, o) {
 function shutBlocked(S, o, entrant) {
   return propsOf(S, o).SHUT && !openedInCell(S, o) && !propsOf(S, entrant).OPEN;
 }
+// Things with these properties are NOT pushed (despite ALL IS PUSH) — you enter
+// their cell and stack instead, which is what makes SINK / DEFEAT / MELT able
+// to trigger at all. OPEN things are enterable too (videogame doors).
+function enterableProp(p) { return !!(p.OPEN || p.SINK || p.DEFEAT || p.MELT); }
 
 // Chain push: everything in the path is pushed (ALL IS PUSH); the move only
 // fails if the chain runs into the edge of the board or a STOP / shut thing.
 // A YOU mover may still stack onto a WIN thing instead of pushing it.
-// Videogame properties: STOP = immovable wall; OPEN = can be entered (not
-// pushed) and opens SHUT things it touches; WEAK = destroyed when pushed
-// (collected in `dead`, the chain passes through its cell).
+// Videogame properties: STOP = immovable wall; OPEN/SINK/DEFEAT/MELT = enterable,
+// not pushed (OPEN also opens SHUT things it touches); WEAK = destroyed when
+// pushed (collected in `dead`, the chain passes through its cell).
 function gather(S, m, e, dx, dy, list, dead) {
   const tx = e.x + dx, ty = e.y + dy;
   if (tx < 0 || ty < 0 || tx >= W || ty >= H) return false;
@@ -389,7 +393,7 @@ function gather(S, m, e, dx, dy, list, dead) {
       return false;
     }
     if (stackable(S, m, o)) continue;
-    if (p.OPEN) continue; // OPEN things are entered, not pushed
+    if (enterableProp(p)) continue; // enterable things are entered, not pushed
     if (p.WEAK) {
       if (!gather(S, m, o, dx, dy, list, dead)) return false;
       dead.add(o);
@@ -399,7 +403,7 @@ function gather(S, m, e, dx, dy, list, dead) {
   }
   for (const o of ents) {
     const p = propsOf(S, o);
-    if (stackable(S, m, o) || p.OPEN || p.WEAK) continue;
+    if (stackable(S, m, o) || enterableProp(p) || p.WEAK) continue;
     if (p.SHUT && !openedInCell(S, o)) continue; // shut things are never pushed
     list.push(o);
   }
@@ -639,7 +643,7 @@ function spendClock(S, p) {
   pushHistory(S, snapshot(S));
   sc.bo3 = true;
   sc.clocks[p] = false;
-  log(S, `🕐 player ${p + 1} spends their clock — this scenario is best 2 of 3`);
+  log(S, `🕐 Player ${p + 1} spends their clock — this scenario is best 2 of 3`);
   return true;
 }
 
@@ -683,7 +687,8 @@ function initUI() {
   function selected() {
     const yours = activeSelectable();
     let sel = S.entities.find(e => e.id === S.selectedId);
-    if (!sel || !yours.includes(sel)) sel = yours[0];
+    // with multiple YOUs there is no implicit choice — the player must tap one (or Tab)
+    if (!sel || !yours.includes(sel)) sel = yours.length === 1 ? yours[0] : null;
     if (sel) S.selectedId = sel.id;
     return sel;
   }
@@ -705,9 +710,24 @@ function initUI() {
       render();
       return;
     }
-    const here = entitiesAt(S, x, y);
-    const mine = here.find(e => activeSelectable().includes(e));
-    if (mine) { S.selectedId = mine.id; render(); }
+    const yours = activeSelectable();
+    const mine = entitiesAt(S, x, y).find(e => yours.includes(e));
+    if (mine) { S.selectedId = mine.id; render(); return; } // tap a YOUR thing to select it
+    const sel = selected();
+    if (yours.length > 1 && !sel) {
+      log(S, 'multiple things are YOU — tap one of your highlighted things (or Tab) to choose which to move first');
+      render();
+      return;
+    }
+    if (!sel) return;
+    // tap a highlighted neighbour cell to walk there (same highlight as place targets)
+    for (const [dx, dy] of DIRS) {
+      if (sel.x + dx === x && sel.y + dy === y && canMove(S, sel, dx, dy)) {
+        moveSelected(S, S.turn, dx, dy, pullOn);
+        render();
+        return;
+      }
+    }
   }
 
   function tryMove(dx, dy) {
@@ -743,8 +763,10 @@ function initUI() {
     const turnChar = S.numPlayers > 0 ? charAtRank(S, S.turn) : null;
     let targets = new Set();
     if (S.placeIdx !== null) targets = placeTargets(S, S.turn);
-    if (S.fastDir && sel) {
+    else if (S.fastDir && sel) {
       for (const [x, y] of fastReach(S, sel, S.fastDir.dx, S.fastDir.dy)) targets.add(x + ',' + y);
+    } else if (sel) {
+      for (const [dx, dy] of DIRS) if (canMove(S, sel, dx, dy)) targets.add((sel.x + dx) + ',' + (sel.y + dy));
     }
     const byCell = new Map();
     for (const e of S.entities) {
@@ -789,15 +811,15 @@ function initUI() {
       const wch = w === null ? null : charAtRank(S, w);
       turnEl.innerHTML = w === null
         ? `🤝 DRAW — ${S.over.reason}`
-        : `<span style="color:${wch.color}">${wch.emoji} ${wch.name} (player ${w + 1}) WINS</span> — ${S.over.reason}`;
+        : `<span style="color:${wch.color}">${wch.emoji} ${wch.name} (Player ${w + 1}) WINS</span> — ${S.over.reason}`;
     } else if (S.challenge) {
       const opp = (S.challenge.challenger + 1) % S.numPlayers;
       const och = charAtRank(S, opp);
-      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${och.emoji} ${och.name} (player ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
+      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${och.emoji} ${och.name} (Player ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
     } else if (!cur) {
       turnEl.textContent = 'no players enabled — toggle someone on above';
     } else {
-      turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (player ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
+      turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (Player ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
     }
 
     const sc = S.scenario;
@@ -857,7 +879,7 @@ function initUI() {
         const wch = w === null ? null : charAtRank(S, w);
         html += w === null
           ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
-          : `<div class="big" style="color:${wch.color}">${wch.emoji} ${wch.name} (player ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
+          : `<div class="big" style="color:${wch.color}">${wch.emoji} ${wch.name} (Player ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
         html += `<div class="sub">R = next game${S.scenarioOver ? '' : ' · N = new scenario'}</div>`;
       }
       if (S.scenarioOver) {
@@ -865,7 +887,7 @@ function initUI() {
         for (let i = 1; i < sc.score.length; i++) if (sc.score[i] > sc.score[w === null ? 0 : w]) w = i;
         if (w !== null && sc.score.filter(v => v === sc.score[w]).length > 1) w = null;
         const wch = w === null ? null : charAtRank(S, w);
-        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? wch.emoji + ' ' + wch.name + ' (player ' + (w + 1) + ')' : 'tie'}</div>`;
+        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? wch.emoji + ' ' + wch.name + ' (Player ' + (w + 1) + ')' : 'tie'}</div>`;
         html += `<div class="sub">N = new scenario · R = replay</div>`;
       }
       ov.innerHTML = html;
@@ -947,7 +969,7 @@ function initUI() {
   CHARACTERS.forEach((c, i) => {
     const b = document.createElement('button');
     b.textContent = `${c.emoji} ${c.name}`;
-    b.title = 'toggle player (active players become player 1, player 2, … in this order)';
+    b.title = 'toggle player (active players become Player 1, Player 2, … in this order)';
     b.addEventListener('click', () => { setEnabled(S, i, !S.enabled[i]); render(); });
     pwrap.appendChild(b);
   });
@@ -965,7 +987,14 @@ function initUI() {
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // tap, not swipe — let click handle it
     e.preventDefault();
     if (S.over || S.scenarioOver) return;
-    const sel = S.entities.find(e2 => e2.id === S.selectedId) || activeSelectable()[0];
+    const yours = activeSelectable();
+    const curSel = S.entities.find(e2 => e2.id === S.selectedId);
+    if (yours.length > 1 && !yours.includes(curSel)) {
+      log(S, 'multiple things are YOU — tap one of your highlighted things (or Tab) to choose which to move first');
+      render();
+      return;
+    }
+    const sel = curSel && yours.includes(curSel) ? curSel : yours[0];
     if (sel && propsOf(S, sel).FAST) return; // swiping is ignored for FAST — direction key + tap a square instead
     if (Math.abs(dx) > Math.abs(dy)) moveSelected(S, S.turn, Math.sign(dx), 0, pullOn);
     else moveSelected(S, S.turn, 0, Math.sign(dy), pullOn);
