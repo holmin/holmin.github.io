@@ -69,8 +69,6 @@
   .word.prop-weak { background: #fdcb6e; color: #4a3800; border-radius: 8px; }
   .ent.sel { box-shadow: 0 0 0 2px var(--selc, #f1c40f); border-radius: 50%; }
   .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
-  .word.own0 { outline: 2px solid #ff6b9d; }
-  .word.own1 { outline: 2px solid #4dabf7; }
   #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   #dpad {
     display: grid;
@@ -102,9 +100,9 @@
   #supply-empty { font-size: 12px; color: #8b93c9; display: none; }
   .tile {
     border: none; cursor: pointer;
-    padding: 10px 14px; min-width: 44px; min-height: 44px;
-    border-radius: 8px;
-    font-size: 13px; font-weight: 800; text-align: center;
+    padding: 6px 9px; min-width: 34px; min-height: 34px;
+    border-radius: 7px;
+    font-size: 11px; font-weight: 800; text-align: center;
     touch-action: manipulation; user-select: none; -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
@@ -170,8 +168,14 @@
     font-size: 12px; line-height: 1.5; color: #9aa3d6;
     background: #1a1f38; border-radius: 8px; padding: 10px;
   }
+  .help ul { margin: 4px 0 4px 16px; padding: 0; }
+  .help li { margin: 1px 0; }
   @media (max-width: 860px) {
-    #side { width: min(100%, 420px); }
+    #app { flex-direction: column; align-items: center; }
+    #side { display: contents; }
+    #side > * { width: min(100%, 420px); }
+    #turn { order: -2; }  /* status above the board in the one-column mobile layout */
+    #score { order: -1; }
     body { padding: 8px; }
   }
 </style>
@@ -195,8 +199,9 @@
         <button id="btn-undo">↩ undo (Z)</button>
       </div>
     </div>
+    <div id="levelrow"><span>level:</span><select id="level"></select></div>
     <div id="tray-wrap">
-      <h3>Level tiles (tap, then tap a green cell)</h3>
+      <h3>Level tiles (tap, then tap a gold cell)</h3>
       <div id="supply"></div>
       <div id="supply-empty">supply empty</div>
     </div>
@@ -210,51 +215,44 @@
       <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win (C)">⚔ Challenge (C)</button>
       <button id="btn-clock" title="Make this scenario best 2 of 3">🕐 spend clock</button>
       <button id="btn-newgame" title="R">↺ new game (R)</button>
-      <button id="btn-newscenario" title="N">⇢ new scenario (N)</button>
     </div>
-    <div id="levelrow"><span>level:</span><select id="level"></select></div>
     <h2>Rules</h2>
     <ul id="rules"></ul>
     <h2>Log</h2>
     <ul id="log"></ul>
     <div class="help">
-      Turns alternate; the very first turn has <b>1 action</b>, all later turns <b>2 actions</b>.
-      An action is a <b>MOVE</b> (swipe the board / D-pad / arrows / WASD, PULL toggle or Shift = also
-      pull) of one of your YOU things — tap a thing or Tab to select which — or a <b>PLACE</b> of a
-      level tile into an empty cell next to one of your YOU things (tap tile or keys 1–9, 0, q–p, then a green cell).
-      <b>ALL IS PUSH</b> — pushing shoves whole rows/columns of things along; only the board edge stops
-      a push. PULL drags just one thing. A rule forms when a noun tile points right or down into a
-      property tile. Defaults: <b>ALL IS PUSH</b> plus <b>IS PLAYER n</b> for each enabled character
-      (🐻‍❄️ Sami = PLAYER 1, 🦙 Aas = PLAYER 2, …). Videogame property tiles in the supply: <b>STOP</b> (blocks entry
-      and can't be pushed/pulled), <b>SHUT</b> (same, but an <b>OPEN</b> thing touching it opens it; OPEN things
-      can be entered), <b>WEAK</b> (destroyed when pushed/pulled), <b>SINK</b> (destroyed when sharing a cell),
-      <b>HOT</b>+<b>MELT</b> (melt things touching hot things), <b>DEFEAT</b> (destroys YOU things it touches),
-      plus <b>RIVER</b> and <b>TEXT</b> nouns — RIVER rules the river terrain, and TEXT rules the word tiles
-      themselves (e.g. <b>TEXT IS PLAYER 1</b> makes all word tiles PLAYER 1's YOU things, so you can move them). <b>Win:</b> a YOUR thing (PLAYER 1's, PLAYER 2's, …) shares a space with a WIN thing.
-      Walk by tapping a <span style="color:#2ecc71">green dashed-outline</span> cell (if your thing is FAST, all squares it can
-      slide to are highlighted); placing a tile shows <span style="color:#f1c40f">gold dashed-outline</span> cells instead. The outline never
-      changes the cell background, so the river stays visible. Green cells are walk targets — tap to move there. If ANY
-      square could be reached by several of your things, NO walk cells are shown until you tap the bordered thing (or Tab)
-      to choose which one moves; then its tiles appear. With nothing selected, tapping one of your things selects it; once
-      one is selected, tapping another of your things that it can walk to walks (pushes) there instead. Swipe/D-pad/arrows/
-      WASD also still work.
-      The <b>level</b> dropdown picks which TWO rule tiles are in the supply (per the rulebook); <b>ALL RULES (developer)</b> at the bottom is preselected for now.
-      <b>Challenge (C):</b> the next player gets 10 actions to win or you win. If you cannot take your
-      actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
-      by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same
-      game</b> — active players become PLAYER 1, PLAYER 2, … in the order listed, and new ones spawn as
-      close to their rank's corner as possible (PLAYER 1 lower-left, PLAYER 2 upper-right, …). The blue river is <b>RIVER</b> terrain (not a tile) — later rules will
-      interact with it. Permanent tiles always sit in the margin: the PLAYER-1 noun over IS PLAYER 1 on the
-      left and IS PLAYER 1 below (plus the PLAYER-2 noun + IS PLAYER 2 on top and IS PLAYER 2 on the right
-      whenever 2+ characters are active) — you can place properties next to the printed nouns (e.g. IS FAST right of the
-      PLAYER-1 noun) to rule them.
-      <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column (from outside it), it moves
-      1 space toward them — effects cascade. <b>FAST</b>: press a direction, then tap a highlighted
-      square to slide there (swiping is ignored for FAST). If several things are YOU and a move is ambiguous, tap one
-      (or Tab) to choose which to move. Only one YOU thing sharing a space with WIN is needed to win.
+      <b>Goal:</b> move a thing that is <b>YOU</b> onto a thing that is <b>WIN</b> — sharing a space wins.
+      <b>MOVE</b> one space orthogonally: pushing shoves whole rows/columns along, only the board edge stops a
+      push; with PULL on, one thing from the cell you leave is dragged along. <b>PLACE</b> a level tile into an
+      empty cell next to one of your YOU things. A <b>rule</b> forms when a noun tile's arrow points right or down
+      into a property tile (<b>NOUN IS PROPERTY</b>). <b>Challenge (C):</b> skip your turn — the opponent gets 10
+      actions to win, or you win. If you cannot act, you lose. <b>Z</b> undoes the last action.
+      <b>Differences from the video game (rulebook):</b> everything is always PUSH · adjacent things can always be
+      PULLed · only one YOU thing moves per action · being both YOU and WIN does not win by itself · nouns can never
+      become other nouns · property tiles include the word "is".
+      <b>Properties:</b>
+      <ul>
+        <li><b>WIN</b> — a YOU thing sharing a space with it wins.</li>
+        <li><b>STOP</b> — can't be entered, pushed or pulled.</li>
+        <li><b>SHUT</b> — like STOP, but an OPEN thing touching it opens it.</li>
+        <li><b>OPEN</b> — can be entered (not pushed).</li>
+        <li><b>WEAK</b> — destroyed when pushed or pulled.</li>
+        <li><b>SINK</b> — destroyed when sharing a cell with anything.</li>
+        <li><b>HOT</b> — destroys MELT things it touches.</li>
+        <li><b>MELT</b> — destroyed when touching HOT (a HOT+MELT thing melts itself).</li>
+        <li><b>DEFEAT</b> — destroys YOU things sharing its cell; no YOU things left = you lose.</li>
+        <li><b>CURIOUS</b> — when anything enters its row/column, it steps 1 space toward it (effects cascade).</li>
+        <li><b>FAST</b> — slides as many spaces as you like in one direction.</li>
+        <li><b>RIVER</b> — noun for the river terrain (e.g. RIVER IS WIN).</li>
+        <li><b>TEXT</b> — noun for the word tiles themselves (e.g. TEXT IS PLAYER 1 makes them movable).</li>
+      </ul>
+      Word tiles are never the object they name: you win by touching the actual flag object, not the word.
+      Controls: tap a bordered thing to select it, then tap a walk cell to move; arrows/WASD/swipe/D-pad also work;
+      keys 1–9, 0, q–p pick a level tile; R = new game.
+    </div>
     </div>
   </div>
 </div>
-<script src="game.js?v=19"></script>
+<script src="game.js?v=20"></script>
 </body>
 </html>

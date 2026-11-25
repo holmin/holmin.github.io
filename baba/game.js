@@ -78,7 +78,7 @@ function firstFreeCell(entities, nearX, nearY) {
 }
 
 function createGame(enabled, scenario, levelId) {
-  levelId = levelId || 'dev';
+  levelId = levelId || LEVELS[0].id;
   enabled = (enabled && enabled.length === CHARACTERS.length) ? enabled.slice() : DEFAULT_ENABLED.slice();
   const numPlayers = enabled.filter(Boolean).length;
   nextId = 1;
@@ -717,7 +717,7 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof document !== 'undefined') initUI();
 
 function initUI() {
-  let levelId = 'dev'; // developer option preselected (it is last in the dropdown)
+  let levelId = LEVELS[0].id; // first level preset preselected; ALL RULES (developer) is last in the dropdown
   let S = createGame(undefined, undefined, levelId);
   let pullOn = false;
   const board = document.getElementById('board');
@@ -905,7 +905,7 @@ function initUI() {
             if (ch) { sp.style.background = ch.color + '44'; sp.style.borderRadius = '50%'; }
             sp.innerHTML = spriteImg(e.type);
           } else if (e.prop) {
-            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.owner !== undefined && e.owner !== null ? ' own' + e.owner : '') + (e.fixed ? ' fixed' : '');
+            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.fixed ? ' fixed' : '');
             sp.textContent = e.label;
           } else {
             sp.className = 'ent word noun' + (e.fixed ? ' fixed' : '');
@@ -986,7 +986,7 @@ function initUI() {
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);
     });
-    document.getElementById('level').value = S.level || 'dev';
+    document.getElementById('level').value = S.level || LEVELS[0].id;
 
     const ov = document.getElementById('overlay');
     if (S.over || S.scenarioOver) {
@@ -1082,7 +1082,6 @@ function initUI() {
     S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
     render();
   });
-  document.getElementById('btn-newscenario').addEventListener('click', () => { S = newScenario(S.scenario, S.enabled, levelId); render(); });
   const levelSel = document.getElementById('level');
   LEVELS.forEach(l => {
     const o = document.createElement('option');

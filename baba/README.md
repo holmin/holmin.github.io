@@ -38,10 +38,11 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **Levels:** per the rulebook each level brings in only **two rule tiles** on
   top of the base tiles (2× `IS WIN`, 2× `ROCK`, 2× `FLAG`, `RIVER`, `TEXT`).
   The **level dropdown** offers such two-rule presets (e.g. FAST + CURIOUS,
-  MELT + HOT, OPEN + SHUT, …); the last entry, **ALL RULES (developer)**
-  (all of `IS CURIOUS`, `IS FAST`, `IS STOP`, `IS SINK`, `IS MELT`, `IS HOT`,
-  `IS OPEN`, `IS SHUT`, `IS DEFEAT`, `IS WEAK`), is preselected for now.
-  Changing the level starts a new game with that level's tiles.
+  MELT + HOT, OPEN + SHUT, …); the first preset is the default, and the last entry,
+  **ALL RULES (developer)** (all of `IS CURIOUS`, `IS FAST`, `IS STOP`, `IS SINK`,
+  `IS MELT`, `IS HOT`, `IS OPEN`, `IS SHUT`, `IS DEFEAT`, `IS WEAK`), sits at the
+  bottom. The dropdown sits above the level tiles. Changing the level starts a new
+  game with that level's tiles.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
 - **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —
@@ -133,7 +134,7 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
   reach it, tap the thing (or Tab) first. A cell containing your own thing always
   selects it, never walks onto it
 - Place: tap a supply tile (or keys 1–9, 0, q–p), then tap a highlighted cell; Esc cancels
-- C = challenge · R = new game · N = new scenario · **Z = undo last action**
+- C = challenge · R = new game · **Z = undo last action**
 - 👥 buttons toggle characters on/off in the current game (1–6 players) — undoable with Z.
   PLAYER names show with their sprite in the buttons, rules list and log (not on the board/tiles);
   formed (non-default) rules are bold and listed above the defaults

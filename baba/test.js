@@ -14,10 +14,9 @@ assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4]);
 assert.deepStrictEqual([aas(s).x, aas(s).y], [4, 0]);
 assert.ok(rock(s, 0, 0) && rock(s, 4, 4));
 assert.deepStrictEqual(rulesOf(s), ['AAS IS PLAYER 2 (default)', 'ALL IS PUSH (default)', 'SAMI IS PLAYER 1 (default)']);
-assert.strictEqual(s.supply.length, 18, 'DEFAULT + W1L1 + CURIOUS/FAST + STOP/SINK/MELT/HOT/OPEN/SHUT/DEFEAT/WEAK + RIVER/TEXT nouns');
-for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WEAK']) {
-  assert.ok(s.supply.some(t => t.prop === p), 'supply has IS ' + p);
-}
+assert.strictEqual(s.level, G.LEVELS[0].id, 'first level preset is the default');
+assert.strictEqual(s.supply.length, 10, 'default level = base tiles + its two rules (FAST + CURIOUS)');
+assert.ok(s.supply.some(t => t.prop === 'FAST') && s.supply.some(t => t.prop === 'CURIOUS'));
 assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 2);
 assert.ok(s.supply.some(t => t.noun === 'RIVER'), 'one RIVER noun tile');
 assert.ok(s.supply.some(t => t.noun === 'TEXT'), 'one TEXT noun tile');
@@ -552,8 +551,13 @@ assert.ok(!s.supply.some(t => t.prop === 'STOP') && !s.supply.some(t => t.prop =
 assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'base nouns always present');
 assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 2);
 s = G.createGame();
-assert.strictEqual(s.level, 'dev', 'developer level preselected by default');
+assert.strictEqual(s.level, G.LEVELS[0].id, 'first level preset is the default');
+s = G.createGame(undefined, undefined, 'dev');
+assert.strictEqual(s.level, 'dev');
 assert.strictEqual(s.supply.length, 18, 'developer level has all rules');
+for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WEAK']) {
+  assert.ok(s.supply.some(t => t.prop === p), 'developer supply has IS ' + p);
+}
 assert.strictEqual(G.LEVELS.filter(l => l.props !== 'ALL').every(l => l.props.length === 2), true, 'every level preset has exactly two rules');
 console.log('ok 34: level presets (two rules each) + ALL RULES developer option last & default');
 
