@@ -66,7 +66,9 @@
   .word.prop-shut { background: #2d3436; color: #fff; border-radius: 8px; }
   .word.prop-defeat { background: #6c5ce7; color: #fff; border-radius: 8px; }
   .word.prop-weak { background: #fdcb6e; color: #4a3800; border-radius: 8px; }
-  .word.fixed { outline: 2px dashed #8b93c9; opacity: .9; }
+  .word.fixed:not(.noun) { outline: 2px dashed #8b93c9; opacity: .9; }
+  .ent.sel { box-shadow: 0 0 0 2px var(--selc, #f1c40f); border-radius: 50%; }
+  .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
   .word.own0 { outline: 2px solid #ff6b9d; }
   .word.own1 { outline: 2px solid #4dabf7; }
   #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -215,21 +217,21 @@
       level tile into an empty cell next to one of your YOU things (tap tile or keys 1–9, 0, q–o, then a green cell).
       <b>ALL IS PUSH</b> — pushing shoves whole rows/columns of things along; only the board edge stops
       a push. PULL drags just one thing. A rule forms when a noun tile points right or down into a
-      property tile. Defaults: <b>ALL IS PUSH</b> plus <b>IS Pn</b> for each enabled character
-      (🐻‍❄️ Sami = P1, 🦙 Aas = P2, …). Videogame property tiles in the supply: <b>STOP</b> (blocks entry
+      property tile. Defaults: <b>ALL IS PUSH</b> plus <b>IS player n</b> for each enabled character
+      (🐻‍❄️ Sami = player 1, 🦙 Aas = player 2, …). Videogame property tiles in the supply: <b>STOP</b> (blocks entry
       and can't be pushed/pulled), <b>SHUT</b> (same, but an <b>OPEN</b> thing touching it opens it; OPEN things
       can be entered), <b>WEAK</b> (destroyed when pushed/pulled), <b>SINK</b> (destroyed when sharing a cell),
       <b>HOT</b>+<b>MELT</b> (melt things touching hot things), <b>DEFEAT</b> (destroys YOU things it touches),
-      plus a <b>RIVER</b> noun (the river cells count as RIVER). <b>Win:</b> a YOUR thing (P1's, P2's, …) shares a space with a WIN thing.
+      plus a <b>RIVER</b> noun (the river cells count as RIVER). <b>Win:</b> a YOUR thing (player 1's, player 2's, …) shares a space with a WIN thing.
       <b>Challenge (C):</b> the next player gets 10 actions to win or you win. If you cannot take your
       actions, you lose. <b>Undo (Z)</b> takes back the last action. Word tiles are not objects — you win
       by touching the actual flag, not the word. The 👥 buttons toggle characters on/off in the <b>same
-      game</b> — active players become P1, P2, … in the order listed, and new ones spawn as close to
-      their corner as possible. The blue river is <b>RIVER</b> terrain (not a tile) — later rules will
-      interact with it. Permanent tiles always sit in the margin: the P1 noun over IS P1 on the left
-      and IS P1 below (plus the P2 noun + IS P2 on top and IS P2 on the right whenever 2+ characters
-      are active) — you can place properties next to the printed nouns (e.g. IS FAST right of the
-      P1 noun) to rule them.
+      game</b> — active players become player 1, player 2, … in the order listed, and new ones spawn as
+      close to their rank's corner as possible (player 1 lower-left, player 2 upper-right, …). The blue river is <b>RIVER</b> terrain (not a tile) — later rules will
+      interact with it. Permanent tiles always sit in the margin: the player-1 noun over IS player 1 on the
+      left and IS player 1 below (plus the player-2 noun + IS player 2 on top and IS player 2 on the right
+      whenever 2+ characters are active) — you can place properties next to the printed nouns (e.g. IS FAST right of the
+      player-1 noun) to rule them.
       <b>CURIOUS</b>: when anything enters a CURIOUS thing's row or column (from outside it), it moves
       1 space toward them — effects cascade. <b>FAST</b>: press a direction, then tap a highlighted
       square to slide there (swiping is ignored for FAST). If several things are YOU, tap one (or Tab)

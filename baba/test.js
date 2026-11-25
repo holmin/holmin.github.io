@@ -13,7 +13,7 @@ let s = G.createGame();
 assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4]);
 assert.deepStrictEqual([aas(s).x, aas(s).y], [4, 0]);
 assert.ok(rock(s, 0, 0) && rock(s, 4, 4));
-assert.deepStrictEqual(rulesOf(s), ['AAS IS P2 (default)', 'ALL IS PUSH (default)', 'SAMI IS P1 (default)']);
+assert.deepStrictEqual(rulesOf(s), ['AAS IS player 2 (default)', 'ALL IS PUSH (default)', 'SAMI IS player 1 (default)']);
 assert.strictEqual(s.supply.length, 17, 'DEFAULT + W1L1 + CURIOUS/FAST + STOP/SINK/MELT/HOT/OPEN/SHUT/DEFEAT/WEAK + RIVER noun');
 for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WEAK']) {
   assert.ok(s.supply.some(t => t.prop === p), 'supply has IS ' + p);
@@ -183,8 +183,8 @@ const gaba17 = s.entities.find(e => e.type === 'GABA');
 const ebba17 = s.entities.find(e => e.type === 'EBBA');
 assert.ok(gaba17 && Math.abs(gaba17.x) + Math.abs(gaba17.y) <= 1, 'GABA near corner (0,0)');
 assert.ok(ebba17 && Math.abs(ebba17.x - 4) + Math.abs(ebba17.y - 4) <= 1, 'EBBA near corner (4,4)');
-assert.deepStrictEqual(rulesOf(s).filter(r => /IS P\d/.test(r)),
-  ['AAS IS P2 (default)', 'EBBA IS P4 (default)', 'GABA IS P3 (default)', 'SAMI IS P1 (default)']);
+assert.deepStrictEqual(rulesOf(s).filter(r => /IS player \d/.test(r)),
+  ['AAS IS player 2 (default)', 'EBBA IS player 4 (default)', 'GABA IS player 3 (default)', 'SAMI IS player 1 (default)']);
 s.selectedId = sami(s).id;
 G.moveSelected(s, 0, 1, 0, false);
 assert.strictEqual(s.turn, 1);
@@ -198,13 +198,13 @@ s = G.createGame();
 assert.strictEqual(G.setEnabled(s, 0, false), true);
 assert.strictEqual(s.numPlayers, 1);
 assert.ok(!s.entities.some(e => e.type === 'SAMI'), 'SAMI figure removed');
-assert.ok(rulesOf(s).includes('AAS IS P1 (default)'), 'AAS re-ranked to P1');
+assert.ok(rulesOf(s).includes('AAS IS player 1 (default)'), 'AAS re-ranked to P1');
 assert.ok(!rulesOf(s).some(r => r.startsWith('SAMI')));
 G.setEnabled(s, 2, true); // Gaba in -> AAS P1, GABA P2
 assert.strictEqual(s.numPlayers, 2);
-assert.ok(rulesOf(s).includes('GABA IS P2 (default)'));
+assert.ok(rulesOf(s).includes('GABA IS player 2 (default)'));
 const g18 = s.entities.find(e => e.type === 'GABA');
-assert.ok(g18 && Math.abs(g18.x) + Math.abs(g18.y) <= 1, 'GABA spawned near (0,0)');
+assert.ok(g18 && Math.abs(g18.x - 4) + Math.abs(g18.y) <= 1, 'GABA spawned near (4,0) — player 2 corner (rank-based)');
 G.setEnabled(s, 1, false);
 G.setEnabled(s, 2, false);
 assert.strictEqual(s.numPlayers, 0, 'all disabled is allowed while selecting');
@@ -213,7 +213,7 @@ assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), false, 'no one can move wi
 assert.ok(!s.over, 'no spurious game-over with 0 players');
 G.setEnabled(s, 0, true);
 assert.strictEqual(s.numPlayers, 1);
-assert.ok(rulesOf(s).includes('SAMI IS P1 (default)'));
+assert.ok(rulesOf(s).includes('SAMI IS player 1 (default)'));
 console.log('ok 18: toggle re-ranking + disable-all');
 
 // 19. Undo restores toggles
@@ -308,8 +308,8 @@ const fixed = s => s.entities.filter(e => e.fixed);
   assert.strictEqual(fixed(g).length, 6, 'six printed tiles in the margin');
   const coords = fixed(g).map(e => e.x + ',' + e.y).sort();
   assert.deepStrictEqual(coords, ['-1,2', '-1,3', '2,-1', '2,5', '3,-1', '5,2']);
-  assert.strictEqual(rulesOf(g).filter(r => r === 'SAMI IS P1 (default)').length, 1, 'no duplicate default rules');
-  assert.ok(rulesOf(g).includes('AAS IS P2 (default)'));
+  assert.strictEqual(rulesOf(g).filter(r => r === 'SAMI IS player 1 (default)').length, 1, 'no duplicate default rules');
+  assert.ok(rulesOf(g).includes('AAS IS player 2 (default)'));
   // a property placed right of the left-middle P1 noun rules SAMI: place IS WIN at (0,2)
   const winIdx = g.supply.findIndex(t => t.prop === 'WIN');
   G.doPlace(g, 0, winIdx, 0, 2);
@@ -326,15 +326,15 @@ const fixed = s => s.entities.filter(e => e.fixed);
 {
   const g = G.createGame([true, true, true, false, false, false]);
   assert.strictEqual(fixed(g).length, 6, 'both printed nouns at 3 players');
-  assert.strictEqual(rulesOf(g).filter(r => /IS P\d/.test(r)).length, 3, 'P3 default is implicit');
+  assert.strictEqual(rulesOf(g).filter(r => /IS player \d/.test(r)).length, 3, 'P3 default is implicit');
   G.setEnabled(g, 2, false);
   G.setEnabled(g, 1, false); // down to 1 player
-  assert.strictEqual(fixed(g).length, 3, 'only the P1 noun tile + IS P1s at 1 player');
+  assert.strictEqual(fixed(g).length, 3, 'only the P1 noun tile + IS player 1s at 1 player');
   assert.deepStrictEqual(fixed(g).map(e => e.x + ',' + e.y).sort(), ['-1,2', '-1,3', '2,5']);
-  assert.deepStrictEqual(rulesOf(g).filter(r => /IS P\d/.test(r)), ['SAMI IS P1 (default)']);
+  assert.deepStrictEqual(rulesOf(g).filter(r => /IS player \d/.test(r)), ['SAMI IS player 1 (default)']);
   G.setEnabled(g, 1, true); // back to 2
   assert.strictEqual(fixed(g).length, 6);
-  assert.ok(rulesOf(g).includes('AAS IS P2 (default)'));
+  assert.ok(rulesOf(g).includes('AAS IS player 2 (default)'));
   console.log('ok 23d: printed noun tiles follow player count (P1 always, P2 at 2+)');
 }
 // FAST with explicit destination square
@@ -505,5 +505,17 @@ assert.ok(G.CHARACTERS.some(c => c.noun === 'MINNE' && c.emoji === '🐼'));
 assert.ok(G.CHARACTERS.some(c => c.noun === 'AAS' && c.name === 'Aas'));
 assert.ok(!G.CHARACTERS.some(c => c.noun === 'ERIK'));
 console.log('ok 31: RIVER noun rules + Minne');
+
+// 32. Home corners are by player RANK: player 1 lower-left, player 2 upper-right (opposite diagonal)
+s = G.createGame();
+G.setEnabled(s, 1, false); // only SAMI active -> player 1
+assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4], 'lone player 1 at lower-left (0,4)');
+G.setEnabled(s, 4, true); // add ZABA -> becomes player 2
+const zaba32 = s.entities.find(e => e.type === 'ZABA');
+assert.deepStrictEqual([zaba32.x, zaba32.y], [4, 0], 'second player on the opposite diagonal (4,0)');
+G.setEnabled(s, 5, true); // add MINNE -> player 3 -> corner (0,0) area (rock sits there)
+const minne32 = s.entities.find(e => e.type === 'MINNE');
+assert.ok(Math.abs(minne32.x) + Math.abs(minne32.y) <= 1, 'third player near (0,0)');
+console.log('ok 32: spawn corners follow player rank (opposite diagonals first)');
 
 console.log('\nAll engine tests passed.');

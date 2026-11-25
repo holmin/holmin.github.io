@@ -20,7 +20,9 @@ const PLAYER_COLORS = CHARACTERS.map(c => c.color);
 // (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5)  ->  stored 0-indexed as (x=col-1, y=row-1).
 // The river is called RIVER (noun 'RIVER'); it is terrain, not a tile — future rules will interact with it.
 const RIVER = new Set(['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
-const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0], [2, H - 1]]; // home spots for the 6 characters
+// Home spots BY PLAYER RANK: player 1 lower-left, player 2 upper-right (opposite
+// diagonals), then the other corners, then edge midpoints.
+const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0], [2, H - 1]];
 function isRiverCell(x, y) { return RIVER.has(x + ',' + y); }
 function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 function activeChars(S) {
@@ -62,12 +64,13 @@ function createGame(enabled, scenario) {
     obj('ROCK', 0, 0), obj('ROCK', W - 1, H - 1),
     obj('FLAG', 2, 2),
   ];
-  // each enabled character spawns as close as possible to its home corner (corner if free, else nearest free cell)
-  for (const ci of activeChars({ enabled })) {
-    const [cx, cy] = HOME_CORNERS[ci];
+  // each enabled character spawns as close as possible to the home corner of its
+  // rank (player 1 lower-left, player 2 upper-right, ...) — corner if free, else nearest free cell
+  activeChars({ enabled }).forEach((ci, rank) => {
+    const [cx, cy] = HOME_CORNERS[rank];
     const [fx, fy] = firstFreeCell(entities, cx, cy);
     entities.push(obj(CHARACTERS[ci].noun, fx, fy));
-  }
+  });
   const supply = [
     { prop: 'WIN' }, { prop: 'WIN' },
     { noun: 'ROCK' }, { noun: 'FLAG' },
@@ -106,16 +109,16 @@ function syncFixedTiles(S) {
     const n0 = CHARACTERS[a[0]].noun;
     S.entities.push(
       { id: nextId++, kind: 'word', noun: n0, fixed: true, x: -1, y: 2 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS P1', fixed: true, x: -1, y: 3 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS P1', fixed: true, x: 2, y: 5 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS player 1', fixed: true, x: -1, y: 3 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 0, label: 'IS player 1', fixed: true, x: 2, y: 5 },
     );
   }
   if (a.length >= 2) {
     const n1 = CHARACTERS[a[1]].noun;
     S.entities.push(
       { id: nextId++, kind: 'word', noun: n1, fixed: true, x: 2, y: -1 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS P2', fixed: true, x: 3, y: -1 },
-      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS P2', fixed: true, x: 5, y: 2 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS player 2', fixed: true, x: 3, y: -1 },
+      { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS player 2', fixed: true, x: 5, y: 2 },
     );
   }
   ensureParsed(S);
@@ -150,10 +153,11 @@ function setEnabled(S, ci, on) {
   const newActive = activeChars(S);
   const c = CHARACTERS[ci];
   if (on) {
-    const [cx, cy] = HOME_CORNERS[ci];
+    const rank = newActive.indexOf(ci);
+    const [cx, cy] = HOME_CORNERS[rank];
     const [fx, fy] = firstFreeCell(S.entities, cx, cy);
     S.entities.push(obj(c.noun, fx, fy));
-    log(S, `${c.emoji} ${c.name} (P${newActive.indexOf(ci) + 1}) drops in at ${fx},${fy}`);
+    log(S, `${c.emoji} ${c.name} (player ${rank + 1}) drops in at ${fx},${fy}`);
   } else {
     S.entities = S.entities.filter((e) => {
       if (e.kind === 'object' && e.type === c.noun) return false;
@@ -219,7 +223,7 @@ function ensureParsed(S) {
 
 function ruleList(S) {
   const fmt = (r) => {
-    const prop = r.prop === 'YOU' && r.owner !== null && r.owner !== undefined ? 'P' + (r.owner + 1) : r.prop;
+    const prop = r.prop === 'YOU' && r.owner !== null && r.owner !== undefined ? 'player ' + (r.owner + 1) : r.prop;
     return r.noun + ' IS ' + prop + (r.permanent ? ' (default)' : '');
   };
   // formed (non-default) rules first, default rules below
@@ -283,7 +287,7 @@ function end(S, winner, reason) {
     }
   }
   const wch = winner === null ? null : charAtRank(S, winner);
-  log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (P${winner + 1}) ${reason}`);
+  log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (player ${winner + 1}) ${reason}`);
 }
 
 // Videogame destruction rules, applied after every action (and after CURIOUS
@@ -635,7 +639,7 @@ function spendClock(S, p) {
   pushHistory(S, snapshot(S));
   sc.bo3 = true;
   sc.clocks[p] = false;
-  log(S, `🕐 P${p + 1} spends their clock — this scenario is best 2 of 3`);
+  log(S, `🕐 player ${p + 1} spends their clock — this scenario is best 2 of 3`);
   return true;
 }
 
@@ -733,6 +737,10 @@ function initUI() {
       cells[i].className = 'cell' + (i % EXT === 0 || i / EXT < 1 || i % EXT === EXT - 1 || i / EXT >= EXT - 1 ? ' margin' : '');
     }
     const sel = selected();
+    // border the current player's YOU things on the board (thicker on the selected
+    // one) — also shows which things can be picked when there are multiple YOUs
+    const turnYous = (!S.over && !S.scenarioOver && S.numPlayers > 0) ? yourThings(S, S.turn) : [];
+    const turnChar = S.numPlayers > 0 ? charAtRank(S, S.turn) : null;
     let targets = new Set();
     if (S.placeIdx !== null) targets = placeTargets(S, S.turn);
     if (S.fastDir && sel) {
@@ -764,6 +772,11 @@ function initUI() {
             sp.className = 'ent word noun' + (e.fixed ? ' fixed' : '');
             sp.textContent = e.noun;
           }
+          if (turnYous.includes(e)) {
+            sp.classList.add('sel');
+            if (turnChar) sp.style.setProperty('--selc', turnChar.color);
+            if (sel && e.id === sel.id) sp.classList.add('cur');
+          }
           cell.appendChild(sp);
         }
       }
@@ -776,15 +789,15 @@ function initUI() {
       const wch = w === null ? null : charAtRank(S, w);
       turnEl.innerHTML = w === null
         ? `🤝 DRAW — ${S.over.reason}`
-        : `<span style="color:${wch.color}">${wch.emoji} ${wch.name} (P${w + 1}) WINS</span> — ${S.over.reason}`;
+        : `<span style="color:${wch.color}">${wch.emoji} ${wch.name} (player ${w + 1}) WINS</span> — ${S.over.reason}`;
     } else if (S.challenge) {
       const opp = (S.challenge.challenger + 1) % S.numPlayers;
       const och = charAtRank(S, opp);
-      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${och.emoji} ${och.name} (P${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
+      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${och.emoji} ${och.name} (player ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
     } else if (!cur) {
       turnEl.textContent = 'no players enabled — toggle someone on above';
     } else {
-      turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (P${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
+      turnEl.innerHTML = `<span style="color:${cur.color}">${cur.emoji} ${cur.name} (player ${S.turn + 1})</span> — actions: ${'●'.repeat(S.actionsLeft)}${'○'.repeat(Math.max(0, (S.gameTurn === 0 ? 1 : 2) - S.actionsLeft))}`;
     }
 
     const sc = S.scenario;
@@ -844,7 +857,7 @@ function initUI() {
         const wch = w === null ? null : charAtRank(S, w);
         html += w === null
           ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
-          : `<div class="big" style="color:${wch.color}">${wch.emoji} ${wch.name} (P${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
+          : `<div class="big" style="color:${wch.color}">${wch.emoji} ${wch.name} (player ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
         html += `<div class="sub">R = next game${S.scenarioOver ? '' : ' · N = new scenario'}</div>`;
       }
       if (S.scenarioOver) {
@@ -852,7 +865,7 @@ function initUI() {
         for (let i = 1; i < sc.score.length; i++) if (sc.score[i] > sc.score[w === null ? 0 : w]) w = i;
         if (w !== null && sc.score.filter(v => v === sc.score[w]).length > 1) w = null;
         const wch = w === null ? null : charAtRank(S, w);
-        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? wch.emoji + ' ' + wch.name + ' (P' + (w + 1) + ')' : 'tie'}</div>`;
+        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? wch.emoji + ' ' + wch.name + ' (player ' + (w + 1) + ')' : 'tie'}</div>`;
         html += `<div class="sub">N = new scenario · R = replay</div>`;
       }
       ov.innerHTML = html;
@@ -934,7 +947,7 @@ function initUI() {
   CHARACTERS.forEach((c, i) => {
     const b = document.createElement('button');
     b.textContent = `${c.emoji} ${c.name}`;
-    b.title = 'toggle player (active players become P1, P2, … in this order)';
+    b.title = 'toggle player (active players become player 1, player 2, … in this order)';
     b.addEventListener('click', () => { setEnabled(S, i, !S.enabled[i]); render(); });
     pwrap.appendChild(b);
   });
