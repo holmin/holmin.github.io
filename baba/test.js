@@ -582,4 +582,20 @@ assert.strictEqual(G.place(s, 0, flagNounIdx, 1, 4), true, 'placed FLAG noun at 
 assert.deepStrictEqual([r36.x, r36.y], [1, 1], 'curious rock moved toward the just-placed tile (PDF: placing = entering)');
 console.log('ok 36: placing counts as entering (PDF glossary) -> CURIOUS triggers');
 
+// 37. moversTo: which YOUR things can walk to a tapped cell (axis-aligned only)
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 3, y: 0 });
+s.entities.push({ id: 901, kind: 'word', prop: 'YOU', label: 'IS YOU', owner: 0, x: 4, y: 0 }); // ROCK IS PLAYER 1
+const rA = rock(s, 0, 0); rA.x = 2; rA.y = 4; // SAMI (0,4) and this rock are both PLAYER 1 YOU
+G.ensureParsed(s);
+let m = G.moversTo(s, 0, 1, 4);
+assert.strictEqual(m.length, 2, 'cell (1,4) reachable from both SAMI and the rock -> ambiguous');
+m = G.moversTo(s, 0, 0, 3);
+assert.strictEqual(m.length, 1, 'cell (0,3) reachable only by SAMI');
+assert.strictEqual(m[0][0].type, 'SAMI');
+assert.deepStrictEqual([m[0][1], m[0][2]], [0, -1]);
+assert.strictEqual(G.moversTo(s, 0, 1, 3).length, 0, 'diagonal cells are never walk targets');
+assert.strictEqual(G.moversTo(s, 0, 0, 4).length, 0, 'own YOU cell is not a walk target');
+console.log('ok 37: moversTo (unambiguous vs ambiguous walk targets)');
+
 console.log('\nAll engine tests passed.');

@@ -570,6 +570,22 @@ function fastMoveTo(S, p, dx, dy, tx, ty) {
   });
 }
 
+// Which of player p's YOU things can walk to cell (x,y) — returns [[thing, dx, dy], ...].
+// Axis-aligned only; FAST things count if the cell is on their slide ray.
+function moversTo(S, p, x, y) {
+  const out = [];
+  for (const th of yourThings(S, p)) {
+    const dx = Math.sign(x - th.x), dy = Math.sign(y - th.y);
+    if ((dx === 0) === (dy === 0)) continue; // skip the thing's own cell and diagonals
+    if (propsOf(S, th).FAST) {
+      if (fastReach(S, th, dx, dy).some(([cx, cy]) => cx === x && cy === y)) out.push([th, dx, dy]);
+    } else if (Math.abs(x - th.x) + Math.abs(y - th.y) === 1 && canMove(S, th, dx, dy)) {
+      out.push([th, dx, dy]);
+    }
+  }
+  return out;
+}
+
 // cells a FAST thing could slide to in direction (dx,dy) — computed on a clone
 function fastReach(S, sel, dx, dy) {
   const S2 = { ...S, entities: S.entities.map(e => ({ ...e })), _entered: null };
@@ -671,7 +687,7 @@ if (typeof module !== 'undefined' && module.exports) {
     propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
-    resolveCurious, fastMoveTo, fastReach, syncFixedTiles, resolveDestructive,
+    resolveCurious, fastMoveTo, fastReach, moversTo, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
     RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
@@ -734,20 +750,11 @@ function initUI() {
     if (mine) { S.selectedId = mine.id; render(); return; } // tap a YOUR thing to select it
     // tap a highlighted cell to walk there; if several of your things could go
     // there, that is ambiguous -> choose the thing first
-    const movers = [];
-    for (const y of yours) {
-      const dx = Math.sign(x - y.x), dy = Math.sign(y - y.y);
-      if (dx === 0 && dy === 0) continue;
-      if (propsOf(S, y).FAST) {
-        if (fastReach(S, y, dx, dy).some(([cx, cy]) => cx === x && cy === y)) movers.push([y, dx, dy]);
-      } else if (Math.abs(x - y.x) + Math.abs(y - y.y) === 1 && canMove(S, y, dx, dy)) {
-        movers.push([y, dx, dy]);
-      }
-    }
+    const movers = moversTo(S, S.turn, x, y);
     if (movers.length === 1) {
-      const [y, dx, dy] = movers[0];
-      S.selectedId = y.id;
-      if (propsOf(S, y).FAST) fastMoveTo(S, S.turn, dx, dy, x, y);
+      const [th, dx, dy] = movers[0];
+      S.selectedId = th.id;
+      if (propsOf(S, th).FAST) fastMoveTo(S, S.turn, dx, dy, x, y);
       else moveSelected(S, S.turn, dx, dy, pullOn);
       render();
       return;
