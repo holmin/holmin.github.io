@@ -12,8 +12,9 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **Setup:** 5×5 board with the World 1 "The Plains" river drawn on it — matrix
   notation (row,col) cells (1,1),(2,1),(2,2),(2,3),(3,3),(4,3),(4,4),(4,5),(5,5).
   The river is terrain called **RIVER** (not a tile, not WATER) — future rules
-  will interact with it. Rocks in two corners, flag in the center. Spawning is by
-  PLAYER rank: PLAYER 1 in the lower-left corner (0,4), PLAYER 2 in the
+  will interact with it. Rocks in two corners, flag in the center. Spawning follows
+  SELECTION order (not the written order): the first character selected spawns in
+  the lower-left corner (0,4), the second in the
   upper-right corner (4,0) — opposite diagonals; extra players near the other
   corners (0,0) and (4,4), then edge midpoints (2,0), (2,4) — as close as
   possible (corner if free, else nearest free cell). Default rules

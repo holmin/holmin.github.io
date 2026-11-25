@@ -626,4 +626,27 @@ s.selectedId = rock(s, 4, 4).id;
 assert.strictEqual(G.moveSelected(s, 1, -1, 0, false), true, 'PLAYER 2 moves a rock on his turn');
 console.log('ok 39: ROCK IS PLAYER 1 + IS PLAYER 2 -> both players can move the rocks');
 
+// 40. spawn corners follow SELECTION order: 1st selected -> (0,4), 2nd -> (4,0), even if the
+// 2nd has a lower written index than the 1st (Ebba first, then Gaba -> Gaba still upper-right)
+s = G.createGame();
+G.setEnabled(s, 0, false); G.setEnabled(s, 1, false); // clear defaults
+G.setEnabled(s, 3, true); // EBBA chosen first
+const ebba40 = s.entities.find(e => e.type === 'EBBA');
+assert.deepStrictEqual([ebba40.x, ebba40.y], [0, 4], 'first selected (EBBA) at lower-left (0,4)');
+G.setEnabled(s, 2, true); // GABA chosen second (index 2 < 3, but selected second)
+const gaba40 = s.entities.find(e => e.type === 'GABA');
+assert.deepStrictEqual([gaba40.x, gaba40.y], [4, 0], 'second selected (GABA) at upper-right (4,0) — opposite diagonal');
+// ...and the same with ZABA second (index 4)
+s = G.createGame();
+G.setEnabled(s, 0, false); G.setEnabled(s, 1, false);
+G.setEnabled(s, 3, true);
+G.setEnabled(s, 4, true); // ZABA second
+const zaba40 = s.entities.find(e => e.type === 'ZABA');
+assert.deepStrictEqual([zaba40.x, zaba40.y], [4, 0], 'second selected (ZABA) at upper-right (4,0)');
+// third selected goes elsewhere (other corner)
+G.setEnabled(s, 5, true); // MINNE third
+const minne40 = s.entities.find(e => e.type === 'MINNE');
+assert.ok(Math.abs(minne40.x) + Math.abs(minne40.y) <= 1, 'third selected (MINNE) near (0,0), not on the diagonal');
+console.log('ok 40: spawn corners follow selection order (first two on opposite diagonals)');
+
 console.log('\nAll engine tests passed.');

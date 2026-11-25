@@ -95,16 +95,18 @@ function createGame(enabled, scenario, levelId) {
     obj('ROCK', 0, 0), obj('ROCK', W - 1, H - 1),
     obj('FLAG', 2, 2),
   ];
-  // each enabled character spawns as close as possible to the home corner of its
-  // rank (PLAYER 1 lower-left, PLAYER 2 upper-right, ...) — corner if free, else nearest free cell
-  activeChars({ enabled }).forEach((ci, rank) => {
-    const [cx, cy] = HOME_CORNERS[rank];
+  // spawn corners follow SELECTION order: first selected -> lower-left (0,4),
+  // second selected -> upper-right (4,0) (opposite diagonals), then the other
+  // corners/edge midpoints — corner if free, else nearest free cell
+  const order = activeChars({ enabled });
+  order.forEach((ci, i) => {
+    const [cx, cy] = HOME_CORNERS[i];
     const [fx, fy] = firstFreeCell(entities, cx, cy);
     entities.push(obj(CHARACTERS[ci].noun, fx, fy));
   });
   const supply = supplyFor(levelId);
   const S = {
-    entities, supply, numPlayers, enabled, level: levelId,
+    entities, supply, numPlayers, enabled, level: levelId, spawnOrder: order.slice(),
     turn: 0, gameTurn: 0, actionsLeft: 1,
     challenge: null, over: null, scenarioOver: false,
     scenario,
@@ -175,9 +177,11 @@ function setEnabled(S, ci, on) {
   S.enabled[ci] = on;
   const newActive = activeChars(S);
   const c = CHARACTERS[ci];
+  S.spawnOrder = (S.spawnOrder || []).filter(x => x !== ci);
   if (on) {
     const rank = newActive.indexOf(ci);
-    const [cx, cy] = HOME_CORNERS[rank];
+    S.spawnOrder.push(ci); // corner follows selection order, not written index order
+    const [cx, cy] = HOME_CORNERS[S.spawnOrder.indexOf(ci)];
     const [fx, fy] = firstFreeCell(S.entities, cx, cy);
     S.entities.push(obj(c.noun, fx, fy));
     log(S, `${c.emoji} ${c.name} (PLAYER ${rank + 1}) drops in at ${fx},${fy}`);
@@ -285,7 +289,7 @@ function snapshot(S) {
     actionsLeft: S.actionsLeft, challenge: S.challenge, over: S.over,
     scenarioOver: S.scenarioOver, scenario: S.scenario, numPlayers: S.numPlayers, enabled: S.enabled,
     selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
-    river: Array.from(S.river || RIVER), level: S.level,
+    river: Array.from(S.river || RIVER), level: S.level, spawnOrder: S.spawnOrder,
   });
 }
 
