@@ -598,4 +598,31 @@ assert.strictEqual(G.moversTo(s, 0, 1, 3).length, 0, 'diagonal cells are never w
 assert.strictEqual(G.moversTo(s, 0, 0, 4).length, 0, 'own YOU cell is not a walk target');
 console.log('ok 37: moversTo (unambiguous vs ambiguous walk targets)');
 
+// 38. pixel sprites exist for every character and object, and paint pixels
+for (const c of G.CHARACTERS) assert.ok(G.SPRITES[c.noun], 'sprite for ' + c.noun);
+assert.ok(G.SPRITES.ROCK && G.SPRITES.FLAG, 'sprites for ROCK and FLAG');
+for (const k of Object.keys(G.SPRITES)) {
+  let painted = 0;
+  const mock = { fillStyle: null, fillRect: (x, y, w, h) => { painted += w * h; } };
+  G.SPRITES[k](mock);
+  assert.ok(painted > 20, 'sprite ' + k + ' paints pixels (' + painted + ')');
+}
+console.log('ok 38: pixel sprites for all characters/objects');
+
+// 39. a noun can be YOU for multiple players at once: ROCK IS PLAYER 1 + ROCK IS PLAYER 2
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 0 });
+s.entities.push({ id: 901, kind: 'word', prop: 'YOU', label: 'IS YOU', owner: 0, x: 3, y: 0 });
+s.entities.push({ id: 902, kind: 'word', prop: 'YOU', label: 'IS YOU', owner: 1, x: 2, y: 1 });
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('ROCK IS PLAYER 1') && rulesOf(s).includes('ROCK IS PLAYER 2'));
+assert.ok(G.yourThings(s, 0).some(e => e.type === 'ROCK'), 'PLAYER 1 can move rocks');
+assert.ok(G.yourThings(s, 1).some(e => e.type === 'ROCK'), 'PLAYER 2 can also move rocks');
+s.selectedId = rock(s, 0, 0).id;
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true, 'PLAYER 1 moves a rock on his turn');
+assert.strictEqual(s.turn, 1);
+s.selectedId = rock(s, 4, 4).id;
+assert.strictEqual(G.moveSelected(s, 1, -1, 0, false), true, 'PLAYER 2 moves a rock on his turn');
+console.log('ok 39: ROCK IS PLAYER 1 + IS PLAYER 2 -> both players can move the rocks');
+
 console.log('\nAll engine tests passed.');

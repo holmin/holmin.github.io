@@ -45,9 +45,8 @@
   .ent { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; }
   .cell.stack .ent { width: 50%; height: 50%; font-size: calc(var(--cell) * .34); }
   .cell.stack .ent.word { font-size: calc(var(--cell) * .14); }
-  .obj { font-size: calc(var(--cell) * .56); line-height: 1; }
-  .obj-BABA { background: rgba(255, 107, 157, .28); border-radius: 50%; }
-  .obj-KEKE { background: rgba(77, 171, 247, .28); border-radius: 50%; }
+  .obj { width: 84%; height: 84%; }
+  .obj canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
   .word {
     margin: 3px; width: calc(100% - 6px); height: calc(100% - 6px);
     display: flex; align-items: center; justify-content: center; text-align: center;
@@ -156,8 +155,9 @@
   #players button {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170;
     border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
-    touch-action: manipulation;
+    touch-action: manipulation; display: inline-flex; align-items: center; gap: 6px;
   }
+  #players button canvas { image-rendering: pixelated; }
   #players button.on { background: #f1c40f; color: #4a3800; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #8b93c9; margin-top: 6px; }
   #rules, #log { list-style: none; display: flex; flex-direction: column; gap: 4px; }
@@ -255,6 +255,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=14"></script>
+<script src="game.js?v=16"></script>
 </body>
 </html>

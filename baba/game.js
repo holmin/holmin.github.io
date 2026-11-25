@@ -12,6 +12,53 @@ const CHARACTERS = [
   { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
 const DEFAULT_ENABLED = [true, true, false, false, false, false];
+// Cute childish pixel-art sprites (Baba Is You style): each sprite is drawn on a
+// 16x16 canvas and scaled up with image-rendering: pixelated.
+const SPRITE_INK = '#1b1b2f';
+function px(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+function blob(g, cx, cy, r, c) {
+  for (let y = 0; y < 16; y++) {
+    const d = y - cy;
+    if (d * d > r * r) continue;
+    const hw = Math.floor(Math.sqrt(r * r - d * d));
+    px(g, cx - hw, y, hw * 2 + 1, 1, c);
+  }
+}
+function creature(g, bodyC, featC, opts) {
+  opts = opts || {};
+  blob(g, 8, 9, 7, SPRITE_INK);
+  blob(g, 8, 9, 6, bodyC);
+  if (opts.ears !== false) {
+    const ey = opts.tallEars ? 1 : 3;
+    blob(g, 4, ey, 2, SPRITE_INK); blob(g, 11, ey, 2, SPRITE_INK);
+    blob(g, 4, ey, 1, featC); blob(g, 11, ey, 1, featC);
+  }
+  if (opts.patch) { px(g, 4, 7, 3, 3, SPRITE_INK); px(g, 9, 7, 3, 3, SPRITE_INK); }
+  px(g, 5, 8, 2, 2, SPRITE_INK); px(g, 9, 8, 2, 2, SPRITE_INK);
+  px(g, 5, 8, 1, 1, '#fff'); px(g, 9, 8, 1, 1, '#fff');
+  px(g, 7, 12, 2, 1, SPRITE_INK);
+}
+function frog(g) {
+  blob(g, 5, 3, 3, SPRITE_INK); blob(g, 10, 3, 3, SPRITE_INK);
+  blob(g, 5, 3, 2, '#6abe30'); blob(g, 10, 3, 2, '#6abe30');
+  px(g, 4, 2, 2, 2, '#fff'); px(g, 9, 2, 2, 2, '#fff');
+  px(g, 4, 2, 1, 1, SPRITE_INK); px(g, 9, 2, 1, 1, SPRITE_INK);
+  blob(g, 8, 10, 7, SPRITE_INK); blob(g, 8, 10, 6, '#6abe30');
+  px(g, 5, 9, 2, 2, SPRITE_INK); px(g, 9, 9, 2, 2, SPRITE_INK);
+  px(g, 5, 9, 1, 1, '#fff'); px(g, 9, 9, 1, 1, '#fff');
+  px(g, 7, 13, 2, 1, SPRITE_INK);
+}
+const SPRITES = {
+  SAMI(g) { creature(g, '#f4faff', '#bfe0ff'); },                                   // polar bear
+  AAS(g) { creature(g, '#e8c07d', '#c89b5a', { tallEars: true }); px(g, 7, 0, 2, 2, '#e8c07d'); }, // llama
+  GABA(g) { creature(g, '#b5793a', '#6e4520'); px(g, 2, 5, 2, 5, '#6e4520'); },    // horse + mane
+  EBBA(g) { creature(g, '#8a5a33', '#d9b38c'); blob(g, 8, 11, 3, '#d9b38c'); },    // otter + belly
+  ZABA(g) { frog(g); },                                                            // frog
+  MINNE(g) { creature(g, '#ffffff', SPRITE_INK, { patch: true, ears: false }); blob(g, 4, 3, 2, SPRITE_INK); blob(g, 11, 3, 2, SPRITE_INK); }, // panda
+  ROCK(g) { blob(g, 8, 9, 7, SPRITE_INK); blob(g, 8, 9, 6, '#7d8590'); px(g, 5, 6, 2, 2, '#5a616b'); px(g, 9, 11, 2, 2, '#5a616b'); px(g, 5, 5, 2, 1, '#aab2bd'); },
+  FLAG(g) { px(g, 7, 1, 2, 13, SPRITE_INK); px(g, 8, 1, 1, 13, '#8a5a33'); px(g, 9, 2, 5, 4, SPRITE_INK); px(g, 9, 2, 4, 3, '#e0393e'); px(g, 5, 14, 6, 2, SPRITE_INK); px(g, 6, 14, 4, 1, '#8a5a33'); },
+};
+
 const PLAYER_NOUNS = CHARACTERS.map(c => c.noun);
 const PLAYER_NAMES = CHARACTERS.map(c => c.name);
 const PLAYER_EMOJI = CHARACTERS.map(c => c.emoji);
@@ -227,13 +274,19 @@ function parseRules(S) {
 function ensureParsed(S) {
   const rules = parseRules(S);
   S.rules = rules;
-  const propMap = {}, youOwner = {};
+  const propMap = {}, youOwners = {};
   for (const r of rules) {
     (propMap[r.noun] = propMap[r.noun] || {})[r.prop] = true;
-    if (r.prop === 'YOU' && youOwner[r.noun] === undefined) youOwner[r.noun] = r.owner;
+    // a noun can be YOU for SEVERAL players at once (e.g. ROCK IS PLAYER 1 + ROCK IS PLAYER 2)
+    if (r.prop === 'YOU') {
+      if (!youOwners[r.noun]) youOwners[r.noun] = [];
+      if (!youOwners[r.noun].includes(r.owner)) youOwners[r.noun].push(r.owner);
+    }
   }
   S._propMap = propMap;
-  S._youOwner = youOwner;
+  S._youOwners = youOwners;
+  S._youOwner = {};
+  for (const n of Object.keys(youOwners)) S._youOwner[n] = youOwners[n][0];
 }
 
 function ruleList(S) {
@@ -256,6 +309,8 @@ function propsOf(S, e) { const t = typeOf(e); return t ? (S._propMap[t] || {}) :
 function isYou(S, e) { return !!propsOf(S, e).YOU; }
 function isWin(S, e) { return !!propsOf(S, e).WIN; }
 function youOwner(S, e) { return S._youOwner[typeOf(e)]; }
+function youOwners(S, e) { return S._youOwners[typeOf(e)] || []; }
+function isYouBy(S, e, p) { return !!propsOf(S, e).YOU && youOwners(S, e).includes(p); }
 function entitiesAt(S, x, y) { return S.entities.filter(e => e.x === x && e.y === y); }
 
 function log(S, msg) {
@@ -359,7 +414,7 @@ function resolve(S, actor) {
     for (const o of entitiesAt(S, e.x, e.y)) {
       if (o !== e && isWin(S, o)) won = true;
     }
-    if (won) winners.add(youOwner(S, e));
+    if (won) for (const ow of youOwners(S, e)) winners.add(ow);
   }
   if (winners.size === 2) end(S, actor, 'both YOU on WIN — last action wins');
   else if (winners.size === 1) end(S, [...winners][0], 'YOU shared a space with WIN');
@@ -465,7 +520,7 @@ function doMove(S, m, dx, dy, pull) {
 function placeTargets(S, p) {
   const targets = new Set();
   for (const e of S.entities) {
-    if (!(isYou(S, e) && youOwner(S, e) === p)) continue;
+    if (!isYouBy(S, e, p)) continue;
     for (const [dx, dy] of DIRS) {
       const x = e.x + dx, y = e.y + dy;
       if (x < 0 || y < 0 || x >= W || y >= H) continue;
@@ -491,7 +546,7 @@ function doPlace(S, p, idx, x, y) {
 function legalMoves(S, p) {
   const res = [];
   for (const e of S.entities) {
-    if (!(isYou(S, e) && youOwner(S, e) === p)) continue;
+    if (!isYouBy(S, e, p)) continue;
     for (const [dx, dy] of DIRS) if (canMove(S, e, dx, dy)) res.push([e, dx, dy]);
   }
   return res;
@@ -502,7 +557,7 @@ function hasLegalAction(S, p) {
 }
 
 function yourThings(S, p) {
-  return S.entities.filter(e => isYou(S, e) && youOwner(S, e) === p);
+  return S.entities.filter(e => isYouBy(S, e, p));
 }
 
 function act(S, p, fn) {
@@ -684,12 +739,12 @@ function spendClock(S, p) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
-    propsOf, isYou, isWin, youOwner, entitiesAt, canMove, doMove, placeTargets, canPlace,
+    propsOf, isYou, isWin, youOwner, youOwners, isYouBy, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious, fastMoveTo, fastReach, moversTo, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
-    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS,
+    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS, SPRITES,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
@@ -713,6 +768,13 @@ function initUI() {
       board.appendChild(d);
       cells.push(d);
     }
+  }
+
+  function spriteCanvas(type) {
+    const c = document.createElement('canvas');
+    c.width = 16; c.height = 16;
+    (SPRITES[type] || SPRITES.ROCK)(c.getContext('2d'));
+    return c;
   }
 
   function activeSelectable() {
@@ -877,7 +939,9 @@ function initUI() {
           const sp = document.createElement('span');
           if (e.kind === 'object') {
             sp.className = 'ent obj obj-' + e.type;
-            sp.textContent = EMOJI[e.type];
+            const ch = CHARACTERS.find(c => c.noun === e.type);
+            if (ch) { sp.style.background = ch.color + '44'; sp.style.borderRadius = '50%'; }
+            sp.appendChild(spriteCanvas(e.type));
           } else if (e.prop) {
             sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.owner !== undefined && e.owner !== null ? ' own' + e.owner : '') + (e.fixed ? ' fixed' : '');
             sp.textContent = e.label;
@@ -1072,7 +1136,10 @@ function initUI() {
   const pwrap = document.getElementById('players');
   CHARACTERS.forEach((c, i) => {
     const b = document.createElement('button');
-    b.textContent = `${c.emoji} ${c.name}`;
+    const cv = spriteCanvas(c.noun);
+    cv.style.width = '22px'; cv.style.height = '22px';
+    b.appendChild(cv);
+    b.appendChild(document.createTextNode(' ' + c.name));
     b.title = 'toggle PLAYER (active players become PLAYER 1, PLAYER 2, … in this order)';
     b.addEventListener('click', () => { setEnabled(S, i, !S.enabled[i]); render(); });
     pwrap.appendChild(b);
