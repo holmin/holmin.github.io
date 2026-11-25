@@ -554,8 +554,8 @@ assert.ok(s.supply.some(t => t.prop === 'FAST') && s.supply.some(t => t.prop ===
 assert.ok(!s.supply.some(t => t.prop === 'STOP') && !s.supply.some(t => t.prop === 'DEFEAT'));
 assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'base nouns present in non-plain levels');
 s = G.createGame(undefined, undefined, 'dev');
-assert.strictEqual(s.supply.length, 17, 'developer level has all rules (no WEAK tile)');
-for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT']) {
+assert.strictEqual(s.supply.length, 18, 'developer level has all rules (no WEAK tile)');
+for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP']) {
   assert.ok(s.supply.some(t => t.prop === p), 'developer supply has IS ' + p);
 }
 assert.ok(!s.supply.some(t => t.prop === 'WEAK'), 'WEAK tile removed');
@@ -655,5 +655,41 @@ G.setEnabled(s, 5, true); // MINNE third
 const minne40 = s.entities.find(e => e.type === 'MINNE');
 assert.ok(Math.abs(minne40.x) + Math.abs(minne40.y) <= 1, 'third selected (MINNE) near (0,0), not on the diagonal');
 console.log('ok 40: spawn corners follow selection order (first two on opposite diagonals)');
+
+// 41. WRAP: pushed/moved off the grid wraps to the other side, unless blocked;
+// the permanent margin tiles outside the grid do not block it
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WRAP', label: 'IS WRAP', owner: 0, x: 1, y: 2 });
+const r41 = rock(s, 0, 0); r41.x = 0; r41.y = 3;
+const r41other = rock(s, 4, 4); r41other.x = 4; r41other.y = 0; // keep (4,3) free
+sami(s).x = 1; sami(s).y = 3; s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, -1, 0, false), true, 'push the WRAP rock off the left edge');
+assert.deepStrictEqual([r41.x, r41.y], [4, 3], 'WRAP rock wrapped to (4,3)');
+assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 3]);
+// no WRAP -> edge blocks
+s = G.createGame();
+const r41b = rock(s, 0, 0); r41b.x = 0; r41b.y = 3;
+sami(s).x = 1; sami(s).y = 3; s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, -1, 0, false), false, 'without WRAP the edge blocks');
+// WRAP into a blocked cell fails
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WRAP', label: 'IS WRAP', owner: 0, x: 1, y: 2 });
+s.entities.push({ id: 902, kind: 'word', noun: 'FLAG', x: 2, y: 1 });
+s.entities.push({ id: 903, kind: 'word', prop: 'STOP', label: 'IS STOP', owner: 0, x: 3, y: 1 });
+const r41c = rock(s, 0, 0); r41c.x = 0; r41c.y = 3;
+const f41 = s.entities.find(e => e.type === 'FLAG'); f41.x = 4; f41.y = 3; // STOP flag at the wrap destination
+sami(s).x = 1; sami(s).y = 3; s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, -1, 0, false), false, 'WRAP into a STOP cell is blocked');
+// pushing toward a printed margin tile wraps instead of being blocked by it
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 1, y: 0 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WRAP', label: 'IS WRAP', owner: 0, x: 2, y: 0 });
+const r41d = rock(s, 0, 0); r41d.x = 0; r41d.y = 2; // left of it sits the printed SAMI noun at (-1,2)
+sami(s).x = 1; sami(s).y = 2; s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, -1, 0, false), true, 'pushed toward the printed margin tile wraps');
+assert.deepStrictEqual([r41d.x, r41d.y], [4, 2], 'wrapped to (4,2), margin tile did not block');
+console.log('ok 41: WRAP (off-grid wraps unless blocked; margin tiles do not block)');
 
 console.log('\nAll engine tests passed.');

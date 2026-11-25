@@ -37,7 +37,7 @@ function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 // Levels (PDF: each level brings in only TWO rule/property tiles on top of the
 // base tiles — flag/rock/win + RIVER/TEXT nouns). The developer option at the
 // BOTTOM of the dropdown has all of them and is preselected for now.
-const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT'];
+const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP'];
 const LEVELS = [
   { id: 'plain', name: 'PLAIN (base rules only)', props: [], plain: true },
   { id: 'fast-curious', name: 'FAST + CURIOUS', props: ['FAST', 'CURIOUS'] },
@@ -46,6 +46,7 @@ const LEVELS = [
   { id: 'open-shut', name: 'OPEN + SHUT', props: ['OPEN', 'SHUT'] },
   { id: 'stop-sink', name: 'STOP + SINK', props: ['STOP', 'SINK'] },
   { id: 'fast-stop', name: 'FAST + STOP', props: ['FAST', 'STOP'] },
+  { id: 'wrap-stop', name: 'WRAP + STOP', props: ['WRAP', 'STOP'] },
   { id: 'dev', name: 'ALL RULES (developer)', props: 'ALL' },
 ];
 function supplyFor(levelId) {
@@ -419,9 +420,15 @@ function enterableProp(p) { return !!(p.OPEN || p.SINK || p.DEFEAT || p.MELT); }
 // Videogame properties: STOP = immovable wall; OPEN/SINK/DEFEAT/MELT = enterable,
 // not pushed (OPEN also opens SHUT things it touches); WEAK = destroyed when
 // pushed (collected in `dead`, the chain passes through its cell).
+function wrapCoord(v, lim) { return (v % lim + lim) % lim; }
 function gather(S, m, e, dx, dy, list, dead) {
-  const tx = e.x + dx, ty = e.y + dy;
-  if (tx < 0 || ty < 0 || tx >= W || ty >= H) return false;
+  let tx = e.x + dx, ty = e.y + dy;
+  if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
+    // WRAP: off the grid -> wrap to the other side (the printed margin tiles
+    // outside the grid never block this); otherwise the edge blocks the move
+    if (!propsOf(S, e).WRAP) return false;
+    tx = wrapCoord(tx, W); ty = wrapCoord(ty, H);
+  }
   const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o) && !dead.has(o));
   for (const o of ents) {
     const p = propsOf(S, o);
@@ -458,13 +465,16 @@ function doMove(S, m, dx, dy, pull) {
   const dead = new Set();
   if (!gather(S, m, m, dx, dy, list, dead)) return false;
   const ox = m.x, oy = m.y;
+  // apply WRAP when a moved thing leaves the grid
+  const stepX = (e, v) => (v < 0 || v >= W) && propsOf(S, e).WRAP ? wrapCoord(v, W) : v;
+  const stepY = (e, v) => (v < 0 || v >= H) && propsOf(S, e).WRAP ? wrapCoord(v, H) : v;
   const ev = [];
   if (S._entered) {
-    ev.push({ id: m.id, fx: ox, fy: oy, tx: ox + dx, ty: oy + dy });
-    for (const o of list) ev.push({ id: o.id, fx: o.x, fy: o.y, tx: o.x + dx, ty: o.y + dy });
+    ev.push({ id: m.id, fx: ox, fy: oy, tx: stepX(m, ox + dx), ty: stepY(m, oy + dy) });
+    for (const o of list) ev.push({ id: o.id, fx: o.x, fy: o.y, tx: stepX(o, o.x + dx), ty: stepY(o, o.y + dy) });
   }
-  for (const o of list) { o.x += dx; o.y += dy; }
-  m.x += dx; m.y += dy;
+  for (const o of list) { o.x = stepX(o, o.x + dx); o.y = stepY(o, o.y + dy); }
+  m.x = stepX(m, m.x + dx); m.y = stepY(m, m.y + dy);
   if (pull) {
     const behind = entitiesAt(S, ox - dx, oy - dy);
     if (behind.length > 0) {
@@ -570,7 +580,8 @@ function moveSelected(S, p, dx, dy, pull) {
     doMove(S, sel, dx, dy, pull);
     // FAST (diary #3): move as many spaces as you like in a single direction
     if (propsOf(S, sel).FAST) {
-      while (canMove(S, sel, dx, dy)) doMove(S, sel, dx, dy, false);
+      let g = 0;
+      while (g++ < 25 && canMove(S, sel, dx, dy)) doMove(S, sel, dx, dy, false); // cap: WRAP could loop forever
     }
     return true;
   });
@@ -590,17 +601,28 @@ function fastMoveTo(S, p, dx, dy, tx, ty) {
   });
 }
 
+// where a thing ends up when stepping (dx,dy) — off-grid wraps if it is WRAP
+function walkTarget(S, th, dx, dy) {
+  let tx = th.x + dx, ty = th.y + dy;
+  if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
+    if (!propsOf(S, th).WRAP) return null;
+    tx = wrapCoord(tx, W); ty = wrapCoord(ty, H);
+  }
+  return [tx, ty];
+}
 // Which of player p's YOU things can walk to cell (x,y) — returns [[thing, dx, dy], ...].
 // Axis-aligned only; FAST things count if the cell is on their slide ray.
 function moversTo(S, p, x, y) {
   const out = [];
   for (const th of yourThings(S, p)) {
-    const dx = Math.sign(x - th.x), dy = Math.sign(y - th.y);
-    if ((dx === 0) === (dy === 0)) continue; // skip the thing's own cell and diagonals
-    if (propsOf(S, th).FAST) {
-      if (fastReach(S, th, dx, dy).some(([cx, cy]) => cx === x && cy === y)) out.push([th, dx, dy]);
-    } else if (Math.abs(x - th.x) + Math.abs(y - th.y) === 1 && canMove(S, th, dx, dy)) {
-      out.push([th, dx, dy]);
+    for (const [dx, dy] of DIRS) {
+      const t = walkTarget(S, th, dx, dy);
+      if (!t || t[0] !== x || t[1] !== y) continue;
+      if (propsOf(S, th).FAST) {
+        if (fastReach(S, th, dx, dy).some(([cx, cy]) => cx === x && cy === y)) out.push([th, dx, dy]);
+      } else if (canMove(S, th, dx, dy)) {
+        out.push([th, dx, dy]);
+      }
     }
   }
   return out;
@@ -707,7 +729,7 @@ if (typeof module !== 'undefined' && module.exports) {
     propsOf, isYou, isWin, youOwner, youOwners, isYouBy, entitiesAt, canMove, doMove, placeTargets, canPlace,
     doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
-    resolveCurious, fastMoveTo, fastReach, moversTo, syncFixedTiles, resolveDestructive,
+    resolveCurious, fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
     RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS, SPRITE_IMG,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
@@ -859,7 +881,10 @@ function initUI() {
           // FAST: every square it can slide to, in all 4 directions
           for (const [dx, dy] of DIRS) for (const [cx, cy] of fastReach(S, th, dx, dy)) cells.push([cx, cy]);
         } else {
-          for (const [dx, dy] of DIRS) if (canMove(S, th, dx, dy)) cells.push([th.x + dx, th.y + dy]);
+          for (const [dx, dy] of DIRS) {
+            const t = walkTarget(S, th, dx, dy);
+            if (t && canMove(S, th, dx, dy)) cells.push(t);
+          }
         }
         return cells;
       };

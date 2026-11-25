@@ -63,6 +63,9 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   Moving along the same row/column does not trigger it; every CURIOUS thing in the
   entered line reacts. Effects cascade (a push can make a rock move, which makes
   another curious thing move, …). One `IS CURIOUS` tile exists and is in the supply.
+- **WRAP**: when pushed or moved outside the grid, a WRAP thing wraps to the
+  opposite side — unless that side is blocked. Pushing/walking toward one of the
+  permanent printed tiles in the margin also wraps (they never block it).
 - **FAST** (board-game keyword, diary #3): on its MOVE, a FAST thing slides **as
   many spaces as you like in a single direction** (until blocked). Because the
   printed PLAYER-1/PLAYER-2 noun tiles exist, `IS FAST` placed next to one does
