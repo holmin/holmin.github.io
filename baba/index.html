@@ -148,12 +148,14 @@
   .help li { margin: 1px 0; }
   @media (max-width: 860px) {
     #app { flex-direction: column; align-items: center; }
-    #controls { flex-wrap: wrap; }
+    #dpad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 34px); }
+    .cbtns button { padding: 6px 8px; font-size: 11px; }
     #side { display: contents; }
     #side > * { width: min(100%, 420px); }
     #titlerow { order: -3; width: min(100%, 420px); }  /* title + rule cards + status on top in the one-column mobile layout */
     body { padding: 8px; }
   }
+  @media (max-width: 340px) { #controls { flex-wrap: wrap; } }  /* very narrow screens: let the buttons wrap below the dpad */
 </style>
 </head>
 <body>
@@ -172,9 +174,9 @@
       </div>
       <div class="cbtns">
         <button id="btn-pull">PULL: off</button>
-        <button id="btn-undo">↩ undo (Z)</button>
-        <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win">⚔ sudden death</button>
-        <button id="btn-newgame" title="R">↺ new game (R)</button>
+        <button id="btn-undo">undo (Z)</button>
+        <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win">sudden death</button>
+        <button id="btn-newgame" title="R">new game (R)</button>
       </div>
     </div>
     <div id="tray-wrap">
@@ -227,6 +229,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=37"></script>
+<script src="game.js?v=38"></script>
 </body>
 </html>
