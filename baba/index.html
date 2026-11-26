@@ -124,7 +124,7 @@
   #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; flex-wrap: wrap; margin-top: 8px; }
   #levelrow select { flex: 1 1 0; min-width: 0; }
   #levelrow label { display: flex; gap: 4px; align-items: center; }
-  #levelrow .checks { flex: 1 1 100%; display: flex; gap: 12px; }  /* the two checkboxes on their own line */
+  .checks { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: #8b93c9; }  /* the two dev checkboxes on their own line */
   #level {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170; border-radius: 8px;
     padding: 6px; font-size: 12px; font-weight: 700; max-width: 100%;
@@ -183,11 +183,12 @@
         <button id="btn-newgame" title="N">new game (N)</button>
       </div>
     </div>
-    <div id="levelrow"><span>Rules:</span><select id="mod1"></select><select id="mod2"></select><span class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label></span></div>
+    <div id="levelrow"><span>Rules:</span><select id="mod1"></select><select id="mod2"></select></div>
     <div id="tray-wrap">
       <h3>RULE TILES (TAP, THEN PLACE ON MAP)</h3>
       <div id="supply"></div>
       <div id="supply-empty">supply empty</div>
+      <div class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label></div>
     </div>
   </div>
   <div id="side">
@@ -235,6 +236,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=46"></script>
+<script src="game.js?v=47"></script>
 </body>
 </html>
