@@ -20,7 +20,7 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   possible (corner if free, else nearest free cell). Default rules
   (shown as `(default)`, listed below any formed rules): `ALL IS PUSH`, plus one
   `IS PLAYER n` per active character — permanent.
-- **Characters:** only **Baba 🐻‍❄️ (PLAYER 1)** and **Keke 🦔 (PLAYER 2)** — no character select.
+- **Characters:** only **Baba 🐑 (PLAYER 1)** and **Keke 🦔 (PLAYER 2)** — no character select.
   The **alternate characters (dev)** checkbox next to the title brings back the character
   toggles for the six alternates (Sami, Aas, Gaba, Ebba, Zaba, Minne; 1–8 players; disabling all
   is allowed while selecting). Active players are always **PLAYER 1, PLAYER 2, … in the order

@@ -2,11 +2,11 @@
 
 const W = 5, H = 5, CELL = 64;
 const NOUNS = ['BABA', 'KEKE', 'SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER', 'TEXT', 'SQUARE'];
-const EMOJI = { BABA: '🐻‍❄️', KEKE: '🦔', SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊', TEXT: '🔤' };
+const EMOJI = { BABA: '🐑', KEKE: '🦔', SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊', TEXT: '🔤' };
 // BABA (polar bear) and KEKE (hedgehog) are the only characters by default —
 // no character select unless the "alternate characters (dev)" checkbox is on.
 const CHARACTERS = [
-  { noun: 'BABA', name: 'Baba', emoji: '🐻‍❄️', color: '#ff6b9d' },
+  { noun: 'BABA', name: 'Baba', emoji: '🐑', color: '#ff6b9d' },
   { noun: 'KEKE', name: 'Keke', emoji: '🦔', color: '#4dabf7' },
   { noun: 'SAMI', name: 'Sami', emoji: '🐻‍❄️', color: '#ff6b9d' },
   { noun: 'AAS', name: 'Aas', emoji: '🦙', color: '#4dabf7' },
