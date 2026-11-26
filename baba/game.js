@@ -512,7 +512,7 @@ function gather(S, m, e, dx, dy, list, dead) {
     else if (e !== m && propsOf(S, m).STRONG) { dead.add(e); return true; }
     else return false;
   }
-  const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o) && !dead.has(o));
+  const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !o.fixed && !list.includes(o) && !dead.has(o)); // printed margin tiles never interact
   const strong = !!propsOf(S, m).STRONG; // STRONG pushes even STOP / shut things
   for (const o of ents) {
     const p = propsOf(S, o);
@@ -549,6 +549,7 @@ function canMove(S, m, dx, dy) {
 }
 
 function doMove(S, m, dx, dy, pull) {
+  if (m.fixed) return false; // printed permanent tiles never move
   const list = [];
   const dead = new Set();
   if (!gather(S, m, m, dx, dy, list, dead)) return false;
@@ -566,7 +567,9 @@ function doMove(S, m, dx, dy, pull) {
   m.x = stepX(m, m.x + dx); m.y = stepY(m, m.y + dy);
   let pulled = null;
   if (pull) {
-    const behind = entitiesAt(S, ox - dx, oy - dy);
+    // the "behind" cell can be a margin cell at the board edge — the permanent
+    // printed tiles there only exist to form rules and are never pulled
+    const behind = entitiesAt(S, ox - dx, oy - dy).filter(e => !e.fixed);
     if (behind.length > 0) {
       const p = behind[0]; // pull only one thing
       const pp = propsOf(S, p);

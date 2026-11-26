@@ -1017,4 +1017,24 @@ G.resolve(s, 0);
 assert.ok(s.entities.includes(r52b), 'control: MELT rock off the river survives');
 console.log('ok 52: RIVER IS HOT destroys MELT things on the river');
 
+// 53. pulling at the board edge must NOT drag the permanent printed margin tiles
+//     (they only exist to form rules) — otherwise the printed IS PLAYER n rule breaks
+s = G.createGame();
+const fixedBefore = s.entities.filter(e => e.fixed).map(e => [e.id, e.x, e.y]);
+sami(s).x = 0; sami(s).y = 2; // left-middle: the printed SAMI noun sits at (-1,2)
+s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, true), true, 'move right with pull at the left edge');
+assert.deepStrictEqual([sami(s).x, sami(s).y], [1, 2], 'mover moved');
+assert.deepStrictEqual(s.entities.filter(e => e.fixed).map(e => [e.id, e.x, e.y]), fixedBefore, 'printed margin tiles untouched');
+assert.ok(rulesOf(s).includes('SAMI IS PLAYER 1 (default)'), 'printed YOU rule intact');
+assert.ok(G.hasLegalAction(s, 1) || G.hasLegalAction(s, 0), 'no bogus "cannot act"');
+// perm corner rule tiles are also untouchable (mover at (0,0) pulling from the top margin)
+s = G.createGame(undefined, undefined, 'm:hot-melt');
+const permBefore = s.entities.filter(e => e.perm).map(e => [e.id, e.x, e.y]);
+sami(s).x = 0; sami(s).y = 0; s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, 0, 1, true), true, 'move down with pull from the top edge');
+assert.deepStrictEqual(s.entities.filter(e => e.perm).map(e => [e.id, e.x, e.y]), permBefore, 'purple corner rule tiles untouched');
+assert.ok(rulesOf(s).includes('RIVER IS HOT (default)'), 'permanent card rule intact');
+console.log('ok 53: permanent printed tiles (margin + purple corners) are never pulled/pushed/moved');
+
 console.log('\nAll engine tests passed.');
