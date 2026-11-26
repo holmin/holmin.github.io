@@ -139,7 +139,7 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   flag object (videogame-faithful). If both players' YOU things share with WIN
   simultaneously, the PLAYER who last acted wins. Being both YOU and WIN does
   not auto-win.
-- **Challenge (C):** if you think the game is unwinnable, skip your turn to
+- **Sudden death (C):** if you think the game is unwinnable, skip your turn to
   challenge — your opponent then gets 10 actions to win; if they fail, you win.
 - **Game end:** a YOU+WIN share, a resolved challenge, or a PLAYER who cannot
   take their actions (the other PLAYER wins).

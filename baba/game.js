@@ -952,7 +952,7 @@ function challenge(S, p) {
   S.actionsLeft = 2;
   S.placeIdx = null;
   const opp = S.turn;
-  log(S, `⚔ ${charAtRank(S, p).emoji} ${charAtRank(S, p).name} challenges — ${charAtRank(S, opp).emoji} ${charAtRank(S, opp).name} gets 10 actions to win`);
+  log(S, `⚔ ${charAtRank(S, p).emoji} ${charAtRank(S, p).name} starts sudden death — ${charAtRank(S, opp).emoji} ${charAtRank(S, opp).name} gets 10 actions to win`);
   if (!S.over && !hasLegalAction(S, S.turn)) end(S, p, 'opponent cannot act');
   return true;
 }
@@ -1216,7 +1216,7 @@ function initUI() {
     } else if (S.challenge) {
       const opp = (S.challenge.challenger + 1) % S.numPlayers;
       const och = charAtRank(S, opp);
-      turnEl.innerHTML = `⚔ Challenge: <span style="color:${och.color}">${spriteImg(och.noun)} ${och.name} (PLAYER ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
+      turnEl.innerHTML = `⚔ Sudden death: <span style="color:${och.color}">${spriteImg(och.noun)} ${och.name} (PLAYER ${opp + 1})</span> must win in <b>${S.challenge.left}</b> actions`;
     } else if (!cur) {
       turnEl.textContent = 'no players enabled — toggle someone on above';
     } else {
@@ -1228,26 +1228,6 @@ function initUI() {
     document.getElementById('score').textContent =
       `Scenario ${sc.score.join('–')} ${sc.bo3 ? '(best of 3)' : ''} · world pts ${sc.worldPoints.join('–')}`;
 
-    const ul = document.getElementById('rules');
-    ul.innerHTML = '';
-    for (const r of ruleList(S)) {
-      const li = document.createElement('li');
-      // emoji graphics next to character nouns in the rules list (not on board/tiles)
-      const m = r.match(/^([A-Z]+)/);
-      const c = m && CHARACTERS.find(cc => cc.noun === m[1]);
-      const label = c ? r.replace(/^([A-Z]+)/, c.noun) : r;
-      const holder = r.endsWith(' (default)') ? li : (() => { const b = document.createElement('b'); li.appendChild(b); return b; })(); // formed rules bold, above defaults
-      if (c) {
-        const img = document.createElement('img');
-        img.className = 'spr'; img.src = SPRITE_IMG[c.noun]; img.alt = c.noun;
-        img.style.cssText = 'width:14px;height:14px;vertical-align:-2px';
-        holder.appendChild(img);
-        holder.appendChild(document.createTextNode(' ' + label));
-      } else {
-        holder.textContent = label;
-      }
-      ul.appendChild(li);
-    }
 
     const tray = document.getElementById('supply');
     tray.innerHTML = '';
