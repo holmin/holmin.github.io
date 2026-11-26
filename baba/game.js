@@ -213,6 +213,12 @@ function syncFixedTiles(S) {
   ensureParsed(S);
 }
 
+// new game button / N key: rotate the starting player, then start a fresh game
+function newGame(S, levelId) {
+  S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1;
+  return S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
+}
+
 function newScenario(prev, enabled, levelId) {
   enabled = (enabled && enabled.length === CHARACTERS.length) ? enabled : (prev && prev.enabled ? prev.enabled.slice() : DEFAULT_ENABLED.slice());
   const numPlayers = enabled.filter(Boolean).length;
@@ -387,7 +393,6 @@ function undo(S) {
 
 function end(S, winner, reason) {
   S.over = { winner, reason };
-  S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1; // rotate the starting player for the next game
   if (winner !== null) {
     const sc = S.scenario;
     sc.wins[winner]++;
@@ -996,7 +1001,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, youOwners, isYouBy, entitiesAt, canMove, doMove, placeTargets, canPlace,
-    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge,
+    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge, newGame,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
@@ -1304,7 +1309,7 @@ function initUI() {
   window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyN') { // N = new game (rotates the starting player)
-      S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
+      S = newGame(S, levelId);
       render();
       return;
     }
@@ -1357,7 +1362,7 @@ function initUI() {
 
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
   document.getElementById('btn-newgame').addEventListener('click', () => {
-    S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
+    S = newGame(S, levelId); // rotates the starting player
     render();
   });
   // two level-card ("modifier") dropdowns — pick none, one, or two DIFFERENT cards
@@ -1384,7 +1389,14 @@ function initUI() {
   }
   mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; rebuild(); });
   mod2.addEventListener('change', () => { if (mod2.value !== 'none' && mod1.value === mod2.value) mod1.value = 'none'; rebuild(); });
-  devChk.addEventListener('change', rebuild); // dev mode composes with up to two modifier cards (e.g. RIVER IS HOT)
+  devChk.addEventListener('change', () => {
+    // dev toggle applies to the CURRENT game (no restart): infinite supply of all tiles,
+    // still composes with up to two modifier cards (e.g. their RIVER IS HOT rule)
+    S.dev = devChk.checked;
+    S.level = currentLevelId();
+    S.supply = supplyFor(S.level);
+    render();
+  });
   // character select is hidden unless "alternate characters (dev)" is checked.
   // Default: only BABA + KEKE. With the checkbox: SAMI + AAS are the defaults and
   // ALL characters have toggles, so any of them can be deselected/replaced.

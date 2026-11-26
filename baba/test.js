@@ -1061,9 +1061,10 @@ G.ensureParsed(s);
 s.selectedId = baba(s).id;
 G.moveSelected(s, 0, 1, 0, false); // BABA steps onto the FLAG (FLAG IS WIN) -> wins
 assert.ok(s.over && s.over.winner === 0, 'BABA won');
-const sc54 = s.scenario;
-s = G.createGame(s.enabled, sc54, s.level);
+s = G.newGame(s, s.level); // new game button: rotates the starter
 assert.strictEqual(s.turn, 1, 'next game: PLAYER 2 (KEKE) starts — starters rotate');
+s = G.newGame(s, s.level);
+assert.strictEqual(s.turn, 0, 'and back to PLAYER 1');
 
 // 55. a lone player who is destroyed LOSES (does not "win")
 s = G.createGame([true, false, false, false, false, false, false, false]); // only BABA
