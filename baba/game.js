@@ -1,7 +1,7 @@
 'use strict';
 
 const W = 5, H = 5, CELL = 64;
-const NOUNS = ['SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER', 'TEXT'];
+const NOUNS = ['SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER', 'TEXT', 'SQUARE'];
 const EMOJI = { SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊', TEXT: '🔤' };
 const CHARACTERS = [
   { noun: 'SAMI', name: 'Sami', emoji: '🐻‍❄️', color: '#ff6b9d' },
@@ -38,25 +38,42 @@ function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 // base tiles — flag/rock/win + RIVER/TEXT nouns). The developer option at the
 // BOTTOM of the dropdown has all of them and is preselected for now.
 const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP', 'THIRSTY', 'STRONG', 'SCARED', 'SHEEP'];
-const LEVELS = [
-  { id: 'plain', name: 'PLAIN (base rules only)', props: [], plain: true },
-  { id: 'fast-curious', name: 'FAST + CURIOUS', props: ['FAST', 'CURIOUS'] },
-  { id: 'sink-defeat', name: 'SINK + DEFEAT', props: ['SINK', 'DEFEAT'] },
-  { id: 'melt-hot', name: 'MELT + HOT', props: ['MELT', 'HOT'] },
-  { id: 'open-shut', name: 'OPEN + SHUT', props: ['OPEN', 'SHUT'] },
-  { id: 'stop-sink', name: 'STOP + SINK', props: ['STOP', 'SINK'] },
-  { id: 'fast-stop', name: 'FAST + STOP', props: ['FAST', 'STOP'] },
-  { id: 'wrap-stop', name: 'WRAP + STOP', props: ['WRAP', 'STOP'] },
-  { id: 'thirsty-scared', name: 'THIRSTY + SCARED', props: ['THIRSTY', 'SCARED'] },
-  { id: 'strong-sheep', name: 'STRONG + SHEEP', props: ['STRONG', 'SHEEP'] },
-  { id: 'dev', name: 'ALL RULES (developer)', props: 'ALL' },
+// Level cards ("modifiers") in the order they appear in the campaign video
+// (world 1, then world 2). A card is named after its permanent rule when it
+// has one (e.g. RIVER IS HOT instead of HOT/MELT). `fixed` rules are printed
+// as permanent purple tiles in the board corners (see syncFixedTiles).
+const MODIFIERS = [
+  { id: 'more-rock-flag', name: 'MORE ROCK MORE FLAG', tiles: [{ noun: 'ROCK' }, { noun: 'FLAG' }] },
+  { id: 'fast', name: 'FAST', tiles: [{ prop: 'FAST' }] },
+  { id: 'hot-melt', name: 'RIVER IS HOT', tiles: [{ prop: 'HOT' }, { prop: 'MELT' }], fixed: [['RIVER', 'HOT']] },
+  { id: 'curious', name: 'FLAG IS CURIOUS', tiles: [{ prop: 'CURIOUS' }], fixed: [['FLAG', 'CURIOUS']] },
+  { id: 'square', name: 'SQUARE', tiles: [{ noun: 'SQUARE' }] },
+  { id: 'win-harder', name: 'WIN HARDER', tiles: [{ prop: 'WIN' }, { prop: 'WIN' }] },
+  { id: 'thirsty', name: 'ROCK IS THIRSTY', tiles: [{ prop: 'THIRSTY' }], fixed: [['ROCK', 'THIRSTY']] },
+  { id: 'strong', name: 'STRONG', tiles: [{ prop: 'STRONG' }] },
+  { id: 'scared', name: 'ROCK IS SCARED', tiles: [{ prop: 'SCARED' }], fixed: [['ROCK', 'SCARED']] },
+  { id: 'sheep', name: 'ROCK IS SHEEP', tiles: [{ prop: 'SHEEP' }, { prop: 'SHEEP' }], fixed: [['ROCK', 'SHEEP']] },
 ];
+// levelId: 'base' (no cards), 'm:<id1>,<id2>' (one or two different cards), 'dev' (all tiles, infinite)
+function parseLevel(levelId) {
+  if (levelId === 'dev') return { dev: true, mods: [] };
+  if (levelId && levelId.slice(0, 2) === 'm:') return { dev: false, mods: levelId.slice(2).split(',').filter(Boolean) };
+  return { dev: false, mods: [] };
+}
+const BASE_TILES = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'RIVER' }, { noun: 'TEXT' }];
 function supplyFor(levelId) {
-  const lvl = LEVELS.find(l => l.id === levelId) || LEVELS[0];
-  const head = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'ROCK' }, { noun: 'FLAG' }];
-  const props = lvl.props === 'ALL' ? ALL_PROPS : (lvl.props || []);
-  const nouns = lvl.plain ? [] : [{ noun: 'RIVER' }, { noun: 'TEXT' }];
-  return head.concat(props.map(p => ({ prop: p })), nouns);
+  const { dev, mods } = parseLevel(levelId);
+  if (dev) {
+    // developer: ONE of each tile (placing does not consume, see doPlace)
+    return [{ prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'RIVER' }, { noun: 'TEXT' }, { noun: 'SQUARE' }]
+      .concat(ALL_PROPS.map(p => ({ prop: p })));
+  }
+  const out = BASE_TILES.slice();
+  for (const id of mods) {
+    const m = MODIFIERS.find(mm => mm.id === id);
+    if (m) for (const t of m.tiles) out.push({ prop: t.prop, noun: t.noun });
+  }
+  return out;
 }
 function activeChars(S) {
   const out = [];
@@ -84,7 +101,7 @@ function firstFreeCell(entities, nearX, nearY) {
 }
 
 function createGame(enabled, scenario, levelId) {
-  levelId = levelId || LEVELS[0].id;
+  levelId = levelId || 'base';
   enabled = (enabled && enabled.length === CHARACTERS.length) ? enabled.slice() : DEFAULT_ENABLED.slice();
   const numPlayers = enabled.filter(Boolean).length;
   nextId = 1;
@@ -111,8 +128,9 @@ function createGame(enabled, scenario, levelId) {
     entities.push(obj(CHARACTERS[ci].noun, fx, fy));
   });
   const supply = supplyFor(levelId);
+  const pl = parseLevel(levelId);
   const S = {
-    entities, supply, numPlayers, enabled, level: levelId, spawnOrder: order.slice(),
+    entities, supply, numPlayers, enabled, level: levelId, mods: pl.mods, dev: pl.dev, spawnOrder: order.slice(),
     turn: 0, gameTurn: 0, actionsLeft: 1,
     challenge: null, over: null, scenarioOver: false,
     scenario,
@@ -121,6 +139,7 @@ function createGame(enabled, scenario, levelId) {
     river: new Set(RIVER),
     _loopSteps: 0, _thirstyPending: [], _thirstyChooser: UI_THIRSTY_CHOOSER,
   };
+  S.mods = pl.mods; S.dev = pl.dev;
   syncFixedTiles(S);
   ensureParsed(S);
   S._prevRules = ruleList(S);
@@ -153,6 +172,21 @@ function syncFixedTiles(S) {
       { id: nextId++, kind: 'word', prop: 'YOU', owner: 1, label: 'IS PLAYER 2', fixed: true, x: 5, y: 2 },
     );
   }
+  // Permanent level-card rules, printed as purple tiles: first rule in the
+  // top-left corner, second in the lower-left corner (noun + property tile).
+  const fixedRules = [];
+  for (const id of (S.mods || [])) {
+    const m = MODIFIERS.find(mm => mm.id === id);
+    if (m && m.fixed) for (const fr of m.fixed) fixedRules.push(fr);
+  }
+  const corners = [[-1, -1], [-1, 5]];
+  fixedRules.slice(0, 2).forEach(([noun, prop], i) => {
+    const [cx, cy] = corners[i];
+    S.entities.push(
+      { id: nextId++, kind: 'word', noun, fixed: true, perm: true, x: cx, y: cy },
+      { id: nextId++, kind: 'word', prop, owner: null, label: 'IS ' + prop, fixed: true, perm: true, x: cx + 1, y: cy },
+    );
+  });
   ensureParsed(S);
 }
 
@@ -232,9 +266,9 @@ function parseRules(S) {
   }
   for (const n of nounTiles) {
     const r = propAt.get((n.x + 1) + ',' + n.y);
-    if (r) rules.push({ noun: n.noun, prop: r.prop, owner: r.owner, permanent: !!r.fixed });
+    if (r) rules.push({ noun: n.noun, prop: r.prop, owner: r.owner, permanent: !!r.fixed, _tile: r.id });
     const d = propAt.get(n.x + ',' + (n.y + 1));
-    if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner, permanent: !!d.fixed });
+    if (d) rules.push({ noun: n.noun, prop: d.prop, owner: d.owner, permanent: !!d.fixed, _tile: d.id });
   }
   // printed margin tiles cover PLAYER 1 (always) and PLAYER 2 (2+ players); PLAYER 3+ are implicit
   activeChars(S).forEach((ci, rank) => {
@@ -257,8 +291,6 @@ function ensureParsed(S) {
   }
   S._propMap = propMap;
   S._youOwners = youOwners;
-  S._youOwner = {};
-  for (const n of Object.keys(youOwners)) S._youOwner[n] = youOwners[n][0];
 }
 
 function ruleList(S) {
@@ -277,11 +309,25 @@ function ruleList(S) {
 // not the word "FLAG" (unless TEXT IS WIN). The permanent printed tiles in the
 // margin are exempt: TEXT rules never apply to them.
 const typeOf = (e) => (e.kind === 'object' ? e.type : (e.fixed ? null : 'TEXT'));
-function propsOf(S, e) { const t = typeOf(e); return t ? (S._propMap[t] || {}) : {}; }
+// A word tile is TEXT (all word tiles) and, if it is the property tile of a
+// currently formed rule, also SQUARE (unlike TEXT, SQUARE is dynamic — it
+// changes as rules form and break).
+function typesOf(S, e) {
+  if (e.kind === 'object') return [e.type];
+  if (e.fixed) return [];
+  const t = ['TEXT'];
+  if (e.prop && S.rules.some(r => !r.permanent && r._tile === e.id)) t.push('SQUARE');
+  return t;
+}
+function propsOf(S, e) { const out = {}; for (const t of typesOf(S, e)) Object.assign(out, S._propMap[t] || {}); return out; }
 function isYou(S, e) { return !!propsOf(S, e).YOU; }
 function isWin(S, e) { return !!propsOf(S, e).WIN; }
-function youOwner(S, e) { return S._youOwner[typeOf(e)]; }
-function youOwners(S, e) { return S._youOwners[typeOf(e)] || []; }
+function youOwners(S, e) {
+  const out = [];
+  for (const t of typesOf(S, e)) for (const o of (S._youOwners[t] || [])) if (!out.includes(o)) out.push(o);
+  return out;
+}
+function youOwner(S, e) { return youOwners(S, e)[0]; }
 function isYouBy(S, e, p) { return !!propsOf(S, e).YOU && youOwners(S, e).includes(p); }
 function entitiesAt(S, x, y) { return S.entities.filter(e => e.x === x && e.y === y); }
 
@@ -296,7 +342,7 @@ function snapshot(S) {
     actionsLeft: S.actionsLeft, challenge: S.challenge, over: S.over,
     scenarioOver: S.scenarioOver, scenario: S.scenario, numPlayers: S.numPlayers, enabled: S.enabled,
     selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
-    river: Array.from(S.river || RIVER), level: S.level, spawnOrder: S.spawnOrder,
+    river: Array.from(S.river || RIVER), level: S.level, spawnOrder: S.spawnOrder, mods: S.mods, dev: S.dev,
   });
 }
 
@@ -377,7 +423,9 @@ function resolveDestructive(S, actor) {
       }
     }
     if (!dead.size && !riverDead.length) return;
+    const removed = S.entities.filter(e => dead.has(e.id));
     S.entities = S.entities.filter(e => !dead.has(e.id));
+    recycleTiles(S, removed);
     if (S.river) for (const k of riverDead) S.river.delete(k);
   }
 }
@@ -453,12 +501,13 @@ function gather(S, m, e, dx, dy, list, dead) {
     else return false;
   }
   const ents = entitiesAt(S, tx, ty).filter(o => o !== e && !list.includes(o) && !dead.has(o));
+  const strong = !!propsOf(S, m).STRONG; // STRONG pushes even STOP / shut things
   for (const o of ents) {
     const p = propsOf(S, o);
-    if (p.STOP) return false;
+    if (p.STOP && !strong) return false;
     if (p.SHUT && !openedInCell(S, o)) {
-      if (propsOf(S, e).OPEN) continue; // an OPEN entrant stacks onto the shut thing, opening it
-      return false;
+      if (propsOf(S, e).OPEN && !strong) continue; // an OPEN entrant stacks onto the shut thing, opening it
+      if (!strong) return false;
     }
     if (stackable(S, m, o)) continue;
     if (enterableProp(p)) continue; // enterable things are entered, not pushed
@@ -472,7 +521,7 @@ function gather(S, m, e, dx, dy, list, dead) {
   for (const o of ents) {
     const p = propsOf(S, o);
     if (dead.has(o) || stackable(S, m, o) || enterableProp(p) || p.WEAK) continue;
-    if (p.SHUT && !openedInCell(S, o)) continue; // shut things are never pushed
+    if (p.SHUT && !openedInCell(S, o) && (propsOf(S, e).OPEN || !strong)) continue; // shut things are only pushed by STRONG (or stacked on by OPEN)
     list.push(o);
   }
   return true;
@@ -509,15 +558,20 @@ function doMove(S, m, dx, dy, pull) {
     if (behind.length > 0) {
       const p = behind[0]; // pull only one thing
       const pp = propsOf(S, p);
+      const strong = !!propsOf(S, m).STRONG; // STRONG can pull things that normally can't be pulled (STOP/SHUT/SCARED)
       if (pp.WEAK) dead.add(p); // WEAK breaks when pulled
-      else if (!pp.STOP && !pp.SCARED && !(pp.SHUT && !openedInCell(S, p))) { // SCARED things cannot be pulled
+      else if ((!pp.STOP || strong) && (!pp.SCARED || strong) && (!(pp.SHUT && !openedInCell(S, p)) || strong)) {
         if (S._entered) ev.push({ id: p.id, fx: p.x, fy: p.y, tx: ox, ty: oy });
         p.x = ox; p.y = oy;
         pulled = p;
       }
     }
   }
-  if (dead.size) S.entities = S.entities.filter(e => !dead.has(e));
+  if (dead.size) {
+    const removed = S.entities.filter(e => dead.has(e));
+    S.entities = S.entities.filter(e => !dead.has(e));
+    recycleTiles(S, removed);
+  }
   // SHEEP: when a SHEEP thing moves, every other SHEEP thing moves the same
   // amount in the same direction, if its destination cell is free (no pushing)
   if (S._entered) {
@@ -562,13 +616,24 @@ function canPlace(S, p) {
   return S.supply.length > 0 && placeTargets(S, p).size > 0;
 }
 
+// Destroyed word tiles go back to the supply (they can be placed again later);
+// in the developer level nothing is ever consumed or returned.
+function recycleTiles(S, removed) {
+  if (S.dev) return;
+  for (const e of removed) {
+    if (e.kind === 'word' && !e.fixed && e.prop) S.supply.push({ prop: e.prop });
+    else if (e.kind === 'word' && !e.fixed && e.noun) S.supply.push({ noun: e.noun });
+  }
+}
+
 function doPlace(S, p, idx, x, y) {
   const t = S.supply[idx];
   const e = t.prop ? propTile(t.prop, p, x, y) : nounTile(t.noun, x, y);
   S.entities.push(e);
-  S.supply.splice(idx, 1);
-  // FAQ: placing a tile does NOT count as entering — a freshly placed rule
-  // (e.g. CURIOUS) only triggers from the next action on
+  if (!S.dev) S.supply.splice(idx, 1); // developer level: infinite tiles
+  // Placing DOES scare adjacent SCARED things, but does NOT trigger CURIOUS
+  // (FAQ: a freshly placed rule only triggers from the next action on)
+  if (S._entered) S._entered.push({ id: e.id, fx: null, fy: null, tx: x, ty: y, placed: true });
   return e;
 }
 
@@ -726,6 +791,7 @@ function resolveCascade(S, actor) {
       // consumed per (curious object, event) pair, not per event globally
       let bestI = -1, bd = Infinity;
       evs.forEach((ev, i) => {
+        if (ev.placed) return; // FAQ: placing does NOT trigger CURIOUS
         if (reactedC.has(c.id + ':' + i)) return;
         const e = S.entities.find(x => x.id === ev.id);
         if (!e || e === c) return;
@@ -750,21 +816,22 @@ function resolveCascade(S, actor) {
     }
     const scared = S.entities.filter(e => !e.fixed && propsOf(S, e).SCARED);
     for (const c of scared) {
-      let bestI = -1, bd = Infinity;
+      // SCARED reacts when anything ENTERS an edge-adjacent space — including
+      // being placed or pushed there (placed events have fx=null -> wasAdj=false)
+      const trig = [];
       evs.forEach((ev, i) => {
         if (reactedS.has(c.id + ':' + i)) return;
         const e = S.entities.find(x => x.id === ev.id);
         if (!e || e === c) return;
         const newAdj = Math.abs(ev.tx - c.x) + Math.abs(ev.ty - c.y) === 1;   // ended up directly next to it
         const wasAdj = ev.fx !== null && Math.abs(ev.fx - c.x) + Math.abs(ev.fy - c.y) === 1;
-        if (!(newAdj && !wasAdj)) return;
-        const d = Math.abs(ev.tx - c.x) + Math.abs(ev.ty - c.y);
-        if (d < bd) { bd = d; bestI = i; }
+        if (newAdj && !wasAdj) trig.push([i, Math.sign(c.x - ev.tx), Math.sign(c.y - ev.ty)]);
       });
-      if (bestI < 0) continue;
-      const ev = evs[bestI];
-      reactedS.add(c.id + ':' + bestI);
-      const fdx = Math.sign(c.x - ev.tx), fdy = Math.sign(c.y - ev.ty); // flee in the opposite direction
+      if (!trig.length) continue;
+      for (const [i] of trig) reactedS.add(c.id + ':' + i);
+      const dirs = new Set(trig.map(([, fx, fy]) => fx + ',' + fy));
+      if (dirs.size > 1) continue; // would have to flee in multiple directions -> paralyzed, doesn't move
+      const [, fdx, fdy] = trig[0]; // flee in the opposite direction, as far as possible
       if (fdx === 0 && fdy === 0) continue;
       while (!bumpLoop(S, actor) && canMove(S, c, fdx, fdy)) { doMove(S, c, fdx, fdy, false); moved = true; }
     }
@@ -778,35 +845,36 @@ function resolveCurious(S, actor) { resolveCascade(S, actor); }
 // equally close, the player chooses the target — the UI defers via
 // S._thirstyPending + pickThirsty (S._thirstyChooser returns null); the engine
 // default is the first option.
+// THIRSTY destinations: the nearest river cell in each of the 4 straight
+// directions, keeping only the closest ones (entries [x, y, dx, dy])
 function thirstyOptions(S, e) {
   const river = S.river || RIVER;
   if (!river || !river.size) return [];
-  let bd = Infinity;
+  let best = Infinity;
   const opts = [];
-  for (const k of river) {
-    const [x, y] = k.split(',').map(Number);
-    const d = Math.abs(x - e.x) + Math.abs(y - e.y);
-    if (d < bd) { bd = d; opts.length = 0; opts.push([x, y]); }
-    else if (d === bd) opts.push([x, y]);
+  for (const [dx, dy] of DIRS) {
+    for (let d = 1; d <= Math.max(W, H); d++) {
+      const x = e.x + dx * d, y = e.y + dy * d;
+      if (x < 0 || y < 0 || x >= W || y >= H) break;
+      if (river.has(x + ',' + y)) {
+        if (d < best) { best = d; opts.length = 0; opts.push([x, y, dx, dy]); }
+        else if (d === best) opts.push([x, y, dx, dy]);
+        break; // nearest river cell in this direction
+      }
+    }
   }
   opts.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
   return opts;
 }
+// THIRSTY moves in ONE straight direction only, pushing its way if legal
 function moveToward(S, e, tx, ty, actor) {
+  const dx = Math.sign(tx - e.x), dy = Math.sign(ty - e.y);
+  if ((dx !== 0) === (dy !== 0)) return; // diagonal target: not a straight line, stay
   let g = 0;
-  while (!riverAt(S, e.x, e.y) && g++ < 10) {
+  while ((e.x !== tx || e.y !== ty) && g++ < 10) {
     if (bumpLoop(S, actor)) return;
-    const dist = (x, y) => Math.abs(tx - x) + Math.abs(ty - y);
-    const d0 = dist(e.x, e.y);
-    const cands = DIRS
-      .map(([dx, dy]) => [dx, dy, dist(e.x + dx, e.y + dy)])
-      .filter(([, , d]) => d < d0)
-      .sort((a, b) => (Math.abs(a[0]) - Math.abs(b[0])) || (a[2] - b[2])); // horizontal step first
-    let stepped = false;
-    for (const [dx, dy] of cands) {
-      if (canMove(S, e, dx, dy)) { doMove(S, e, dx, dy, false); stepped = true; break; }
-    }
-    if (!stepped) return;
+    if (!canMove(S, e, dx, dy)) return; // blocked -> stays
+    doMove(S, e, dx, dy, false);
   }
 }
 function resolveThirsty(S, actor) {
@@ -817,12 +885,13 @@ function resolveThirsty(S, actor) {
     if (riverAt(S, e.x, e.y)) continue;
     const opts = thirstyOptions(S, e);
     if (!opts.length) continue;
-    let target = opts[0];
-    if (opts.length > 1 && typeof S._thirstyChooser === 'function') {
-      const c = S._thirstyChooser(opts.map(o => o.slice()), e);
+    const dests = opts.map(o => [o[0], o[1]]);
+    let target = dests[0];
+    if (dests.length > 1 && typeof S._thirstyChooser === 'function') {
+      const c = S._thirstyChooser(dests.map(d => d.slice()), e);
       if (c == null) {
         S._thirstyPending = S._thirstyPending || [];
-        if (!S._thirstyPending.some(q => q.eid === e.id)) S._thirstyPending.push({ eid: e.id, options: opts, actor });
+        if (!S._thirstyPending.some(q => q.eid === e.id)) S._thirstyPending.push({ eid: e.id, options: dests, actor });
         continue;
       }
       target = c;
@@ -897,7 +966,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
-    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, LEVELS, supplyFor, ALL_PROPS, SPRITE_IMG,
+    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, MODIFIERS, parseLevel, supplyFor, ALL_PROPS, SPRITE_IMG, typesOf,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
@@ -906,7 +975,7 @@ if (typeof document !== 'undefined') initUI();
 
 function initUI() {
   setThirstyChooser(() => null); // THIRSTY ties defer to a tap on a highlighted water cell
-  let levelId = LEVELS[0].id; // first level preset preselected; ALL RULES (developer) is last in the dropdown
+  let levelId = 'base'; // no level cards by default; 'dev' = developer (all tiles, infinite)
   let S = createGame(undefined, undefined, levelId);
   let pullOn = false;
   const board = document.getElementById('board');
@@ -1108,10 +1177,10 @@ function initUI() {
             if (ch) { sp.style.background = ch.color + '44'; sp.style.borderRadius = '50%'; }
             sp.innerHTML = spriteImg(e.type);
           } else if (e.prop) {
-            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.fixed ? ' fixed' : '');
+            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.fixed ? ' fixed' : '') + (e.perm ? ' perm' : '');
             sp.textContent = e.label;
           } else {
-            sp.className = 'ent word noun' + (e.fixed ? ' fixed' : '');
+            sp.className = 'ent word noun' + (e.fixed ? ' fixed' : '') + (e.perm ? ' perm' : '');
             sp.textContent = e.noun;
           }
           if (turnYous.includes(e)) {
@@ -1188,7 +1257,11 @@ function initUI() {
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);
     });
-    document.getElementById('level').value = S.level || LEVELS[0].id;
+    // modifier dropdowns reflect the current game's levelId
+    const pl = parseLevel(S.level || 'base');
+    document.getElementById('devmode').checked = !!pl.dev;
+    document.getElementById('mod1').value = pl.dev ? 'none' : (pl.mods[0] || 'none');
+    document.getElementById('mod2').value = pl.dev ? 'none' : (pl.mods[1] || 'none');
 
     const ov = document.getElementById('overlay');
     if (S.over || S.scenarioOver) {
@@ -1284,18 +1357,32 @@ function initUI() {
     S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
     render();
   });
-  const levelSel = document.getElementById('level');
-  LEVELS.forEach(l => {
-    const o = document.createElement('option');
-    o.value = l.id; o.textContent = l.name;
-    levelSel.appendChild(o);
-  });
-  levelSel.value = levelId;
-  levelSel.addEventListener('change', () => {
-    levelId = levelSel.value;
-    S = createGame(S.enabled, S.scenario, levelId); // changing level starts a new game with that level's tiles
+  // two level-card ("modifier") dropdowns — pick none, one, or two DIFFERENT cards
+  const mod1 = document.getElementById('mod1'), mod2 = document.getElementById('mod2'), devChk = document.getElementById('devmode');
+  for (const sel of [mod1, mod2]) {
+    const none = document.createElement('option');
+    none.value = 'none'; none.textContent = '— none —';
+    sel.appendChild(none);
+    MODIFIERS.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.id; o.textContent = m.name;
+      sel.appendChild(o);
+    });
+  }
+  function currentLevelId() {
+    if (devChk.checked) return 'dev';
+    const a = mod1.value, b = mod2.value;
+    const mods = [a, b].filter(v => v && v !== 'none');
+    return mods.length ? 'm:' + mods.join(',') : 'base';
+  }
+  function rebuild() {
+    levelId = currentLevelId();
+    S = createGame(S.enabled, S.scenario, levelId); // changing modifiers starts a new game with those cards
     render();
-  });
+  }
+  mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
+  mod2.addEventListener('change', () => { if (mod2.value !== 'none' && mod1.value === mod2.value) mod1.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
+  devChk.addEventListener('change', () => { if (devChk.checked) { mod1.value = 'none'; mod2.value = 'none'; } rebuild(); });
   const pwrap = document.getElementById('players');
   CHARACTERS.forEach((c, i) => {
     const b = document.createElement('button');

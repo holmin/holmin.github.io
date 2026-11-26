@@ -36,13 +36,19 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   — e.g. place `IS FAST` right of the left-middle PLAYER-1 noun for `SAMI IS FAST`.
   The printed tiles have no dashed border.
 - **Levels:** per the rulebook each level brings in only **two rule tiles** on
-  top of the base tiles (2× `IS WIN`, 2× `ROCK`, 2× `FLAG`, `RIVER`, `TEXT`).
-  The **level dropdown** (next to the BABA VS KEKE title) offers a **PLAIN** level
-  (base tiles only: 2× `IS WIN`, 2× `ROCK`, 2× `FLAG` — no FAST/CURIOUS/RIVER/TEXT) as
-  the default, plus two-rule presets (FAST + CURIOUS, SINK + DEFEAT, MELT + HOT,
-  OPEN + SHUT, STOP + SINK, FAST + STOP, WRAP + STOP, THIRSTY + SCARED,
-  STRONG + SHEEP); the last entry, **ALL RULES (developer)**, sits at the bottom.
-  Changing the level starts a new game with that level's tiles.
+  top of the base tiles. Base supply: **2× `IS WIN`, 1× `ROCK` noun, 1× `FLAG` noun,
+  `RIVER`, `TEXT`**. Next to the BABA VS KEKE title are **two modifier dropdowns**
+  — pick **none, one, or two different level cards** (called *modifiers*). The cards,
+  in campaign order: MORE ROCK MORE FLAG (+1 ROCK noun, +1 FLAG noun), FAST,
+  **RIVER IS HOT** (HOT + MELT tiles, permanent rule printed top-left),
+  **FLAG IS CURIOUS** (CURIOUS tile, permanent rule), SQUARE (SQUARE noun),
+  WIN HARDER (+2 WIN), **ROCK IS THIRSTY**, STRONG, **ROCK IS SCARED**, **ROCK IS SHEEP**.
+  A card's permanent rule is printed as **purple tiles in the board corners** —
+  first card's rule top-left, second card's rule lower-left. The **all rules (dev)**
+  checkbox gives one of every tile with an **infinite supply** (placing does not
+  consume a tile, destroyed tiles are not returned — so only one `IS WIN` is needed).
+  In normal games placing consumes the tile, and **destroyed tiles return to the
+  supply** (they can be placed again). Changing modifiers starts a new game.
 - **Turns:** players alternate; the very first turn of a game has **1 action**,
   every later turn **2 actions**. An action is a MOVE or a PLACE.
 - **MOVE:** move one of your YOU things one space orthogonally. `ALL IS PUSH` —
@@ -51,9 +57,9 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   the thing **off the board (destroyed)**, unless it is WRAP (then it wraps).
   Without STRONG the edge stops the push and the whole move fails. Hold
   **Shift** (or the PULL toggle) while moving to also **PULL** — exactly one
-  thing from the cell you left is dragged into the vacated cell (SCARED things
-  cannot be pulled). A YOU thing may enter the cell of a WIN thing (and vice
-  versa) — they stack.
+  thing from the cell you left is dragged into the vacated cell (STOP/SHUT/SCARED
+  things cannot be pulled — unless the puller is **STRONG**). A YOU thing may
+  enter the cell of a WIN thing (and vice versa) — they stack.
 - **PLACE:** place a level tile from the supply into an empty cell orthogonally
   adjacent to one of your YOU things (click tile or keys 1–9, 0, q–p, then click a
   green cell).
@@ -71,15 +77,19 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   **100 steps** (infinite loop), the **player who last took an action loses**.
   One `IS CURIOUS` tile exists and is in the supply.
 - **THIRSTY**: at the **end of the turn**, a THIRSTY thing that is not on the
-  river moves to the **closest river cell** (orthogonal steps). If several
-  river cells are equally close, the player whose turn ended chooses the target
-  (tap a highlighted water cell).
-- **STRONG**: can push **several things at once** (chain push), and pushes
-  things against the board edge **off the board — destroyed** (unless the
-  thing is WRAP, which wraps instead).
-- **SCARED**: when something **moves directly next to it** (edge-adjacent, not
-  diagonal), it **flees as far as possible in the opposite direction**. SCARED
-  things **cannot be pulled**.
+  river moves in **one straight direction** to the **nearest river cell** in that
+  direction, pushing its way there if legal. If several directions are equally
+  close, the player whose turn ended chooses the destination (tap a highlighted
+  water cell).
+- **STRONG**: can push **several things at once** (chain push), can push things
+  that cannot normally be pushed (**STOP / shut** things), and can **pull**
+  things that cannot be pulled (STOP/SHUT/SCARED). A thing pushed against the
+  board edge is **pushed off — destroyed** (unless it is WRAP, which wraps).
+- **SCARED**: when something **enters an edge-adjacent space** (moving, being
+  pushed, **or being placed** there; not diagonal), it **flees as far as possible
+  in the opposite direction**. If it would have to flee in multiple directions at
+  once, it is **paralyzed** and does not move. SCARED things **cannot be pulled**
+  (unless the puller is STRONG).
 - **SHEEP**: when a SHEEP thing **moves**, every other SHEEP thing moves the
   **same amount in the same direction**, if its destination cell is free.
 - **WRAP**: when pushed or moved outside the grid, a WRAP thing wraps to the
@@ -114,6 +124,12 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
     apply to the permanent printed tiles in the margin.
     Word tiles are still never the object they name: `FLAG IS WIN` does not
     make the word "FLAG" a WIN object.
+  - `SQUARE` is a noun for the **property tiles that are currently part of a
+    formed rule** (unlike TEXT, which covers ALL word tiles — SQUARE is dynamic:
+    it changes as rules form and break). `SQUARE IS PLAYER n` lets that player
+    move those property tiles (e.g. push `IS WIN` out of `ROCK IS WIN` to repeal
+    the rule — once out, the tile is no longer SQUARE). `SQUARE IS WIN` makes
+    active property tiles win objects.
 - **Choosing which YOU moves:** when several things are YOU, you must pick one
   (tap it or Tab) before moving; only one YOU thing sharing a space with a WIN
   object is needed to win.

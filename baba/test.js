@@ -14,12 +14,12 @@ assert.deepStrictEqual([sami(s).x, sami(s).y], [0, 4]);
 assert.deepStrictEqual([aas(s).x, aas(s).y], [4, 0]);
 assert.ok(rock(s, 0, 0) && rock(s, 4, 4));
 assert.deepStrictEqual(rulesOf(s), ['AAS IS PLAYER 2 (default)', 'ALL IS PUSH (default)', 'SAMI IS PLAYER 1 (default)']);
-assert.strictEqual(s.level, 'plain', 'PLAIN level is the default');
-assert.strictEqual(s.supply.length, 6, 'plain level = base tiles only');
+assert.strictEqual(s.level, 'base', 'base (no modifier cards) is the default');
+assert.strictEqual(s.supply.length, 6, 'base = 2x WIN + ROCK/FLAG/RIVER/TEXT nouns');
 assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 2);
 assert.ok(s.supply.some(t => t.noun === 'ROCK') && s.supply.some(t => t.noun === 'FLAG'));
-assert.ok(!s.supply.some(t => t.prop === 'FAST' || t.prop === 'CURIOUS'), 'no FAST/CURIOUS in plain');
-assert.ok(!s.supply.some(t => t.noun === 'RIVER' || t.noun === 'TEXT'), 'no RIVER/TEXT in plain');
+assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'RIVER/TEXT nouns in base');
+assert.ok(!s.supply.some(t => t.prop && t.prop !== 'WIN'), 'no rule tiles in base');
 assert.strictEqual(s.numPlayers, 2);
 console.log('ok 1: setup + default rules');
 
@@ -548,35 +548,32 @@ G.ensureParsed(s);
 assert.ok(G.isWin(s, s.entities.find(e => e.id === 900)), 'but the word tiles ARE win under TEXT IS WIN');
 console.log('ok 33: TEXT noun (TEXT IS PLAYER 1 -> word tiles movable; TEXT IS WIN works)');
 
-// 34. Levels: plain default (base only), two-rule presets, developer option last with all rules
-assert.strictEqual(G.LEVELS[0].id, 'plain', 'plain level is first/default');
-assert.strictEqual(G.LEVELS[G.LEVELS.length - 1].id, 'dev', 'developer option is at the bottom');
+// 34. Modifier cards (level cards in video order, named by their permanent rule when they have one) + developer level
+assert.deepStrictEqual(G.MODIFIERS.map(m => m.id),
+  ['more-rock-flag', 'fast', 'hot-melt', 'curious', 'square', 'win-harder', 'thirsty', 'strong', 'scared', 'sheep'], 'cards in video order');
+assert.strictEqual(G.MODIFIERS.find(m => m.id === 'hot-melt').name, 'RIVER IS HOT', 'card named after its permanent rule');
+assert.strictEqual(G.MODIFIERS.find(m => m.id === 'fast').name, 'FAST');
 s = G.createGame();
-assert.strictEqual(s.level, 'plain');
-assert.strictEqual(s.supply.length, 6);
-assert.ok(!s.supply.some(t => t.prop === 'FAST' || t.prop === 'CURIOUS') && !s.supply.some(t => t.noun === 'TEXT' || t.noun === 'RIVER'));
-s = G.createGame(undefined, undefined, 'fast-curious');
-assert.strictEqual(s.supply.length, 10, 'base 8 + 2 rule tiles');
-assert.ok(s.supply.some(t => t.prop === 'FAST') && s.supply.some(t => t.prop === 'CURIOUS'));
-assert.ok(!s.supply.some(t => t.prop === 'STOP') && !s.supply.some(t => t.prop === 'DEFEAT'));
-assert.ok(s.supply.some(t => t.noun === 'RIVER') && s.supply.some(t => t.noun === 'TEXT'), 'base nouns present in non-plain levels');
+assert.strictEqual(s.level, 'base');
+assert.strictEqual(s.supply.length, 6, 'base = 2x WIN + 4 nouns');
+s = G.createGame(undefined, undefined, 'm:fast');
+assert.strictEqual(s.supply.length, 7, 'base 6 + IS FAST');
+assert.ok(s.supply.some(t => t.prop === 'FAST') && !s.supply.some(t => t.prop === 'STOP'));
+s = G.createGame(undefined, undefined, 'm:hot-melt,scared');
+assert.strictEqual(s.supply.length, 9, 'base 6 + HOT + MELT + SCARED');
+assert.ok(rulesOf(s).includes('RIVER IS HOT (default)') && rulesOf(s).includes('ROCK IS SCARED (default)'), 'permanent card rules formed');
+const permTiles = s.entities.filter(e => e.perm);
+assert.strictEqual(permTiles.length, 4, 'two permanent rules = 4 purple corner tiles');
+assert.ok(permTiles.some(e => e.noun === 'RIVER' && e.x === -1 && e.y === -1) && permTiles.some(e => e.prop === 'HOT' && e.x === 0 && e.y === -1), 'first rule in the TOP-LEFT corner');
+assert.ok(permTiles.some(e => e.noun === 'ROCK' && e.x === -1 && e.y === 5) && permTiles.some(e => e.prop === 'SCARED' && e.x === 0 && e.y === 5), 'second rule in the LOWER-LEFT corner');
 s = G.createGame(undefined, undefined, 'dev');
-assert.strictEqual(s.supply.length, 22, 'developer level has all rules (no WEAK tile)');
-for (const p of ['WIN', 'CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP', 'THIRSTY', 'STRONG', 'SCARED', 'SHEEP']) {
+assert.strictEqual(s.supply.filter(t => t.prop === 'WIN').length, 1, 'developer: only ONE IS WIN (infinite tiles)');
+for (const p of ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP', 'THIRSTY', 'STRONG', 'SCARED', 'SHEEP']) {
   assert.ok(s.supply.some(t => t.prop === p), 'developer supply has IS ' + p);
 }
 assert.ok(!s.supply.some(t => t.prop === 'WEAK'), 'WEAK tile removed');
-s = G.createGame(undefined, undefined, 'thirsty-scared');
-assert.strictEqual(s.supply.length, 10);
-assert.ok(s.supply.some(t => t.prop === 'THIRSTY') && s.supply.some(t => t.prop === 'SCARED'), 'THIRSTY + SCARED preset');
-s = G.createGame(undefined, undefined, 'strong-sheep');
-assert.strictEqual(s.supply.length, 10);
-assert.ok(s.supply.some(t => t.prop === 'STRONG') && s.supply.some(t => t.prop === 'SHEEP'), 'STRONG + SHEEP preset');
-for (const p of ['THIRSTY', 'STRONG', 'SCARED', 'SHEEP']) {
-  assert.ok(G.LEVELS.some(l => l.props !== 'ALL' && !l.plain && l.props.includes(p)), 'new rule IS ' + p + ' is used in some level preset');
-}
-assert.strictEqual(G.LEVELS.filter(l => l.props !== 'ALL' && !l.plain).every(l => l.props.length === 2), true, 'every level preset has exactly two rules');
-console.log('ok 34: level presets (two rules each) + ALL RULES developer option last & default');
+assert.ok(s.supply.some(t => t.noun === 'SQUARE'), 'developer supply has the SQUARE noun');
+console.log('ok 34: modifier cards (video order, named by permanent rule) + purple corner rules + developer level');
 
 // 35. TEXT rules do NOT apply to the permanent printed margin tiles
 s = G.createGame();
@@ -606,7 +603,18 @@ G.moveSelected(s, 1, -1, 0, false); G.moveSelected(s, 1, -1, 0, false); // P2's 
 s.selectedId = sami(s).id;
 assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true, 'SAMI steps into column 1 (pushing the FLAG word)');
 assert.deepStrictEqual([r36.x, r36.y], [1, 1], 'the next action triggers the freshly placed rule');
-console.log('ok 36: placing does not trigger CURIOUS (FAQ) — the next action does');
+// ...but placing adjacent DOES scare SCARED things
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SCARED', label: 'IS SCARED', owner: 0, x: 3, y: 3 });
+const f36 = s.entities.find(e => e.type === 'FLAG'); f36.x = 2; f36.y = 2;
+sami(s).x = 0; sami(s).y = 2;
+G.ensureParsed(s);
+s.selectedId = sami(s).id;
+const rockNounIdx36 = s.supply.findIndex(t => t.noun === 'ROCK');
+assert.strictEqual(G.place(s, 0, rockNounIdx36, 1, 2), true, 'placed ROCK noun at (1,2), directly next to the scared flag');
+assert.deepStrictEqual([f36.x, f36.y], [4, 2], 'placing adjacent scared the flag — it fled as far as possible away');
+console.log('ok 36: placing triggers SCARED but not CURIOUS (FAQ)');
 
 // 37. moversTo: which YOUR things can walk to a tapped cell (axis-aligned only)
 s = G.createGame();
@@ -841,7 +849,39 @@ const r46 = rock(s, 0, 0); r46.x = 0; r46.y = 4;
 sami(s).x = 1; sami(s).y = 4; s.selectedId = sami(s).id;
 G.moveSelected(s, 0, 1, 0, true);
 assert.deepStrictEqual([r46.x, r46.y], [1, 4], 'control: a normal rock IS pulled into the vacated cell');
-console.log('ok 46: SCARED (flees when something moves next to it; not diagonal; cannot be pulled)');
+// paralyzed when it would have to flee in multiple directions at once
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SCARED', label: 'IS SCARED', owner: 0, x: 3, y: 3 });
+const f46d = s.entities.find(e => e.type === 'FLAG'); f46d.x = 3; f46d.y = 2;
+G.ensureParsed(s);
+s._loopSteps = 0;
+s._entered = [
+  { id: sami(s).id, fx: 1, fy: 2, tx: 2, ty: 2 }, // entered from the left  -> flee +x
+  { id: aas(s).id, fx: 3, fy: 0, tx: 3, ty: 1 },  // entered from above   -> flee +y
+];
+G.resolveCurious(s, 0);
+assert.deepStrictEqual([f46d.x, f46d.y], [3, 2], 'ambiguous flee directions -> paralyzed, stays');
+// STRONG can pull things that normally cannot be pulled (STOP / SHUT / SCARED)
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'SAMI', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'STRONG', label: 'IS STRONG', owner: 0, x: 1, y: 2 });
+s.entities.push({ id: 902, kind: 'word', noun: 'ROCK', x: 0, y: 1 });
+s.entities.push({ id: 903, kind: 'word', prop: 'STOP', label: 'IS STOP', owner: 0, x: 1, y: 1 });
+const r46s = rock(s, 0, 0); r46s.x = 0; r46s.y = 4;
+sami(s).x = 1; sami(s).y = 4; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, true), true);
+assert.deepStrictEqual([r46s.x, r46s.y], [1, 4], 'STRONG pulled the STOP rock');
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 1 });
+s.entities.push({ id: 901, kind: 'word', prop: 'STOP', label: 'IS STOP', owner: 0, x: 1, y: 1 });
+const r46t = rock(s, 0, 0); r46t.x = 0; r46t.y = 4;
+sami(s).x = 1; sami(s).y = 4; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, true), true);
+assert.deepStrictEqual([r46t.x, r46t.y], [0, 4], 'control: without STRONG the STOP rock is NOT pulled');
+console.log('ok 46: SCARED (flees when something moves/is placed next to it; not diagonal; paralyzed if ambiguous) + STRONG pull override');
 
 // 47. SHEEP: when a sheep thing moves, other sheep things move the same amount in the same direction if possible
 s = G.createGame(undefined, undefined, 'dev');
@@ -866,5 +906,79 @@ G.moveSelected(s, 0, 1, 0, false);
 assert.deepStrictEqual([rA2.x, rA2.y], [2, 4]);
 assert.deepStrictEqual([rB2.x, rB2.y], [3, 1], 'blocked sheep rock did not move');
 console.log('ok 47: SHEEP (echo move when a sheep thing moves, if possible)');
+
+// 48. STRONG can also push STOP things
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'SAMI', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'STRONG', label: 'IS STRONG', owner: 0, x: 1, y: 2 });
+s.entities.push({ id: 902, kind: 'word', noun: 'ROCK', x: 0, y: 1 });
+s.entities.push({ id: 903, kind: 'word', prop: 'STOP', label: 'IS STOP', owner: 0, x: 1, y: 1 });
+const r48 = rock(s, 0, 0); r48.x = 1; r48.y = 4;
+sami(s).x = 0; sami(s).y = 4; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('ROCK IS STOP'));
+assert.strictEqual(G.canMove(s, sami(s), 1, 0), true, 'STRONG can push a STOP thing');
+G.moveSelected(s, 0, 1, 0, false);
+assert.deepStrictEqual([r48.x, r48.y], [2, 4], 'STOP rock pushed');
+console.log('ok 48: STRONG pushes STOP things');
+
+// 49. SQUARE noun: property tiles in an ACTIVE rule are SQUARE (TEXT = all word tiles)
+s = G.createGame(undefined, undefined, 'm:square');
+assert.ok(s.supply.some(t => t.noun === 'SQUARE'), 'SQUARE card adds the SQUARE noun');
+s.entities.push({ id: 900, kind: 'word', noun: 'SQUARE', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'YOU', label: 'IS PLAYER 1', owner: 0, x: 1, y: 2 });
+s.entities.push({ id: 902, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+const winTile = { id: 903, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 3, y: 3 };
+s.entities.push(winTile);
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('SQUARE IS PLAYER 1') && rulesOf(s).includes('ROCK IS WIN'));
+assert.ok(G.isYouBy(s, winTile, 0), 'the IS WIN tile in the ROCK IS WIN rule is SQUARE -> YOU for PLAYER 1');
+assert.ok(G.yourThings(s, 0).includes(winTile), '...so it can be selected and moved');
+assert.ok(!G.isYouBy(s, s.entities.find(e => e.id === 902), 0), 'the ROCK noun tile is TEXT but NOT in a rule as a property -> not SQUARE');
+s.selectedId = winTile.id;
+assert.strictEqual(G.moveSelected(s, 0, 0, 1, false), true, 'moved the IS WIN tile out of the rule');
+assert.ok(!rulesOf(s).includes('ROCK IS WIN'), 'rule repealed');
+assert.ok(!G.isYouBy(s, winTile, 0), 'no longer part of a rule -> no longer SQUARE/YOU');
+// SQUARE IS WIN: an active property tile is a win object
+s = G.createGame(undefined, undefined, 'm:square');
+s.entities.push({ id: 900, kind: 'word', noun: 'SQUARE', x: 0, y: 2 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 1, y: 2 });
+s.entities.push({ id: 902, kind: 'word', noun: 'FLAG', x: 2, y: 3 });
+const stopTile = { id: 903, kind: 'word', prop: 'STOP', label: 'IS STOP', owner: 0, x: 3, y: 3 };
+s.entities.push(stopTile);
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('SQUARE IS WIN') && rulesOf(s).includes('FLAG IS STOP'));
+assert.ok(G.isWin(s, stopTile), 'active property tile is SQUARE -> WIN');
+sami(s).x = 3; sami(s).y = 4; s.selectedId = sami(s).id;
+assert.strictEqual(G.moveSelected(s, 0, 0, -1, false), true, 'SAMI steps onto the SQUARE-WIN tile');
+assert.ok(s.over && s.over.winner === 0, 'SQUARE IS WIN: sharing a space with an active property tile wins: ' + (s.over && s.over.reason));
+console.log('ok 49: SQUARE noun (active property tiles; SQUARE IS PLAYER n / SQUARE IS WIN)');
+
+// 50. developer level = infinite tiles (placing doesn't consume, destruction doesn't return);
+//     normal level: placing consumes, destroyed tiles return to the supply
+s = G.createGame(undefined, undefined, 'dev');
+const n50 = s.supply.length;
+s.entities.push({ id: 900, kind: 'word', noun: 'TEXT', x: 0, y: 1 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WEAK', label: 'IS WEAK', owner: 0, x: 1, y: 1 });
+const placed50 = G.doPlace(s, 0, 0, 1, 4); // WIN tile next to SAMI
+assert.strictEqual(s.supply.length, n50, 'dev: placing does NOT consume the tile');
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('TEXT IS WEAK'));
+s.selectedId = sami(s).id;
+G.moveSelected(s, 0, 1, 0, false); // push the WEAK word tile
+assert.ok(!s.entities.includes(placed50), 'WEAK word tile destroyed when pushed');
+assert.strictEqual(s.supply.length, n50, 'dev: destroyed tile NOT added back');
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'TEXT', x: 0, y: 1 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WEAK', label: 'IS WEAK', owner: 0, x: 1, y: 1 });
+const n50b = s.supply.length;
+const placed50b = G.doPlace(s, 0, 0, 1, 4);
+assert.strictEqual(s.supply.length, n50b - 1, 'normal: placing consumes the tile');
+G.ensureParsed(s);
+s.selectedId = sami(s).id;
+G.moveSelected(s, 0, 1, 0, false);
+assert.ok(!s.entities.includes(placed50b), 'destroyed');
+assert.strictEqual(s.supply.length, n50b, 'normal: destroyed tile returned to the supply');
+console.log('ok 50: dev = infinite tiles; normal = destroyed tiles return to the supply');
 
 console.log('\nAll engine tests passed.');

@@ -57,6 +57,7 @@
   .word.noun::after { content: '▼'; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: calc(var(--cell) * .12); opacity: .6; }
   .word[class*="prop-"], .tile[class*="prop-"] { background: #e67e22; color: #fff; border-radius: 8px; }
   .word.prop-win, .tile.prop-win { background: #ffd700; color: #4a3b00; }
+  .ent.word.perm { background: #9b59b6; color: #fff; }
   .ent.sel { box-shadow: 0 0 0 2px var(--selc, #f1c40f); border-radius: 50%; }
   .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
   #controls { margin-top: 10px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
@@ -125,8 +126,9 @@
   .btns button:disabled { opacity: .4; cursor: default; }
   #players { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #8b93c9; }
   #titlerow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; }
-  #levelrow #level { min-width: 0; max-width: 100%; }
+  #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; flex-wrap: wrap; }
+  #levelrow select { min-width: 0; max-width: 100%; }
+  #levelrow label { display: flex; gap: 4px; align-items: center; }
   #level {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170; border-radius: 8px;
     padding: 6px; font-size: 12px; font-weight: 700; max-width: 100%;
@@ -188,7 +190,7 @@
     </div>
   </div>
   <div id="side">
-    <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><div id="levelrow"><span>level:</span><select id="level"></select></div></div>
+    <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><div id="levelrow"><span>modifiers:</span><select id="mod1"></select><select id="mod2"></select><label><input type="checkbox" id="devmode"> all rules (dev)</label></div></div>
     <div id="turn"></div>
     <div id="score"></div>
     <div id="players"><span>👥 players:</span></div>
@@ -230,14 +232,16 @@
         <li><b>SCARED</b> — when something moves directly next to it (not diagonally), it flees as far as possible away; it cannot be pulled.</li>
         <li><b>SHEEP</b> — when a SHEEP thing moves, all other SHEEP things move the same amount in the same direction if possible.</li>
         <li><b>RIVER</b> — noun for the river terrain (e.g. RIVER IS WIN).</li>
-        <li><b>TEXT</b> — noun for the word tiles themselves (e.g. TEXT IS PLAYER 1 makes them movable).</li>
+        <li><b>TEXT</b> — noun for ALL word tiles (e.g. TEXT IS PLAYER 1 makes them movable).</li>
+        <li><b>SQUARE</b> — noun for property tiles currently in a rule (e.g. SQUARE IS PLAYER 1 lets you move an IS WIN tile out of ROCK IS WIN to repeal it).</li>
+        <li>Purple tiles in the board corners are permanent level-card rules (e.g. RIVER IS HOT).</li>
       </ul>
       Controls: tap a bordered thing to select it, then tap a walk cell to move; arrows/WASD/swipe/D-pad also work;
-      keys 1–9, 0, q–p pick a rule tile; R = new game.
+      keys 1–9, 0, q–p pick a rule tile; R = new game. Pick 0–2 modifier cards next to the title.
     </div>
     </div>
   </div>
 </div>
-<script src="game.js?v=28"></script>
+<script src="game.js?v=29"></script>
 </body>
 </html>
