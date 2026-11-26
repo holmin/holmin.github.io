@@ -20,13 +20,13 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   possible (corner if free, else nearest free cell). Default rules
   (shown as `(default)`, listed below any formed rules): `ALL IS PUSH`, plus one
   `IS PLAYER n` per active character — permanent.
-- **Characters:** Sami 🐻‍❄️ and Aas 🦙 are on by default; Gaba 🐴, Ebba 🦦,
-  Zaba 🐸 and Minne 🐼 can be toggled on/off (1–6 players; disabling all is allowed while
-  selecting). Active players are always **PLAYER 1, PLAYER 2, … in the order listed**, so
-  toggling re-ranks them (e.g. disable Sami and Aas becomes PLAYER 1). Toggling works
-  mid-game (undoable with Z): enabling spawns the figure as close as possible
-  to its rank's corner (corner if free, else closest free cell); disabling removes
-  the figure and that character's placed property tiles.
+- **Characters:** only **Baba 🐻‍❄️ (PLAYER 1)** and **Keke 🦔 (PLAYER 2)** — no character select.
+  The **alternate characters (dev)** checkbox next to the title brings back the character
+  toggles for the six alternates (Sami, Aas, Gaba, Ebba, Zaba, Minne; 1–8 players; disabling all
+  is allowed while selecting). Active players are always **PLAYER 1, PLAYER 2, … in the order
+  listed**, so toggling re-ranks them. Toggling works mid-game (undoable with Z): enabling spawns
+  the figure as close as possible to its rank's corner; disabling removes the figure and that
+  character's placed property tiles.
 - **Printed tiles (any PLAYER count):** permanent, unmovable tiles in the
   margin around the board — left-middle [PLAYER-1-noun] over [IS PLAYER 1] and
   bottom-middle [IS PLAYER 1] whenever at least 1 character is active, plus

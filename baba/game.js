@@ -1,9 +1,13 @@
 'use strict';
 
 const W = 5, H = 5, CELL = 64;
-const NOUNS = ['SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER', 'TEXT', 'SQUARE'];
-const EMOJI = { SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊', TEXT: '🔤' };
+const NOUNS = ['BABA', 'KEKE', 'SAMI', 'AAS', 'GABA', 'EBBA', 'ZABA', 'MINNE', 'ROCK', 'FLAG', 'RIVER', 'TEXT', 'SQUARE'];
+const EMOJI = { BABA: '🐻‍❄️', KEKE: '🦔', SAMI: '🐻‍❄️', AAS: '🦙', GABA: '🐴', EBBA: '🦦', ZABA: '🐸', MINNE: '🐼', ROCK: '🪨', FLAG: '🚩', RIVER: '🌊', TEXT: '🔤' };
+// BABA (polar bear) and KEKE (hedgehog) are the only characters by default —
+// no character select unless the "alternate characters (dev)" checkbox is on.
 const CHARACTERS = [
+  { noun: 'BABA', name: 'Baba', emoji: '🐻‍❄️', color: '#ff6b9d' },
+  { noun: 'KEKE', name: 'Keke', emoji: '🦔', color: '#4dabf7' },
   { noun: 'SAMI', name: 'Sami', emoji: '🐻‍❄️', color: '#ff6b9d' },
   { noun: 'AAS', name: 'Aas', emoji: '🦙', color: '#4dabf7' },
   { noun: 'GABA', name: 'Gaba', emoji: '🐴', color: '#b388ff' },
@@ -11,10 +15,11 @@ const CHARACTERS = [
   { noun: 'ZABA', name: 'Zaba', emoji: '🐸', color: '#7bed9f' },
   { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
-const DEFAULT_ENABLED = [true, true, false, false, false, false];
+const DEFAULT_ENABLED = [true, true, false, false, false, false, false, false];
 // Emoji graphics (Noto Color Emoji 128px PNGs, Apache-2.0 — see README) shipped
 // locally in img/, so the board does not depend on the device having an emoji font.
 const SPRITE_IMG = {
+  BABA: 'img/baba.png', KEKE: 'img/keke.png',
   SAMI: 'img/sami.png', AAS: 'img/aas.png', GABA: 'img/gaba.png', EBBA: 'img/ebba.png',
   ZABA: 'img/zaba.png', MINNE: 'img/minne.png', ROCK: 'img/rock.png', FLAG: 'img/flag.png',
   RIVER: 'img/river.png', TEXT: 'img/text.png',
@@ -30,7 +35,7 @@ const PLAYER_COLORS = CHARACTERS.map(c => c.color);
 const RIVER = new Set(['0,0', '0,1', '1,1', '2,1', '2,2', '2,3', '3,3', '4,3', '4,4']);
 // Home spots BY PLAYER RANK: PLAYER 1 lower-left, PLAYER 2 upper-right (opposite
 // diagonals), then the other corners, then edge midpoints.
-const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0], [2, H - 1]];
+const HOME_CORNERS = [[0, H - 1], [W - 1, 0], [0, 0], [W - 1, H - 1], [2, 0], [2, H - 1], [0, 2], [W - 1, 2]];
 function isRiverCell(x, y) { return RIVER.has(x + ',' + y); }
 function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 
@@ -1210,6 +1215,8 @@ function initUI() {
     }
 
     const turnEl = document.getElementById('turn');
+    turnEl.style.background = S.challenge ? '#8b1e2d' : ''; // sudden death: status goes red
+    turnEl.style.color = S.challenge ? '#fff' : '';
     const cur = S.numPlayers > 0 ? charAtRank(S, S.turn) : null;
     if (S.over) {
       const w = S.over.winner;
@@ -1374,14 +1381,23 @@ function initUI() {
   mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
   mod2.addEventListener('change', () => { if (mod2.value !== 'none' && mod1.value === mod2.value) mod1.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
   devChk.addEventListener('change', () => { if (devChk.checked) { mod1.value = 'none'; mod2.value = 'none'; } rebuild(); });
+  // character select is hidden unless "alternate characters (dev)" is checked;
+  // BABA and KEKE (indices 0,1) are always on and have no toggle
   const pwrap = document.getElementById('players');
+  const altChk = document.getElementById('altchars');
   CHARACTERS.forEach((c, i) => {
+    if (i < 2) return;
     const b = document.createElement('button');
     b.insertAdjacentHTML('afterbegin', spriteImg(c.noun));
     b.appendChild(document.createTextNode(' ' + c.name));
     b.title = 'toggle PLAYER (active players become PLAYER 1, PLAYER 2, … in this order)';
     b.addEventListener('click', () => { setEnabled(S, i, !S.enabled[i]); render(); });
     pwrap.appendChild(b);
+  });
+  altChk.addEventListener('change', () => {
+    pwrap.hidden = !altChk.checked;
+    if (!altChk.checked) S = createGame(DEFAULT_ENABLED.slice(), S.scenario, levelId); // back to just BABA + KEKE
+    render();
   });
 
   let touchStart = null;
