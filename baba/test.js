@@ -1063,8 +1063,12 @@ G.moveSelected(s, 0, 1, 0, false); // BABA steps onto the FLAG (FLAG IS WIN) -> 
 assert.ok(s.over && s.over.winner === 0, 'BABA won');
 s = G.newGame(s, s.level); // new game button: rotates the starter
 assert.strictEqual(s.turn, 1, 'next game: PLAYER 2 (KEKE) starts — starters rotate');
+// undo backtraces across the new game (and the win before it)
+assert.strictEqual(G.undo(s), true, 'undo works right after new game');
+assert.ok(s.over && s.over.winner === 0, 'undo returns to the finished game (win/loss backtrace)');
+assert.strictEqual(s.turn, 0);
 s = G.newGame(s, s.level);
-assert.strictEqual(s.turn, 0, 'and back to PLAYER 1');
+assert.strictEqual(s.turn, 1, 'rotation re-applies on the next new game');
 
 // 55. a lone player who is destroyed LOSES (does not "win")
 s = G.createGame([true, false, false, false, false, false, false, false]); // only BABA

@@ -121,6 +121,7 @@
   #players { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #8b93c9; }
   #players[hidden] { display: none; }
   #titlerow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #streak { font-size: 14px; color: #8b93c9; font-weight: 700; }
   #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; flex-wrap: wrap; margin-top: 8px; }
   #levelrow select { flex: 1 1 0; min-width: 0; }
   #levelrow label { display: flex; gap: 4px; align-items: center; }
@@ -188,11 +189,11 @@
       <h3>RULE TILES (TAP, THEN PLACE ON MAP)</h3>
       <div id="supply"></div>
       <div id="supply-empty">supply empty</div>
-      <div class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label></div>
     </div>
+    <div class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label></div>
   </div>
   <div id="side">
-    <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1></div>
+    <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><span id="streak"></span></div>
     <div id="turn"></div>
     <div id="players" hidden><span>👥 players:</span></div>
     <div class="help">
@@ -236,6 +237,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=47"></script>
+<script src="game.js?v=48"></script>
 </body>
 </html>

@@ -213,10 +213,15 @@ function syncFixedTiles(S) {
   ensureParsed(S);
 }
 
-// new game button / N key: rotate the starting player, then start a fresh game
+// new game button / N key: rotate the starting player, then start a fresh game.
+// The previous game state is pushed onto the new game's history, so undo (Z)
+// can backtrace across new game / win / loss.
 function newGame(S, levelId) {
+  const before = snapshot(S);
   S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1;
-  return S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
+  const S2 = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
+  S2.history.unshift(before);
+  return S2;
 }
 
 function newScenario(prev, enabled, levelId) {
@@ -1236,6 +1241,8 @@ function initUI() {
     const turnEl = document.getElementById('turn');
     turnEl.style.background = S.challenge ? '#8b1e2d' : ''; // sudden death: status goes red
     turnEl.style.color = S.challenge ? '#fff' : '';
+    const wins = (S.scenario && S.scenario.wins) || [];
+    document.getElementById('streak').textContent = wins.some(w => w > 0) ? wins.join('–') : ''; // e.g. 2–3
     const cur = S.numPlayers > 0 ? charAtRank(S, S.turn) : null;
     if (S.over) {
       const w = S.over.winner;
@@ -1290,7 +1297,7 @@ function initUI() {
         html += w === null
           ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
           : `<div class="big" style="color:${wch.color}">${spriteImg(wch.noun)} ${wch.name} (PLAYER ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
-        html += `<div class="sub">(N) new game</div>`;
+        html += `<div class="sub">(N) new game — the loser swaps one rule card and picks who starts</div>`;
       }
       ov.innerHTML = html;
     } else {
