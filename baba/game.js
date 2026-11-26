@@ -1225,11 +1225,6 @@ function initUI() {
       if (S._thirstyPending && S._thirstyPending.length) turnEl.innerHTML += ' — <b>THIRSTY</b>: tap a highlighted water cell';
     }
 
-    const sc = S.scenario;
-    document.getElementById('score').textContent =
-      `Scenario ${sc.score.join('–')} ${sc.bo3 ? '(best of 3)' : ''} · world pts ${sc.worldPoints.join('–')}`;
-
-
     const tray = document.getElementById('supply');
     tray.innerHTML = '';
     S.supply.forEach((t, i) => {
@@ -1269,6 +1264,7 @@ function initUI() {
         html += `<div class="sub">R = next game${S.scenarioOver ? '' : ' · N = new scenario'}</div>`;
       }
       if (S.scenarioOver) {
+        const sc = S.scenario;
         let w = null;
         for (let i = 1; i < sc.score.length; i++) if (sc.score[i] > sc.score[w === null ? 0 : w]) w = i;
         if (w !== null && sc.score.filter(v => v === sc.score[w]).length > 1) w = null;
