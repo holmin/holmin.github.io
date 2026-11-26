@@ -998,4 +998,23 @@ assert.deepStrictEqual([rA51.x, rA51.y], [2, 2], 'pulled rock moved up into the 
 assert.deepStrictEqual([rB51.x, rB51.y], [4, 1], 'the other sheep rock also moved UP (same direction as the move), not down');
 console.log('ok 51: SHEEP echo follows the move direction on pulls too');
 
+// 52. RIVER IS HOT (permanent card rule) melts MELT things standing on the river
+s = G.createGame(undefined, undefined, 'm:hot-melt');
+assert.ok(rulesOf(s).includes('RIVER IS HOT (default)'), 'permanent RIVER IS HOT from the card');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'MELT', label: 'IS MELT', owner: 0, x: 3, y: 3 });
+const r52 = rock(s, 0, 0); r52.x = 0; r52.y = 0; // (0,0) is a river cell
+G.ensureParsed(s);
+assert.ok(rulesOf(s).includes('ROCK IS MELT'));
+G.resolve(s, 0);
+assert.ok(!s.entities.includes(r52), 'MELT rock on the HOT river is destroyed');
+s = G.createGame(undefined, undefined, 'm:hot-melt');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'MELT', label: 'IS MELT', owner: 0, x: 3, y: 3 });
+const r52b = rock(s, 0, 0); r52b.x = 2; r52b.y = 4; // not a river cell
+G.ensureParsed(s);
+G.resolve(s, 0);
+assert.ok(s.entities.includes(r52b), 'control: MELT rock off the river survives');
+console.log('ok 52: RIVER IS HOT destroys MELT things on the river');
+
 console.log('\nAll engine tests passed.');

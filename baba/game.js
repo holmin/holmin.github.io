@@ -423,7 +423,8 @@ function resolveDestructive(S, actor) {
       const p = propsOf(S, e);
       const cell = entitiesAt(S, e.x, e.y);
       if (p.SINK && cell.length > 1) dead.add(e.id);
-      if (p.MELT && (p.HOT || cell.some(o => o !== e && propsOf(S, o).HOT))) dead.add(e.id);
+      // MELT is destroyed by HOT — including RIVER IS HOT: a MELT thing standing on the river
+      if (p.MELT && (p.HOT || (riverP.HOT && riverAt(S, e.x, e.y)) || cell.some(o => o !== e && propsOf(S, o).HOT))) dead.add(e.id);
       if (isYou(S, e) && cell.some(o => o !== e && propsOf(S, o).DEFEAT)) dead.add(e.id);
       if (isYou(S, e) && riverP.DEFEAT && riverAt(S, e.x, e.y)) dead.add(e.id);
     }
