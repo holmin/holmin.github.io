@@ -1081,4 +1081,22 @@ G.resolve(s, 0);
 assert.ok(s.over && s.over.winner === null && /lost/.test(s.over.reason), 'lone player destroyed -> lost, not won: ' + (s.over && s.over.reason));
 console.log('ok 54-55: starter rotation + lone-player loss');
 
+// 56. undo backtraces across MULTIPLE games
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 0 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 3, y: 0 });
+const f56 = s.entities.find(e => e.type === 'FLAG'); f56.x = 1; f56.y = 4;
+G.ensureParsed(s);
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // BABA onto FLAG IS WIN -> game 1 won
+assert.ok(s.over && s.over.winner === 0);
+const s2 = G.newGame(s, s.level);
+const s3 = G.newGame(s2, s2.level);
+assert.strictEqual(s3.turn, 0, 'game 3 starts with PLAYER 1 again');
+assert.strictEqual(G.undo(s3), true);
+assert.ok(!s3.over && s3.turn === 1, 'undo once -> back in game 2 (mid-game, KEKE to start)');
+assert.strictEqual(G.undo(s3), true);
+assert.ok(s3.over && s3.over.winner === 0 && s3.turn === 0, 'undo twice -> back in finished game 1');
+console.log('ok 56: undo backtraces across multiple games');
+
 console.log('\nAll engine tests passed.');

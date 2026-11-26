@@ -221,6 +221,7 @@ function newGame(S, levelId) {
   S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1;
   const S2 = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
   S2.history.unshift(before);
+  if (S2.history.length > 500) S2.history.pop();
   return S2;
 }
 
@@ -378,6 +379,7 @@ function snapshot(S) {
     scenarioOver: S.scenarioOver, scenario: S.scenario, numPlayers: S.numPlayers, enabled: S.enabled,
     selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
     river: Array.from(S.river || RIVER), level: S.level, spawnOrder: S.spawnOrder, mods: S.mods, dev: S.dev,
+    history: S.history, // carried so undo can backtrace across multiple games (newGame)
   });
 }
 
