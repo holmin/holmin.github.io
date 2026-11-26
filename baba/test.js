@@ -573,7 +573,10 @@ for (const p of ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT
 }
 assert.ok(!s.supply.some(t => t.prop === 'WEAK'), 'WEAK tile removed');
 assert.ok(s.supply.some(t => t.noun === 'SQUARE'), 'developer supply has the SQUARE noun');
-console.log('ok 34: modifier cards (video order, named by permanent rule) + purple corner rules + developer level');
+s = G.createGame(undefined, undefined, 'm:square,win-harder,fast');
+assert.deepStrictEqual(s.supply.map(t => t.prop || t.noun), ['WIN', 'WIN', 'WIN', 'WIN', 'ROCK', 'FLAG', 'SQUARE', 'FAST'],
+  'supply sorted: IS WIN first, then nouns, then properties');
+console.log('ok 34: modifier cards (video order, named by permanent rule) + purple corner rules + developer level + sorted supply');
 
 // 35. TEXT rules do NOT apply to the permanent printed margin tiles
 s = G.createGame();
@@ -980,5 +983,19 @@ G.moveSelected(s, 0, 1, 0, false);
 assert.ok(!s.entities.includes(placed50b), 'destroyed');
 assert.strictEqual(s.supply.length, n50b, 'normal: destroyed tile returned to the supply');
 console.log('ok 50: dev = infinite tiles; normal = destroyed tiles return to the supply');
+
+// 51. SHEEP + pull: the flock follows the mover's direction (a pulled sheep moves with the pull; other sheep copy that same direction)
+s = G.createGame(undefined, undefined, 'dev');
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SHEEP', label: 'IS SHEEP', owner: 0, x: 3, y: 3 });
+const rA51 = rock(s, 0, 0); rA51.x = 2; rA51.y = 3; // behind SAMI
+const rB51 = rock(s, 4, 4); rB51.x = 4; rB51.y = 2;
+sami(s).x = 2; sami(s).y = 2; s.selectedId = sami(s).id;
+G.ensureParsed(s);
+assert.strictEqual(G.moveSelected(s, 0, 0, -1, true), true, 'SAMI moves up, pulling the rock behind');
+assert.deepStrictEqual([sami(s).x, sami(s).y], [2, 1]);
+assert.deepStrictEqual([rA51.x, rA51.y], [2, 2], 'pulled rock moved up into the vacated cell');
+assert.deepStrictEqual([rB51.x, rB51.y], [4, 1], 'the other sheep rock also moved UP (same direction as the move), not down');
+console.log('ok 51: SHEEP echo follows the move direction on pulls too');
 
 console.log('\nAll engine tests passed.');

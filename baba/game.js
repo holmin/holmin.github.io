@@ -61,19 +61,30 @@ function parseLevel(levelId) {
   return { dev: false, mods: [] };
 }
 const BASE_TILES = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }];
+// tray order: IS WIN first, then nouns (NOUNS order), then all properties (ALL_PROPS order)
+function sortSupply(supply) {
+  return supply.slice().sort((a, b) => {
+    const grp = (t) => (t.prop ? (t.prop === 'WIN' ? 0 : 2) : 1);
+    const ga = grp(a), gb = grp(b);
+    if (ga !== gb) return ga - gb;
+    if (a.prop && b.prop) return (a.prop === 'WIN' ? -1 : ALL_PROPS.indexOf(a.prop)) - (b.prop === 'WIN' ? -1 : ALL_PROPS.indexOf(b.prop));
+    if (a.noun && b.noun) return NOUNS.indexOf(a.noun) - NOUNS.indexOf(b.noun);
+    return 0;
+  });
+}
 function supplyFor(levelId) {
   const { dev, mods } = parseLevel(levelId);
   if (dev) {
     // developer: ONE of each tile (placing does not consume, see doPlace)
-    return [{ prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'RIVER' }, { noun: 'TEXT' }, { noun: 'SQUARE' }]
-      .concat(ALL_PROPS.map(p => ({ prop: p })));
+    return sortSupply([{ prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'RIVER' }, { noun: 'TEXT' }, { noun: 'SQUARE' }]
+      .concat(ALL_PROPS.map(p => ({ prop: p }))));
   }
   const out = BASE_TILES.slice();
   for (const id of mods) {
     const m = MODIFIERS.find(mm => mm.id === id);
     if (m) for (const t of m.tiles) out.push({ prop: t.prop, noun: t.noun });
   }
-  return out;
+  return sortSupply(out);
 }
 function activeChars(S) {
   const out = [];
@@ -578,7 +589,7 @@ function doMove(S, m, dx, dy, pull) {
     const movedIds = new Set([m.id, ...list.map(o => o.id)]);
     if (pulled) movedIds.add(pulled.id);
     const movers = [[m, dx, dy]].concat(list.map(o => [o, dx, dy]));
-    if (pulled) movers.push([pulled, -dx, -dy]);
+    if (pulled) movers.push([pulled, dx, dy]); // a pulled thing also moves in the mover's direction (into the vacated cell)
     for (const [e, edx, edy] of movers) {
       if (!S.entities.includes(e) || !propsOf(S, e).SHEEP) continue;
       for (const o of S.entities.slice()) {
@@ -624,6 +635,7 @@ function recycleTiles(S, removed) {
     if (e.kind === 'word' && !e.fixed && e.prop) S.supply.push({ prop: e.prop });
     else if (e.kind === 'word' && !e.fixed && e.noun) S.supply.push({ noun: e.noun });
   }
+  S.supply = sortSupply(S.supply);
 }
 
 function doPlace(S, p, idx, x, y) {
