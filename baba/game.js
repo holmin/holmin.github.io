@@ -16,6 +16,9 @@ const CHARACTERS = [
   { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
 const DEFAULT_ENABLED = [true, true, false, false, false, false, false, false];
+// with "alternate characters (dev)": BABA/KEKE are replaced by SAMI/AAS as the
+// defaults, and every character can be toggled/replaced in the select
+const ALT_DEFAULT_ENABLED = [false, false, true, true, false, false, false, false];
 // Emoji graphics (Noto Color Emoji 128px PNGs, Apache-2.0 — see README) shipped
 // locally in img/, so the board does not depend on the device having an emoji font.
 const SPRITE_IMG = {
@@ -987,7 +990,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
-    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, MODIFIERS, parseLevel, supplyFor, ALL_PROPS, SPRITE_IMG, typesOf,
+    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, ALT_DEFAULT_ENABLED, MODIFIERS, parseLevel, supplyFor, ALL_PROPS, SPRITE_IMG, typesOf,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
@@ -1381,12 +1384,12 @@ function initUI() {
   mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
   mod2.addEventListener('change', () => { if (mod2.value !== 'none' && mod1.value === mod2.value) mod1.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
   devChk.addEventListener('change', () => { if (devChk.checked) { mod1.value = 'none'; mod2.value = 'none'; } rebuild(); });
-  // character select is hidden unless "alternate characters (dev)" is checked;
-  // BABA and KEKE (indices 0,1) are always on and have no toggle
+  // character select is hidden unless "alternate characters (dev)" is checked.
+  // Default: only BABA + KEKE. With the checkbox: SAMI + AAS are the defaults and
+  // ALL characters have toggles, so any of them can be deselected/replaced.
   const pwrap = document.getElementById('players');
   const altChk = document.getElementById('altchars');
   CHARACTERS.forEach((c, i) => {
-    if (i < 2) return;
     const b = document.createElement('button');
     b.insertAdjacentHTML('afterbegin', spriteImg(c.noun));
     b.appendChild(document.createTextNode(' ' + c.name));
@@ -1396,7 +1399,7 @@ function initUI() {
   });
   altChk.addEventListener('change', () => {
     pwrap.hidden = !altChk.checked;
-    if (!altChk.checked) S = createGame(DEFAULT_ENABLED.slice(), S.scenario, levelId); // back to just BABA + KEKE
+    S = createGame((altChk.checked ? ALT_DEFAULT_ENABLED : DEFAULT_ENABLED).slice(), S.scenario, levelId);
     render();
   });
 

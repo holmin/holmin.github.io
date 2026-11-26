@@ -23,7 +23,12 @@ assert.ok(s.supply.some(t => t.noun === 'ROCK') && s.supply.some(t => t.noun ===
 assert.ok(!s.supply.some(t => t.noun === 'RIVER' || t.noun === 'TEXT'), 'no RIVER/TEXT nouns in base supply');
 assert.ok(!s.supply.some(t => t.prop && t.prop !== 'WIN'), 'no rule tiles in base');
 assert.strictEqual(s.numPlayers, 2);
-console.log('ok 1: setup + default rules');
+assert.ok(s.entities.some(e => e.type === 'BABA') && s.entities.some(e => e.type === 'KEKE'), 'default characters are BABA + KEKE');
+assert.ok(!s.entities.some(e => e.type === 'SAMI'), 'no alternates by default');
+s = G.createGame(G.ALT_DEFAULT_ENABLED.slice());
+assert.ok(rulesOf(s).includes('SAMI IS PLAYER 1 (default)') && rulesOf(s).includes('AAS IS PLAYER 2 (default)'), 'alt mode defaults to SAMI + AAS');
+assert.ok(!s.entities.some(e => e.type === 'BABA' || e.type === 'KEKE'), 'BABA/KEKE do not exist in alt mode');
+console.log('ok 1: setup + default rules (BABA/KEKE default, SAMI/AAS in alt mode)');
 
 // 2. Turn structure: first turn = 1 action, later turns = 2 actions, alternating
 s = G.createGame();
