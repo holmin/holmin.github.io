@@ -1319,7 +1319,6 @@ function initUI() {
       return;
     }
     if (e.code === 'Escape') { S.placeIdx = null; S.fastDir = null; render(); return; }
-    if (e.code === 'KeyC') { challenge(S, S.turn); render(); return; }
     const ti = TILEKEYS.indexOf(e.code);
     if (ti >= 0) {
       if (ti < S.supply.length) { S.placeIdx = S.placeIdx === ti ? null : ti; render(); }
