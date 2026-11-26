@@ -153,7 +153,7 @@
     .cbtns button { padding: 6px 8px; font-size: 11px; }
     #side { display: contents; }
     #side > * { width: min(100%, 420px); }
-    #titlerow { order: -3; width: min(100%, 420px); }  /* title + rule cards + status on top in the one-column mobile layout */
+    #titlerow { order: -3; width: min(100%, 420px); justify-content: center; text-align: center; }  /* title centered on top in the one-column mobile layout */
     body { padding: 8px; }
   }
   @media (max-width: 340px) { #controls { flex-wrap: wrap; } }  /* very narrow screens: let the buttons wrap below the dpad */
@@ -231,6 +231,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=41"></script>
+<script src="game.js?v=42"></script>
 </body>
 </html>
