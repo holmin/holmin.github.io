@@ -129,7 +129,7 @@ function createGame(enabled, scenario, levelId) {
   const numPlayers = enabled.filter(Boolean).length;
   nextId = 1;
   scenario = scenario || {
-    score: [0, 0], wins: [0, 0], bo3: false, clocks: [true, true],
+    score: [0, 0], wins: [0, 0], bo3: false, clocks: [true, true], firstPlayer: 0,
     worldPoints: [0, 0], scenariosPlayed: 0,
   };
   scenario.numPlayers = numPlayers;
@@ -154,7 +154,7 @@ function createGame(enabled, scenario, levelId) {
   const pl = parseLevel(levelId);
   const S = {
     entities, supply, numPlayers, enabled, level: levelId, mods: pl.mods, dev: pl.dev, spawnOrder: order.slice(),
-    turn: 0, gameTurn: 0, actionsLeft: 1,
+    turn: ((scenario && scenario.firstPlayer) || 0) % numPlayers, gameTurn: 0, actionsLeft: 1, // rotate starter across games
     challenge: null, over: null, scenarioOver: false,
     scenario,
     selectedId: null, placeIdx: null,
@@ -223,6 +223,7 @@ function newScenario(prev, enabled, levelId) {
     clocks: new Array(numPlayers).fill(true),
     worldPoints: new Array(numPlayers).fill(0),
     scenariosPlayed: prev ? prev.scenariosPlayed : 0,
+    firstPlayer: prev ? (prev.firstPlayer || 0) : 0,
     numPlayers,
   };
   if (prev) prev.worldPoints.forEach((v, i) => { if (i < numPlayers) sc.worldPoints[i] = v; });
@@ -386,6 +387,7 @@ function undo(S) {
 
 function end(S, winner, reason) {
   S.over = { winner, reason };
+  S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1; // rotate the starting player for the next game
   if (winner !== null) {
     const sc = S.scenario;
     sc.wins[winner]++;
@@ -478,10 +480,15 @@ function resolve(S, actor) {
   else if (winners.size === 1) end(S, [...winners][0], 'YOU shared a space with WIN');
 
   // a PLAYER whose YOU things were all destroyed loses (videogame DEFEAT/SINK)
-  if (!S.over && S.numPlayers >= 2) {
+  if (!S.over && S.numPlayers >= 1) {
     const alive = [];
     for (let r = 0; r < S.numPlayers; r++) if (yourThings(S, r).length) alive.push(r);
-    if (alive.length === 0) end(S, actor, 'all YOU things destroyed — last action wins');
+    if (alive.length === 0) {
+      if (S.numPlayers === 1) {
+        const ch = charAtRank(S, 0);
+        end(S, null, `${ch.name} lost — no YOU things left`); // a lone player who is destroyed LOSES, not wins
+      } else end(S, actor, 'all YOU things destroyed — last action wins');
+    }
     else if (alive.length < S.numPlayers && S.numPlayers === 2) {
       const loser = 1 - alive[0];
       end(S, alive[0], `${charAtRank(S, loser).emoji} ${charAtRank(S, loser).name} has no YOU things left`);
@@ -1278,16 +1285,7 @@ function initUI() {
         html += w === null
           ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
           : `<div class="big" style="color:${wch.color}">${spriteImg(wch.noun)} ${wch.name} (PLAYER ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
-        html += `<div class="sub">R = next game${S.scenarioOver ? '' : ' · N = new scenario'}</div>`;
-      }
-      if (S.scenarioOver) {
-        const sc = S.scenario;
-        let w = null;
-        for (let i = 1; i < sc.score.length; i++) if (sc.score[i] > sc.score[w === null ? 0 : w]) w = i;
-        if (w !== null && sc.score.filter(v => v === sc.score[w]).length > 1) w = null;
-        const wch = w === null ? null : charAtRank(S, w);
-        html += `<div class="big" style="color:${wch ? wch.color : '#fff'}">🏆 Scenario to ${wch ? spriteImg(wch.noun) + ' ' + wch.name + ' (PLAYER ' + (w + 1) + ')' : 'tie'}</div>`;
-        html += `<div class="sub">N = new scenario · R = replay</div>`;
+        html += `<div class="sub">(N) new game</div>`;
       }
       ov.innerHTML = html;
     } else {
@@ -1305,12 +1303,12 @@ function initUI() {
 
   window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
-    if (e.code === 'KeyR') {
+    if (e.code === 'KeyN') { // N = new game (rotates the starting player)
       S = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
       render();
       return;
     }
-    if (e.code === 'KeyN') {
+    if (e.code === 'KeyR') {
       S = newScenario(S.scenario, S.enabled, levelId);
       render();
       return;

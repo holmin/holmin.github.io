@@ -124,6 +124,7 @@
   #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; flex-wrap: wrap; margin-top: 8px; }
   #levelrow select { flex: 1 1 0; min-width: 0; }
   #levelrow label { display: flex; gap: 4px; align-items: center; }
+  #levelrow .checks { flex: 1 1 100%; display: flex; gap: 12px; }  /* the two checkboxes on their own line */
   #level {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170; border-radius: 8px;
     padding: 6px; font-size: 12px; font-weight: 700; max-width: 100%;
@@ -179,10 +180,10 @@
         <button id="btn-pull">PULL: off</button>
         <button id="btn-undo">undo (Z)</button>
         <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win">sudden death</button>
-        <button id="btn-newgame" title="R">new game (R)</button>
+        <button id="btn-newgame" title="N">new game (N)</button>
       </div>
     </div>
-    <div id="levelrow"><span>Rules:</span><select id="mod1"></select><select id="mod2"></select><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label></div>
+    <div id="levelrow"><span>Rules:</span><select id="mod1"></select><select id="mod2"></select><span class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label></span></div>
     <div id="tray-wrap">
       <h3>RULE TILES (TAP, THEN PLACE ON MAP)</h3>
       <div id="supply"></div>
@@ -229,11 +230,11 @@
         <li><b>WRAP</b> — pushed/moved off the grid, it wraps to the other side (unless blocked); the printed margin tiles don't block it.</li>
       </ul>
       Controls: tap a bordered thing to select it, then tap a walk cell to move; arrows/WASD/swipe/D-pad also work;
-      keys 1–9, 0, q–p pick a rule tile; R = new game. Pick 0–2 rule cards next to the title.
+      keys 1–9, 0, q–p pick a rule tile; N = new game. Pick 0–2 rule cards below the board.
     </div>
     </div>
   </div>
 </div>
-<script src="game.js?v=44"></script>
+<script src="game.js?v=45"></script>
 </body>
 </html>

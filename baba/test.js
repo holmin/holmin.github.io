@@ -1051,4 +1051,29 @@ assert.deepStrictEqual(s.entities.filter(e => e.perm).map(e => [e.id, e.x, e.y])
 assert.ok(rulesOf(s).includes('RIVER IS HOT (default)'), 'permanent card rule intact');
 console.log('ok 53: permanent printed tiles (margin + purple corners) are never pulled/pushed/moved');
 
+// 54. starting player rotates across games (next game: KEKE starts, not BABA)
+s = G.createGame();
+assert.strictEqual(s.turn, 0, 'first game: PLAYER 1 (BABA) starts');
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 0 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 3, y: 0 });
+const f54 = s.entities.find(e => e.type === 'FLAG'); f54.x = 1; f54.y = 4;
+G.ensureParsed(s);
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // BABA steps onto the FLAG (FLAG IS WIN) -> wins
+assert.ok(s.over && s.over.winner === 0, 'BABA won');
+const sc54 = s.scenario;
+s = G.createGame(s.enabled, sc54, s.level);
+assert.strictEqual(s.turn, 1, 'next game: PLAYER 2 (KEKE) starts — starters rotate');
+
+// 55. a lone player who is destroyed LOSES (does not "win")
+s = G.createGame([true, false, false, false, false, false, false, false]); // only BABA
+assert.strictEqual(s.numPlayers, 1);
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'DEFEAT', label: 'IS DEFEAT', owner: 0, x: 3, y: 3 });
+const r55 = rock(s, 0, 0); r55.x = 0; r55.y = 4; // DEFEAT rock shares BABA's cell
+G.ensureParsed(s);
+G.resolve(s, 0);
+assert.ok(s.over && s.over.winner === null && /lost/.test(s.over.reason), 'lone player destroyed -> lost, not won: ' + (s.over && s.over.reason));
+console.log('ok 54-55: starter rotation + lone-player loss');
+
 console.log('\nAll engine tests passed.');
