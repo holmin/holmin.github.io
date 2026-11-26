@@ -118,6 +118,7 @@
   #turn img.spr, #overlay img.spr { width: 1.1em; height: 1.1em; vertical-align: -3px; }
   #players { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: #8b93c9; }
   #titlerow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #titlerow #turn { font-size: 13px; padding: 6px 8px; }
   #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; flex-wrap: wrap; }
   #levelrow select { min-width: 0; max-width: 100%; }
   #levelrow label { display: flex; gap: 4px; align-items: center; }
@@ -150,8 +151,7 @@
     #controls { flex-wrap: wrap; }
     #side { display: contents; }
     #side > * { width: min(100%, 420px); }
-    #titlerow { order: -3; }  /* title + level select on top in the one-column mobile layout */
-    #turn { order: -2; }  /* status above the board */
+    #titlerow { order: -3; width: min(100%, 420px); }  /* title + rule cards + status on top in the one-column mobile layout */
     body { padding: 8px; }
   }
 </style>
@@ -184,8 +184,7 @@
     </div>
   </div>
   <div id="side">
-    <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><div id="levelrow"><span>Rules:</span><select id="mod1"></select><select id="mod2"></select><label><input type="checkbox" id="devmode"> all rules (dev)</label></div></div>
-    <div id="turn"></div>
+    <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><div id="levelrow"><span>Rules:</span><select id="mod1"></select><select id="mod2"></select><label><input type="checkbox" id="devmode"> all rules (dev)</label></div><div id="turn"></div></div>
     <div id="players"><span>👥 players:</span></div>
     <div class="help">
       <b>Goal:</b> move a thing that is <b>YOU</b> onto a thing that is <b>WIN</b>.<br>
@@ -228,6 +227,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=36"></script>
+<script src="game.js?v=37"></script>
 </body>
 </html>
