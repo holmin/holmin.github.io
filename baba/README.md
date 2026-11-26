@@ -36,8 +36,8 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   — e.g. place `IS FAST` right of the left-middle PLAYER-1 noun for `SAMI IS FAST`.
   The printed tiles have no dashed border.
 - **Levels:** per the rulebook each level brings in only **two rule tiles** on
-  top of the base tiles. Base supply: **2× `IS WIN`, 1× `ROCK` noun, 1× `FLAG` noun,
-  `RIVER`, `TEXT`**. Next to the BABA VS KEKE title are **two modifier dropdowns**
+  top of the base tiles. Base supply: **2× `IS WIN`, 1× `ROCK` noun, 1× `FLAG` noun**
+  (no RIVER/TEXT nouns in the base). Next to the BABA VS KEKE title are **two modifier dropdowns**
   — pick **none, one, or two different level cards** (called *modifiers*). The cards,
   in campaign order: MORE ROCK MORE FLAG (+1 ROCK noun, +1 FLAG noun), FAST,
   **RIVER IS HOT** (HOT + MELT tiles, permanent rule printed top-left),

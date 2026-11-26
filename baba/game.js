@@ -60,7 +60,7 @@ function parseLevel(levelId) {
   if (levelId && levelId.slice(0, 2) === 'm:') return { dev: false, mods: levelId.slice(2).split(',').filter(Boolean) };
   return { dev: false, mods: [] };
 }
-const BASE_TILES = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }, { noun: 'RIVER' }, { noun: 'TEXT' }];
+const BASE_TILES = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }];
 function supplyFor(levelId) {
   const { dev, mods } = parseLevel(levelId);
   if (dev) {
