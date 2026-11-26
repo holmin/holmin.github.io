@@ -62,11 +62,15 @@ const MODIFIERS = [
   { id: 'scared', name: 'ROCK IS SCARED', tiles: [{ prop: 'SCARED' }], fixed: [['ROCK', 'SCARED']] },
   { id: 'sheep', name: 'ROCK IS SHEEP', tiles: [{ prop: 'SHEEP' }, { prop: 'SHEEP' }], fixed: [['ROCK', 'SHEEP']] },
 ];
-// levelId: 'base' (no cards), 'm:<id1>,<id2>' (one or two different cards), 'dev' (all tiles, infinite)
+// levelId: 'base' (no cards), 'm:<id1>,<id2>' (one or two different cards),
+// 'd...' = developer (all tiles, infinite) — combinable: 'dm:<id1>,<id2>'
 function parseLevel(levelId) {
-  if (levelId === 'dev') return { dev: true, mods: [] };
-  if (levelId && levelId.slice(0, 2) === 'm:') return { dev: false, mods: levelId.slice(2).split(',').filter(Boolean) };
-  return { dev: false, mods: [] };
+  let rest = levelId || 'base';
+  let dev = false;
+  if (rest[0] === 'd') { dev = true; rest = rest.slice(1); }
+  let mods = [];
+  if (rest.slice(0, 2) === 'm:') mods = rest.slice(2).split(',').filter(Boolean);
+  return { dev, mods };
 }
 const BASE_TILES = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }];
 // tray order: IS WIN first, then nouns (NOUNS order), then all properties (ALL_PROPS order)
@@ -1261,8 +1265,8 @@ function initUI() {
     // modifier dropdowns reflect the current game's levelId
     const pl = parseLevel(S.level || 'base');
     document.getElementById('devmode').checked = !!pl.dev;
-    document.getElementById('mod1').value = pl.dev ? 'none' : (pl.mods[0] || 'none');
-    document.getElementById('mod2').value = pl.dev ? 'none' : (pl.mods[1] || 'none');
+    document.getElementById('mod1').value = pl.mods[0] || 'none';
+    document.getElementById('mod2').value = pl.mods[1] || 'none';
 
     const ov = document.getElementById('overlay');
     if (S.over || S.scenarioOver) {
@@ -1371,19 +1375,18 @@ function initUI() {
     });
   }
   function currentLevelId() {
-    if (devChk.checked) return 'dev';
-    const a = mod1.value, b = mod2.value;
-    const mods = [a, b].filter(v => v && v !== 'none');
-    return mods.length ? 'm:' + mods.join(',') : 'base';
+    const mods = [mod1.value, mod2.value].filter(v => v && v !== 'none');
+    const s = (devChk.checked ? 'd' : '') + (mods.length ? 'm:' + mods.join(',') : '');
+    return s || 'base';
   }
   function rebuild() {
     levelId = currentLevelId();
     S = createGame(S.enabled, S.scenario, levelId); // changing modifiers starts a new game with those cards
     render();
   }
-  mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
-  mod2.addEventListener('change', () => { if (mod2.value !== 'none' && mod1.value === mod2.value) mod1.value = 'none'; if (devChk.checked) devChk.checked = false; rebuild(); });
-  devChk.addEventListener('change', () => { if (devChk.checked) { mod1.value = 'none'; mod2.value = 'none'; } rebuild(); });
+  mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; rebuild(); });
+  mod2.addEventListener('change', () => { if (mod2.value !== 'none' && mod1.value === mod2.value) mod1.value = 'none'; rebuild(); });
+  devChk.addEventListener('change', rebuild); // dev mode composes with up to two modifier cards (e.g. RIVER IS HOT)
   // character select is hidden unless "alternate characters (dev)" is checked.
   // Default: only BABA + KEKE. With the checkbox: SAMI + AAS are the defaults and
   // ALL characters have toggles, so any of them can be deselected/replaced.

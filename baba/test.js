@@ -581,6 +581,12 @@ for (const p of ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT
 }
 assert.ok(!s.supply.some(t => t.prop === 'WEAK'), 'WEAK tile removed');
 assert.ok(s.supply.some(t => t.noun === 'SQUARE'), 'developer supply has the SQUARE noun');
+s = G.createGame(undefined, undefined, 'dm:hot-melt');
+assert.ok(s.dev, 'dev flag parsed');
+assert.ok(rulesOf(s).includes('RIVER IS HOT (default)'), 'dev + modifier card: permanent rule still printed');
+assert.ok(s.supply.some(t => t.prop === 'CURIOUS') && s.supply.some(t => t.prop === 'MELT'), 'dev supply still has all rules');
+assert.strictEqual(G.parseLevel('dev').dev, true);
+assert.deepStrictEqual(G.parseLevel('dm:hot-melt,scared').mods, ['hot-melt', 'scared']);
 s = G.createGame(undefined, undefined, 'm:square,win-harder,fast');
 assert.deepStrictEqual(s.supply.map(t => t.prop || t.noun), ['WIN', 'WIN', 'WIN', 'WIN', 'ROCK', 'FLAG', 'SQUARE', 'FAST'],
   'supply sorted: IS WIN first, then nouns, then properties');
