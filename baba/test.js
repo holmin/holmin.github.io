@@ -1115,7 +1115,7 @@ console.log('ok 57: CUSTOM_PROPS = only the rules not in the youtube transcript'
 s = G.createGame();
 s.selectedId = baba(s).id;
 G.moveSelected(s, 0, 1, 0, false);
-assert.ok(s.dlog.some(m => /#\d+ ACTION move player=1 ent=BABA#\d+ dir=1,0 pull=false/.test(m)), 'ACTION move line');
+assert.ok(s.dlog.some(m => /ACTION move player=1 ent=BABA#\d+ dir=1,0 pull=false/.test(m)), 'ACTION move line'); // <ol> in the UI provides the numbering
 assert.ok(s.dlog.some(m => /mv ent=BABA#\d+ from=0,4 to=1,4 kind=move/.test(m)), 'mv detail line');
 const pIdx = s.supply.findIndex(t => t.prop === 'WIN');
 assert.strictEqual(G.place(s, 1, pIdx, 3, 0), true, 'P2 places IS WIN next to KEKE');
@@ -1141,7 +1141,7 @@ assert.ok(s.dlog.length > 0 && s.dlog.every(m => !/[\u{1F000}-\u{1FAFF}\u{2600}-
 const nLog = s.dlog.length;
 const s2 = G.newGame(s, s.level);
 assert.ok(s2.dlog.length > nLog, 'log NOT cleared on new game');
-assert.strictEqual(s2.dlog[nLog], '', 'blank line separates games');
+assert.ok(/------ NEW GAME ------/.test(s2.dlog[nLog]), 'separator line between games');
 assert.ok(s2.dlog.some(m => /ACTION newgame starter=P2/.test(m)), 'new game logged');
 // rule changes are logged (resolve() logs formed/broken rules through log() -> dlog)
 s2.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
@@ -1166,5 +1166,23 @@ let undos = 0;
 while (G.undo(s) && undos++ < 600) {}
 assert.ok(undos > 100, 'undo walks the whole chain back: ' + undos + ' steps');
 console.log('ok 60: new-game spam keeps memory bounded (linear undo chain)');
+
+// 61. undo backtraces across a RULES CHANGE (new game via modifier dropdowns)
+s = G.createGame();
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // one action in the old game (BABA 0,4 -> 1,4)
+const nHist = s.history.length;
+const s3 = G.changeRules(s, 'm:strong');
+assert.strictEqual(s3.level, 'm:strong', 'new game has the new level id');
+assert.strictEqual(s3.history.length, 1, 'boundary entry attached on rules change');
+assert.ok(/------ RULES CHANGED ------/.test(s3.dlog[s3.dlog.length - 2]), 'separator logged');
+assert.ok(s3.dlog.some(m => /ACTION rules=m:strong/.test(m)), 'rules change logged');
+assert.strictEqual(G.undo(s3), true, 'undo crosses the rules-change boundary');
+assert.strictEqual(s3.level, 'base', 'back in the old game');
+assert.ok(baba(s3).x === 1 && baba(s3).y === 4, 'old game restored after its move');
+assert.strictEqual(s3.history.length, nHist, 'old history restored by reference');
+assert.strictEqual(G.undo(s3), true);
+assert.ok(baba(s3).x === 0 && baba(s3).y === 4, 'undo again -> very start of the old game');
+console.log('ok 61: undo works across rules changes (modifier dropdowns)');
 
 console.log('\nAll engine tests passed.');

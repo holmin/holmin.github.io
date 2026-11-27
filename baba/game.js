@@ -220,8 +220,21 @@ function newGame(S, levelId) {
   const before = snapshot(S);
   S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1;
   const S2 = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
-  carryLog(S, S2, `ACTION newgame starter=P${S2.turn + 1}`);
+  carryLog(S, S2, 'NEW GAME', `ACTION newgame starter=P${S2.turn + 1}`);
   S2.history.unshift({ boundary: true, snap: before, prevHistory: S.history }); // reference, not a copy
+  if (S2.history.length > 500) S2.history.pop();
+  return S2;
+}
+
+// Changing the modifier cards starts a new game with those cards (same scenario/score).
+// Like newGame, the previous game is attached to the new history as a boundary entry,
+// so undo (Z) can backtrace across the rules change.
+function changeRules(S, levelId) {
+  const before = snapshot(S);
+  const old = S;
+  const S2 = createGame(S.enabled, S.scenario, levelId);
+  carryLog(old, S2, 'RULES CHANGED', `ACTION rules=${levelId}`);
+  S2.history.unshift({ boundary: true, snap: before, prevHistory: old.history }); // reference, not a copy
   if (S2.history.length > 500) S2.history.pop();
   return S2;
 }
@@ -379,14 +392,14 @@ function dlog(S, msg) {
   msg = String(msg)
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '') // no emojis in the log
     .replace(/\s{2,}/g, ' ').trim();
-  S.dlog.push('#' + (++S._dseq) + ' ' + msg);
+  S.dlog.push(msg); // the <ol> in the UI provides the numbering
   if (S.dlog.length > 500) S.dlog.shift();
 }
 // carry the debug log across a new game, with a blank line separating games
-function carryLog(from, to, note) {
+function carryLog(from, to, label, note) {
   to.dlog = from.dlog || [];
   to._dseq = from._dseq || 0;
-  if (to.dlog) to.dlog.push('');
+  if (to.dlog) to.dlog.push('------ ' + label + ' ------');
   if (note) dlog(to, note);
 }
 function entName(e) {
@@ -1057,7 +1070,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, youOwners, isYouBy, entitiesAt, canMove, doMove, placeTargets, canPlace,
-    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge, newGame,
+    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge, newGame, changeRules,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
@@ -1454,9 +1467,9 @@ function initUI() {
   }
   function rebuild() {
     levelId = currentLevelId();
-    const old = S;
-    S = createGame(S.enabled, S.scenario, levelId); // changing modifiers starts a new game with those cards
-    carryLog(old, S, `ACTION rules=${levelId}`);
+    // changing modifiers starts a new game with those cards; the old game stays on
+    // the history (boundary entry), so undo (Z) backtraces across the change
+    S = changeRules(S, levelId);
     render();
   }
   mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; rebuild(); });
