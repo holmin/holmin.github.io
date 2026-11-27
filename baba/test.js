@@ -1318,4 +1318,30 @@ assert.deepStrictEqual([rE.x, rE.y], [3, 1], 'sheep echo moved into the blocked 
 assert.deepStrictEqual([flagD.x, flagD.y], [3, 0], 'blocker flag pushed one step');
 console.log('ok 68: CURIOUS no-push, SCARED flee no-push, SHEEP echo can push one thing');
 
+// 69. history flat6ten/rebuild round-trip: undo across game boundaries survives a save/load
+s = G.createGame();
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // game 1: BABA (0,4)->(1,4), turn passes to P2
+const s6 = G.newGame(s, s.level);  // game 2 (boundary entry)
+s6.selectedId = keke(s6).id;
+G.moveSelected(s6, 1, -1, 0, false); // game 2: KEKE (4,0)->(3,0)
+const flat6 = G.histToJSON(s6.history);
+assert.strictEqual(flat6.length, 3, 'flattened: 1 game-2 entry + boundary + 1 game-1 entry');
+assert.ok(flat6.some(e => typeof e !== 'string' && e.boundary), 'boundary entry preserved');
+// simulate save/load: fresh shell6 + snapshot + rebuilt history
+const shell6 = G.createGame();
+Object.assign(shell6, JSON.parse(G.snapshot(s6)));
+shell6.history = G.histFromJSON(flat6);
+assert.strictEqual(G.undo(shell6), true);
+assert.ok(shell6.turn === 1 && keke(shell6).x === 4 && keke(shell6).y === 0, 'undo 1 -> game 2 before KEKE moved (KEKE to move at 4,0)');
+assert.strictEqual(G.undo(shell6), true);
+assert.ok(!shell6.over && shell6.gameTurn === 1 && baba(shell6).x === 1, 'undo 2 -> crosses boundary into game 1');
+assert.strictEqual(G.undo(shell6), true);
+assert.ok(baba(shell6).x === 0 && baba(shell6).y === 4, 'undo 3 -> very start of game 1');
+// cap works
+let chain6 = G.createGame();
+for (let i = 0; i < 10; i++) chain6 = G.newGame(chain6, 'base');
+assert.ok(G.histToJSON(chain6.history, 5).length <= 5, 'histToJSON honors the cap');
+console.log('ok 69: history flatten/rebuild round-trips; undo works after a save/load, across game boundaries');
+
 console.log('\nAll engine tests passed.');

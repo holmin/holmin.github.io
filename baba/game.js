@@ -445,6 +445,38 @@ function undo(S) {
   return true;
 }
 
+// Flatten the (possibly boundary-chained) undo history into a plain JSON-safe array
+// and rebuild it. Invariant: a boundary entry is always the LAST entry of its array
+// (newGame unshifts it into a fresh history, later actions unshift in front of it).
+// Capped so a persisted game never blows past storage limits.
+function histToJSON(h, cap) {
+  cap = cap || 300;
+  const out = [];
+  let cur = h;
+  while (cur && cur.length && out.length < cap) {
+    for (const e of cur) {
+      if (out.length >= cap) break;
+      out.push(typeof e === 'string' ? e : { boundary: true, snap: e.snap });
+    }
+    const b = cur.find(e => typeof e !== 'string');
+    cur = b ? b.prevHistory : null;
+  }
+  return out;
+}
+function histFromJSON(arr) {
+  const top = [];
+  let cur = top;
+  for (const e of arr || []) {
+    if (typeof e === 'string') cur.push(e);
+    else {
+      const prev = [];
+      cur.push({ boundary: true, snap: e.snap, prevHistory: prev });
+      cur = prev;
+    }
+  }
+  return top;
+}
+
 function end(S, winner, reason) {
   S.over = { winner, reason };
   if (winner !== null) {
@@ -1141,7 +1173,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, youOwners, isYouBy, entitiesAt, canMove, doMove, placeTargets, canPlace,
-    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge, newGame, changeRules, resign,
+    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge, newGame, changeRules, resign, histToJSON, histFromJSON,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
@@ -1448,6 +1480,8 @@ function initUI() {
     const esc = (m) => m.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     dl.innerHTML = (S.dlog || []).map(m => '<li>' + esc(m) + '</li>').join('');
     dl.scrollTop = dl.scrollHeight;
+
+    saveAll(); // persist the entire state (board + history + log + ui) after every action
   }
 
   const KEYMAP = {
@@ -1515,32 +1549,47 @@ function initUI() {
     const s = (devChk.checked ? 'd' : '') + (mods.length ? 'm:' + mods.join(',') : '');
     return s || 'base';
   }
-  // UI state (cards + dev checkboxes) is saved to localStorage on every change, but only
-  // APPLIED when the "restore state? (dev)" checkbox is clicked (one-shot).
-  function saveUI() {
+  // Full-state persistence: on EVERY action (every render) the entire game (board +
+  // undo history + debug log) and the UI checkboxes are saved to localStorage as ONE
+  // slot, overwriting the previous save (so no multiple sets are kept). On page load
+  // the saved game is restored; the "restore state? (dev)" button re-applies that slot.
+  // (localStorage instead of cookies: cookies cap at ~4KB, too small for board+history.)
+  function saveAll() {
     try {
-      localStorage.setItem('baba-ui', JSON.stringify({ mod1: mod1.value, mod2: mod2.value, dev: devChk.checked, alt: altChk.checked }));
-    } catch (e) { /* storage unavailable (private mode) — saving is best-effort */ }
+      localStorage.setItem('baba-save', JSON.stringify({
+        snap: snapshot(S),
+        hist: histToJSON(S.history),
+        dlog: S.dlog,
+        ui: { alt: altChk.checked },
+      }));
+    } catch (e) { /* storage full/unavailable — best effort */ }
   }
-  // one-shot BUTTON: apply the last saved UI state (cards + dev checkboxes) from localStorage
-  document.getElementById('restore').addEventListener('click', () => {
-    let st = null;
-    try { st = JSON.parse(localStorage.getItem('baba-ui') || 'null'); } catch (err) { st = null; }
-    if (!st) { dlog(S, 'ACTION restore=no saved state'); render(); return; }
-    mod1.value = st.mod1 || 'none';
-    mod2.value = st.mod2 || 'none';
-    if (mod1.value !== 'none' && mod1.value === mod2.value) mod2.value = 'none';
-    devChk.checked = !!st.dev;
-    altChk.checked = !!st.alt;
+  function applySave(d) {
+    const snap = JSON.parse(d.snap);
+    Object.assign(S, snap);
+    if (Array.isArray(S.river)) S.river = new Set(S.river);
+    S.history = histFromJSON(d.hist || []);
+    if (d.dlog) S.dlog = d.dlog;
+    ensureParsed(S);
+    const pl = parseLevel(S.level || 'base');
+    mod1.value = pl.mods[0] || 'none';
+    mod2.value = pl.mods[1] || 'none';
+    devChk.checked = !!S.dev;
+    altChk.checked = !!(d.ui && d.ui.alt);
     document.getElementById('players').hidden = !altChk.checked;
     levelId = currentLevelId();
-    S = changeRules(S, levelId); // start a game with the restored cards/dev setting
-    dlog(S, `ACTION restore=${JSON.stringify(st)}`);
+  }
+  // one-shot BUTTON: re-apply the saved full state (board + history + ui)
+  document.getElementById('restore').addEventListener('click', () => {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem('baba-save') || 'null'); } catch (err) { d = null; }
+    if (!d || !d.snap) { dlog(S, 'ACTION restore=no saved state'); render(); return; }
+    applySave(d);
+    dlog(S, 'ACTION restore=applied saved game (board + history + ui)');
     render();
   });
   function rebuild() {
     levelId = currentLevelId();
-    saveUI();
     // changing modifiers starts a new game with those cards; the old game stays on
     // the history (boundary entry), so undo (Z) backtraces across the change
     S = changeRules(S, levelId);
@@ -1555,7 +1604,6 @@ function initUI() {
     S.level = currentLevelId();
     S.supply = supplyFor(S.level);
     dlog(S, `ACTION checkbox dev=${devChk.checked}`);
-    saveUI();
     render();
   });
   // character select is hidden unless "alternate characters (dev)" is checked.
@@ -1574,10 +1622,8 @@ function initUI() {
   altChk.addEventListener('change', () => {
     pwrap.hidden = !altChk.checked; // in place: no restart, BABA + KEKE stay chosen
     dlog(S, `ACTION checkbox altchars=${altChk.checked}`);
-    saveUI();
     render();
   });
-  saveUI(); // initial save (after altChk exists)
 
   let touchStart = null;
   board.addEventListener('touchstart', (e) => {
@@ -1607,6 +1653,15 @@ function initUI() {
     moveSelected(S, S.turn, dirx, diry, pullOn);
     render();
   }, { passive: false });
+
+  // on page load: restore the last saved game, so play (and undo) continue across reloads
+  try {
+    const raw = localStorage.getItem('baba-save');
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && d.snap) { applySave(d); dlog(S, 'ACTION load=restored saved game (board + history + ui)'); }
+    }
+  } catch (e) { /* corrupt/unavailable save -> fresh game */ }
 
   render();
 }
