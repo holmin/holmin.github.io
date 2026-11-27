@@ -981,8 +981,7 @@ function place(S, p, idx, x, y) {
 function challenge(S, p) {
   if (S.over || S.challenge || S.numPlayers < 2) return false;
   if (S.turn !== p) return false;
-  const full = S.gameTurn === 0 ? 1 : 2;
-  if (S.actionsLeft !== full) return false;
+  if (S.actionsLeft <= 0) return false; // sudden death is allowed any time during your turn, even after the first action
   pushHistory(S, snapshot(S));
   S.challenge = { challenger: p, left: 10 };
   S.turn = (p + 1) % S.numPlayers;
@@ -1281,7 +1280,7 @@ function initUI() {
     });
     document.getElementById('supply-empty').style.display = S.supply.length ? 'none' : 'block';
 
-    document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft !== (S.gameTurn === 0 ? 1 : 2);
+    document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft <= 0;
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);
     });

@@ -136,7 +136,14 @@ for (let i = 0; i < 10 && !s.over; i++) {
   if (!G.moveSelected(s, 1, d[0], d[1], false)) G.moveSelected(s, 1, 0, i % 2 === 0 ? 1 : -1, false);
 }
 assert.ok(s.over && s.over.winner === 0, 'challenger wins after 10 failed actions');
-console.log('ok 10: challenge');
+// sudden death is allowed mid-turn, even after only the first action
+s = G.createGame();
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // first action used; gameTurn 1 -> 2 actions, 1 left
+assert.strictEqual(s.actionsLeft, 1);
+assert.strictEqual(G.challenge(s, 0), true, 'challenge allowed after the first action');
+assert.ok(s.challenge && s.turn === 1, 'challenge started mid-turn');
+console.log('ok 10: challenge (incl. mid-turn after first action)');
 
 // 11. Cannot act -> lose (Aas boxed in by full row/column, chains hit edges)
 s = G.createGame();
