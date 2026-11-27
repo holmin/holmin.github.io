@@ -1522,13 +1522,11 @@ function initUI() {
       localStorage.setItem('baba-ui', JSON.stringify({ mod1: mod1.value, mod2: mod2.value, dev: devChk.checked, alt: altChk.checked }));
     } catch (e) { /* storage unavailable (private mode) — saving is best-effort */ }
   }
-  document.getElementById('restore').addEventListener('change', (e) => {
-    const chk = e.target;
-    if (!chk.checked) return;
-    chk.checked = false; // one-shot: apply once, then uncheck
+  // one-shot BUTTON: apply the last saved UI state (cards + dev checkboxes) from localStorage
+  document.getElementById('restore').addEventListener('click', () => {
     let st = null;
     try { st = JSON.parse(localStorage.getItem('baba-ui') || 'null'); } catch (err) { st = null; }
-    if (!st) { dlog(S, 'ACTION checkbox restore=no saved state'); render(); return; }
+    if (!st) { dlog(S, 'ACTION restore=no saved state'); render(); return; }
     mod1.value = st.mod1 || 'none';
     mod2.value = st.mod2 || 'none';
     if (mod1.value !== 'none' && mod1.value === mod2.value) mod2.value = 'none';
@@ -1537,7 +1535,7 @@ function initUI() {
     document.getElementById('players').hidden = !altChk.checked;
     levelId = currentLevelId();
     S = changeRules(S, levelId); // start a game with the restored cards/dev setting
-    dlog(S, `ACTION checkbox restore=${JSON.stringify(st)}`);
+    dlog(S, `ACTION restore=${JSON.stringify(st)}`);
     render();
   });
   function rebuild() {

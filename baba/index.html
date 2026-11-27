@@ -139,7 +139,9 @@
   #levelrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #8b93c9; flex-wrap: wrap; margin-top: 8px; }
   #levelrow select { flex: 1 1 0; min-width: 0; }
   #levelrow label { display: flex; gap: 4px; align-items: center; }
-  .checks { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: #8b93c9; }  /* the two dev checkboxes on their own line */
+  .checks { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: #8b93c9; align-items: center; }  /* the dev checkboxes + restore button on their own line */
+  .checks button { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+  .checks button:hover { text-decoration: underline; }
   #dlog-wrap { margin-top: 8px; font-size: 12px; color: #8b93c9; }
   #dlog-wrap label { display: flex; gap: 4px; align-items: center; }
   #dlog { max-height: 180px; overflow-y: auto; background: #1a1f38; border-radius: 8px; padding: 6px 8px 6px 26px; margin: 6px 0 0; }
@@ -223,7 +225,7 @@
       <div id="supply"></div>
       <div id="supply-empty">supply empty</div>
     </div>
-    <div class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label><label><input type="checkbox" id="restore"> restore state? (dev)</label></div>
+    <div class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label><button type="button" id="restore" title="apply the last saved UI state (cards + dev checkboxes) from localStorage">restore state? (dev)</button></div>
   </div>
   <div id="side">
     <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><span id="streak"></span></div>
@@ -268,6 +270,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=71"></script>
+<script src="game.js?v=72"></script>
 </body>
 </html>

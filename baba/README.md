@@ -45,7 +45,7 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   WIN HARDER (+2 WIN), **ROCK IS THIRSTY**, STRONG, **ROCK IS SCARED**, **ROCK IS SHEEP**.
   A card's permanent rule is printed as **purple tiles in the board corners** —
   first card's rule top-left, second card's rule lower-left. The **all rules (dev)**
-- **restore state? (dev):** UI state (selected cards + dev checkboxes) is saved to localStorage on every change, but only applied when this checkbox is clicked (one-shot; it unchecks itself).
+- **restore state? (dev)** (button): UI state (selected cards + dev checkboxes) is saved to localStorage on every change, but only applied when this button is clicked (one-shot; starts a new game with the saved cards, undoable with Z).
   checkbox gives one of every tile with an **infinite supply** (placing does not
   consume a tile, destroyed tiles are not returned — so only one `IS WIN` is needed).
   In normal games placing consumes the tile, and **destroyed tiles return to the
