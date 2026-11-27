@@ -230,18 +230,15 @@
     <div id="turn"></div>
     <div id="players" hidden><span>👥 players:</span></div>
     <div class="help">
-      <b>Goal:</b> move a thing that is <b>YOU</b> onto a thing that is <b>WIN</b>.<br>
-      <b>Sudden death:</b> skip your turn — the opponent gets 10 actions to win, or you win.<br>
+      <b>Goal:</b> move a thing that is <b>YOU</b> onto a thing that is <b>WIN</b>, or vice versa. You lose if you have no valid moves, or create an infinite loop.<br>
+      <b>Sudden death:</b> skip your turn and challenge your opponent to win in 10 actions, or you win.<br>
       <b>Differences from the video game:</b>
       <ul>
-        <li>everything is always PUSH, but only one thing per move (unless it is STRONG)</li>
-        <li>things adjacent to YOU can always be PULLed (unless SCARED)</li>
+        <li>everything is always PUSH, but you can only push one thing per move (unless you are STRONG)</li>
+        <li>things adjacent to YOU can optionally be PULLed (unless SCARED, or you are STRONG)</li>
         <li>only one YOU thing moves per action</li>
         <li>being both YOU and WIN does not win by itself</li>
-        <li>placing a tile does not trigger CURIOUS (SCARED does react to being placed next to it)</li>
-        <li>a rule loop of 100 steps = the last actor loses</li>
         <li>nouns can never become other nouns</li>
-        <li>property tiles include the word "is"</li>
       </ul>
       <b>Properties:</b>
       <ul>
@@ -271,6 +268,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=67"></script>
+<script src="game.js?v=68"></script>
 </body>
 </html>
