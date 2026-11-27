@@ -1251,4 +1251,12 @@ assert.ok(/resigned/.test(s.over.reason) && !/win/.test(s.over.reason.replace('d
 assert.ok(!s.scenario.score.some(v => v > 0), 'no scenario point awarded');
 console.log('ok 64: resign (2p win for opponent, >2p continue, mass-kill = draw not win)');
 
+// 65. sudden death is only allowed with exactly 2 players
+const en3b = G.DEFAULT_ENABLED.slice(); en3b[2] = true;
+s = G.createGame(en3b);
+assert.strictEqual(G.challenge(s, 0), false, 'no sudden death with 3 players');
+s = G.createGame();
+assert.strictEqual(G.challenge(s, 0), true, 'sudden death works with 2 players');
+console.log('ok 65: sudden death greyed out / rejected unless exactly 2 players');
+
 console.log('\nAll engine tests passed.');

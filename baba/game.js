@@ -1040,7 +1040,7 @@ function place(S, p, idx, x, y) {
 }
 
 function challenge(S, p) {
-  if (S.over || S.challenge || S.numPlayers < 2) return false;
+  if (S.over || S.challenge || S.numPlayers !== 2) return false; // sudden death is a 2-player mechanic
   if (S.turn !== p) return false;
   if (S.actionsLeft <= 0) return false; // sudden death is allowed any time during your turn, even after the first action
   const maxActions = S.gameTurn === 0 ? 1 : 2;
@@ -1385,7 +1385,7 @@ function initUI() {
     });
     document.getElementById('supply-empty').style.display = S.supply.length ? 'none' : 'block';
 
-    document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft <= 0;
+    document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft <= 0 || S.numPlayers !== 2; // sudden death is 2-player only
     document.getElementById('btn-resign').disabled = !!(S.over || S.scenarioOver);
     document.getElementById('btn-undo').disabled = !S.history || S.history.length === 0; // greyed out until there is something to undo
     document.querySelectorAll('#players button').forEach((b, i) => {
