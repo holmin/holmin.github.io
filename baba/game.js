@@ -1709,6 +1709,7 @@ function initUI() {
     }
     ws.addEventListener('open', () => {
       ws.send(JSON.stringify({ t: 'hi', from: NET.myIndex }));
+      if (isHost) ws.send(JSON.stringify({ t: 'public', on: !!document.getElementById('roompublic').checked }));
       render(); // host: broadcasts the initial game state; joiner: just marks status
     });
     ws.addEventListener('message', (ev) => {
@@ -1745,6 +1746,21 @@ function initUI() {
   });
   document.getElementById('btn-join').addEventListener('click', () => {
     if (roomcode.value.trim()) netConnect(roomcode.value.trim(), false);
+  });
+  document.getElementById('btn-list').addEventListener('click', async () => {
+    const el = document.getElementById('roomlist');
+    el.innerHTML = '';
+    try {
+      const r = await fetch('https://baba-relay.eightyx.workers.dev/?list=1');
+      const list = await r.json();
+      if (!Array.isArray(list) || !list.length) { el.textContent = '(no public rooms right now)'; return; }
+      for (const c of list) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = c; b.title = 'join public room ' + c;
+        b.addEventListener('click', () => netConnect(c, false));
+        el.appendChild(b);
+      }
+    } catch (e) { netStatus('could not fetch the room list'); }
   });
   // opening the page with #room=CODE pre-fills the join UI
   const hm = (location.hash || '').match(/room=([A-Za-z0-9]+)/);

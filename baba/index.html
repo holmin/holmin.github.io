@@ -148,6 +148,9 @@
   #netrow button:hover { text-decoration: underline; }
   #netrow input { width: 92px; background: #141830; border: 1px solid #2c3357; color: #dfe3ff; border-radius: 999px; padding: 3px 8px; font: inherit; text-transform: uppercase; }
   #netstatus { color: #8b93c9; }
+  #roomlist { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  #roomlist button { background: none; border: 1px solid #2c3357; border-radius: 999px; padding: 3px 10px; font: inherit; color: #8b93c9; cursor: pointer; text-transform: uppercase; }
+  #roomlist button:hover { text-decoration: underline; }
   #dlog-wrap { margin-top: 8px; font-size: 12px; color: #8b93c9; }
   #dlog-wrap label { display: flex; gap: 4px; align-items: center; }
   #dlog { max-height: 180px; overflow-y: auto; background: #1a1f38; border-radius: 8px; padding: 6px 8px 6px 26px; margin: 6px 0 0; }
@@ -233,7 +236,7 @@
     </div>
     <div class="checks"><label><input type="checkbox" id="devmode"> all rules (dev)</label><label><input type="checkbox" id="altchars"> alternate characters (dev)</label><button type="button" id="restore" title="apply the last saved UI state (cards + dev checkboxes) from localStorage">restore state? (dev)</button></div>
     <div class="checks"><label><input type="checkbox" id="online"> online (dev)</label></div>
-    <div id="netrow" hidden><button type="button" id="btn-host" title="create a room and get a code/link to share">host</button><button type="button" id="btn-join" title="join a room by code">join</button><input id="roomcode" placeholder="room code" maxlength="8"><span id="netstatus"></span></div>
+    <div id="netrow" hidden><button type="button" id="btn-host" title="create a room and get a code/link to share">host</button><label title="listed in the public room list (anyone can join)"><input type="checkbox" id="roompublic"> public</label><button type="button" id="btn-join" title="join a private room by code">join</button><input id="roomcode" placeholder="room code" maxlength="8"><button type="button" id="btn-list" title="fetch the public room list from the relay">list public</button><span id="roomlist"></span><span id="netstatus"></span></div>
   </div>
   <div id="side">
     <div id="titlerow"><h1>BABA <span>VS</span> KEKE</h1><span id="streak"></span></div>
@@ -278,6 +281,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=74"></script>
+<script src="game.js?v=75"></script>
 </body>
 </html>

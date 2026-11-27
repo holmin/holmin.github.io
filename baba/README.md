@@ -48,7 +48,10 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **Online play (dev):** check "online (dev)", then **host** (you get a 5-char room
   code and the URL becomes `…/baba/#room=CODE` — share either with your friend) or
   **join** (enter the code; opening a `#room=CODE` link pre-fills it). Host plays
-  PLAYER 1. The game connects to a WebSocket relay (Cloudflare Worker,
+  PLAYER 1. **Public rooms** (host checks "public") are listed by the relay
+  (`GET /?list=1`) and anyone can join them via the "list public" button;
+  **private rooms** (default) are only reachable by code/link. The game connects to
+  a WebSocket relay (Cloudflare Worker,
   `wss://baba-relay.eightyx.workers.dev/?room=CODE`) and after every action sends the
   full state blob (board + undo history + log + UI) to the opponent, who applies it.
   Only the player whose turn it is can act (enforced in the engine). Undo/new
