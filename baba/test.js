@@ -1095,13 +1095,13 @@ G.ensureParsed(s);
 s.selectedId = baba(s).id;
 G.moveSelected(s, 0, 1, 0, false); // BABA onto FLAG IS WIN -> game 1 won
 assert.ok(s.over && s.over.winner === 0);
-const s2 = G.newGame(s, s.level);
-const s3 = G.newGame(s2, s2.level);
-assert.strictEqual(s3.turn, 0, 'game 3 starts with PLAYER 1 again');
-assert.strictEqual(G.undo(s3), true);
-assert.ok(!s3.over && s3.turn === 1, 'undo once -> back in game 2 (mid-game, KEKE to start)');
-assert.strictEqual(G.undo(s3), true);
-assert.ok(s3.over && s3.over.winner === 0 && s3.turn === 0, 'undo twice -> back in finished game 1');
+const s56b = G.newGame(s, s.level);
+const s56c = G.newGame(s56b, s56b.level);
+assert.strictEqual(s56c.turn, 0, 'game 3 starts with PLAYER 1 again');
+assert.strictEqual(G.undo(s56c), true);
+assert.ok(!s56c.over && s56c.turn === 1, 'undo once -> back in game 2 (mid-game, KEKE to start)');
+assert.strictEqual(G.undo(s56c), true);
+assert.ok(s56c.over && s56c.over.winner === 0 && s56c.turn === 0, 'undo twice -> back in finished game 1');
 console.log('ok 56: undo backtraces across multiple games');
 
 // 57. custom (non-transcript) props are the purple ones
@@ -1131,5 +1131,24 @@ assert.ok(s.over && s.over.winner === 0);
 assert.ok(s.dlog.some(m => /end winner=0 reason="/.test(m)), 'end line');
 assert.ok(s.dlog.some(m => /FLAG IS WIN/.test(m)), 'rule-formation line logged');
 console.log('ok 58: debug log (dlog) records actions in structured lines');
+
+// 59. debug log: no emojis, kept across new games with a blank separator line
+s = G.createGame();
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // -> P2's turn
+assert.strictEqual(G.challenge(s, 1), true); // logs a message containing an emoji glyph via log()
+assert.ok(s.dlog.length > 0 && s.dlog.every(m => !/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u.test(m)), 'no emojis in the debug log');
+const nLog = s.dlog.length;
+const s2 = G.newGame(s, s.level);
+assert.ok(s2.dlog.length > nLog, 'log NOT cleared on new game');
+assert.strictEqual(s2.dlog[nLog], '', 'blank line separates games');
+assert.ok(s2.dlog.some(m => /ACTION newgame starter=P2/.test(m)), 'new game logged');
+// rule changes are logged (resolve() logs formed/broken rules through log() -> dlog)
+s2.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 2, y: 3 });
+s2.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 3, y: 3 });
+G.ensureParsed(s2);
+G.resolve(s2, 0);
+assert.ok(s2.dlog.some(m => /ROCK IS WIN/.test(m)), 'rule formation logged');
+console.log('ok 59: debug log is emoji-free, survives new game (blank-line separated), logs rule changes');
 
 console.log('\nAll engine tests passed.');

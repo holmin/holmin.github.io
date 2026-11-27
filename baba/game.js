@@ -221,7 +221,7 @@ function newGame(S, levelId) {
   before.history = S.history; // carry the undo chain across the game boundary (linear, not nested)
   S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1;
   const S2 = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
-  dlog(S2, `ACTION newgame starter=P${S2.turn + 1}`);
+  carryLog(S, S2, `ACTION newgame starter=P${S2.turn + 1}`);
   S2.history.unshift(JSON.stringify(before));
   if (S2.history.length > 500) S2.history.pop();
   return S2;
@@ -377,8 +377,18 @@ function log(S, msg) {
 // detailed, greppable debug log of every action (shown under the help text; "debug log (dev)" checkbox)
 function dlog(S, msg) {
   if (!S.dlog) return;
+  msg = String(msg)
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '') // no emojis in the log
+    .replace(/\s{2,}/g, ' ').trim();
   S.dlog.push('#' + (++S._dseq) + ' ' + msg);
   if (S.dlog.length > 500) S.dlog.shift();
+}
+// carry the debug log across a new game, with a blank line separating games
+function carryLog(from, to, note) {
+  to.dlog = from.dlog || [];
+  to._dseq = from._dseq || 0;
+  if (to.dlog) to.dlog.push('');
+  if (note) dlog(to, note);
 }
 function entName(e) {
   return (e.kind === 'object' ? e.type : (e.prop ? 'IS ' + e.prop : e.noun)) + '#' + e.id;
@@ -1406,6 +1416,7 @@ function initUI() {
   document.getElementById('btn-undo').addEventListener('click', () => { undo(S); render(); });
   document.getElementById('dlogon').addEventListener('change', (e) => {
     document.getElementById('dlog-wrap').classList.toggle('off', !e.target.checked);
+    dlog(S, `ACTION checkbox debuglog=${e.target.checked}`);
   });
 
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
@@ -1432,7 +1443,9 @@ function initUI() {
   }
   function rebuild() {
     levelId = currentLevelId();
+    const old = S;
     S = createGame(S.enabled, S.scenario, levelId); // changing modifiers starts a new game with those cards
+    carryLog(old, S, `ACTION rules=${levelId}`);
     render();
   }
   mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; rebuild(); });
@@ -1443,6 +1456,7 @@ function initUI() {
     S.dev = devChk.checked;
     S.level = currentLevelId();
     S.supply = supplyFor(S.level);
+    dlog(S, `ACTION checkbox dev=${devChk.checked}`);
     render();
   });
   // character select is hidden unless "alternate characters (dev)" is checked.
@@ -1460,6 +1474,7 @@ function initUI() {
   });
   altChk.addEventListener('change', () => {
     pwrap.hidden = !altChk.checked; // in place: no restart, BABA + KEKE stay chosen
+    dlog(S, `ACTION checkbox altchars=${altChk.checked}`);
     render();
   });
 
