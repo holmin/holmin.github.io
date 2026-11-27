@@ -15,10 +15,7 @@ const CHARACTERS = [
   { noun: 'ZABA', name: 'Zaba', emoji: '🐸', color: '#7bed9f' },
   { noun: 'MINNE', name: 'Minne', emoji: '🐼', color: '#b2bec3' },
 ];
-const DEFAULT_ENABLED = [true, true, false, false, false, false, false, false];
-// with "alternate characters (dev)": BABA/KEKE are replaced by SAMI/AAS as the
-// defaults, and every character can be toggled/replaced in the select
-const ALT_DEFAULT_ENABLED = [false, false, true, true, false, false, false, false];
+const DEFAULT_ENABLED = [true, true, false, false, false, false, false, false]; // BABA + KEKE, always the defaults
 // Emoji graphics (Noto Color Emoji 128px PNGs, Apache-2.0 — see README) shipped
 // locally in img/, so the board does not depend on the device having an emoji font.
 const SPRITE_IMG = {
@@ -1016,7 +1013,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
-    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, ALT_DEFAULT_ENABLED, MODIFIERS, parseLevel, supplyFor, ALL_PROPS, CUSTOM_PROPS, SPRITE_IMG, typesOf,
+    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, MODIFIERS, parseLevel, supplyFor, ALL_PROPS, CUSTOM_PROPS, SPRITE_IMG, typesOf,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
@@ -1410,8 +1407,8 @@ function initUI() {
     render();
   });
   // character select is hidden unless "alternate characters (dev)" is checked.
-  // Default: only BABA + KEKE. With the checkbox: SAMI + AAS are the defaults and
-  // ALL characters have toggles, so any of them can be deselected/replaced.
+  // Toggling the checkbox does NOT restart the game and keeps BABA + KEKE chosen;
+  // it just reveals toggles for ALL characters, so any of them can be changed/replaced.
   const pwrap = document.getElementById('players');
   const altChk = document.getElementById('altchars');
   CHARACTERS.forEach((c, i) => {
@@ -1423,8 +1420,7 @@ function initUI() {
     pwrap.appendChild(b);
   });
   altChk.addEventListener('change', () => {
-    pwrap.hidden = !altChk.checked;
-    S = createGame((altChk.checked ? ALT_DEFAULT_ENABLED : DEFAULT_ENABLED).slice(), S.scenario, levelId);
+    pwrap.hidden = !altChk.checked; // in place: no restart, BABA + KEKE stay chosen
     render();
   });
 
