@@ -425,6 +425,7 @@ function pushHistory(S, before) {
 
 function undo(S) {
   if (!S.history || S.history.length === 0) return false;
+  const keepNet = S.net; // live connection object — not part of the snapshot
   const h = S.history.shift();
   if (typeof h !== 'string') {
     // game boundary: restore the previous game and its history BY REFERENCE
@@ -434,6 +435,7 @@ function undo(S) {
     Object.assign(S, snap);
     if (Array.isArray(S.river)) S.river = new Set(S.river);
     ensureParsed(S);
+    if (keepNet) S.net = keepNet;
     log(S, '↩ undone');
     return true;
   }
@@ -441,6 +443,7 @@ function undo(S) {
   Object.assign(S, snap);
   if (Array.isArray(S.river)) S.river = new Set(S.river);
   ensureParsed(S);
+  if (keepNet) S.net = keepNet;
   log(S, '↩ undone');
   return true;
 }
@@ -809,6 +812,7 @@ function yourThings(S, p) {
 function act(S, p, fn) {
   if (S.over || S.scenarioOver) return false;
   if (S.turn !== p || S.actionsLeft <= 0) return false;
+  if (S.net && S.net.myIndex !== undefined && S.net.myIndex !== p) return false; // online: only your own turns
   const before = snapshot(S);
   S._entered = [];
   S._loopSteps = 0;
@@ -1101,6 +1105,7 @@ function place(S, p, idx, x, y) {
 function challenge(S, p) {
   if (S.over || S.challenge || S.numPlayers !== 2) return false; // sudden death is a 2-player mechanic
   if (S.turn !== p) return false;
+  if (S.net && S.net.myIndex !== undefined && S.net.myIndex !== p) return false; // online: only your own turns
   if (S.actionsLeft <= 0) return false; // sudden death is allowed any time during your turn, even after the first action
   const maxActions = S.gameTurn === 0 ? 1 : 2;
   if (S.actionsLeft < maxActions) {
@@ -1129,6 +1134,7 @@ function challenge(S, p) {
 function resign(S, p) {
   if (S.over || S.scenarioOver || S.numPlayers === 0) return false;
   if (S.turn !== p) return false;
+  if (S.net && S.net.myIndex !== undefined && S.net.myIndex !== p) return false; // online: only your own turns
   pushHistory(S, snapshot(S));
   const name = charAtRank(S, p).name;
   const mine = S.entities.filter(e => !e.fixed && isYouBy(S, e, p));
@@ -1482,6 +1488,7 @@ function initUI() {
     dl.scrollTop = dl.scrollHeight;
 
     saveAll(); // persist the entire state (board + history + log + ui) after every action
+    netSend();  // and broadcast it to the opponent when online
   }
 
   const KEYMAP = {
@@ -1492,6 +1499,7 @@ function initUI() {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyN') { // N = new game (rotates the starting player)
       S = newGame(S, levelId);
+      if (NET) S.net = NET;
       render();
       return;
     }
@@ -1530,6 +1538,7 @@ function initUI() {
   document.getElementById('btn-resign').addEventListener('click', () => { resign(S, S.turn); render(); });
   document.getElementById('btn-newgame').addEventListener('click', () => {
     S = newGame(S, levelId); // rotates the starting player
+    if (NET) S.net = NET;
     render();
   });
   // two level-card ("modifier") dropdowns — pick none, one, or two DIFFERENT cards
@@ -1565,8 +1574,10 @@ function initUI() {
     } catch (e) { /* storage full/unavailable — best effort */ }
   }
   function applySave(d) {
+    const keepNet = S.net; // live connection object — not part of the snapshot
     const snap = JSON.parse(d.snap);
     Object.assign(S, snap);
+    if (keepNet) S.net = keepNet;
     if (Array.isArray(S.river)) S.river = new Set(S.river);
     S.history = histFromJSON(d.hist || []);
     if (d.dlog) S.dlog = d.dlog;
@@ -1593,6 +1604,7 @@ function initUI() {
     // changing modifiers starts a new game with those cards; the old game stays on
     // the history (boundary entry), so undo (Z) backtraces across the change
     S = changeRules(S, levelId);
+    if (NET) S.net = NET;
     render();
   }
   mod1.addEventListener('change', () => { if (mod1.value !== 'none' && mod2.value === mod1.value) mod2.value = 'none'; rebuild(); });
@@ -1662,6 +1674,81 @@ function initUI() {
       if (d && d.snap) { applySave(d); dlog(S, 'ACTION load=restored saved game (board + history + ui)'); }
     }
   } catch (e) { /* corrupt/unavailable save -> fresh game */ }
+
+  // ---- online play (dev): relay = the Cloudflare worker; rooms are just codes ----
+  const RELAY = 'wss://baba-relay.eightyx.workers.dev/';
+  let NET = null;               // { ws, code, myIndex, isHost, peerSeen }
+  let applyingRemote = false;   // true while applying an opponent blob (don't echo it back)
+
+  function netBlob() {
+    return { snap: snapshot(S), hist: histToJSON(S.history), dlog: S.dlog, ui: { alt: altChk.checked } };
+  }
+  function netSend() {
+    if (!NET || !NET.ws || NET.ws.readyState !== 1 || applyingRemote) return;
+    try { NET.ws.send(JSON.stringify({ t: 'state', blob: netBlob() })); } catch (e) {}
+  }
+  function netStatus(msg) { const el = document.getElementById('netstatus'); if (el) el.textContent = msg; }
+  function netConnect(code, isHost) {
+    code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    if (!code) { netStatus('enter a room code'); return; }
+    if (NET && NET.ws) { try { NET.ws.close(); } catch (e) {} }
+    const ws = new WebSocket(RELAY + '?room=' + encodeURIComponent(code));
+    NET = { ws, code, myIndex: isHost ? 0 : 1, isHost, peerSeen: false };
+    if (isHost) {
+      // host starts a fresh game as PLAYER 1 and broadcasts it; the URL carries the code
+      S.scenario.firstPlayer = 0;
+      S = createGame(S.enabled, S.scenario, levelId);
+      S.net = NET;
+      history.replaceState(null, '', '#room=' + code);
+      dlog(S, `ACTION net=host room=${code}`);
+      netStatus('hosting room ' + code + ' — share the code or this link with your friend');
+    } else {
+      S.net = NET;
+      dlog(S, `ACTION net=join room=${code}`);
+      netStatus('joining room ' + code + ' — waiting for host…');
+    }
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({ t: 'hi', from: NET.myIndex }));
+      render(); // host: broadcasts the initial game state; joiner: just marks status
+    });
+    ws.addEventListener('message', (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.t === 'hi') { NET.peerSeen = true; netStatus('opponent connected — room ' + NET.code); dlog(S, 'ACTION net=peer connected'); return; }
+      if (m.t === 'state' && m.blob && m.blob.snap) {
+        NET.peerSeen = true;
+        applyingRemote = true;
+        applySave(m.blob);
+        S.net = NET;
+        dlog(S, 'ACTION net=received state');
+        netStatus('connected — room ' + NET.code);
+        render();
+        applyingRemote = false;
+      }
+    });
+    ws.addEventListener('close', () => { netStatus('disconnected'); dlog(S, 'ACTION net=disconnected'); });
+    ws.addEventListener('error', () => { netStatus('connection error'); });
+    render();
+  }
+
+  const onlineChk = document.getElementById('online');
+  const netrow = document.getElementById('netrow');
+  const roomcode = document.getElementById('roomcode');
+  onlineChk.addEventListener('change', () => {
+    netrow.hidden = !onlineChk.checked;
+    dlog(S, `ACTION checkbox online=${onlineChk.checked}`);
+    render();
+  });
+  document.getElementById('btn-host').addEventListener('click', () => {
+    let code = '';
+    while (code.length < 5) code += Math.random().toString(36).replace(/[^a-z0-9]/g, '');
+    netConnect(code.slice(0, 5).toUpperCase(), true);
+  });
+  document.getElementById('btn-join').addEventListener('click', () => {
+    if (roomcode.value.trim()) netConnect(roomcode.value.trim(), false);
+  });
+  // opening the page with #room=CODE pre-fills the join UI
+  const hm = (location.hash || '').match(/room=([A-Za-z0-9]+)/);
+  if (hm) { onlineChk.checked = true; netrow.hidden = false; roomcode.value = hm[1].toUpperCase(); }
 
   render();
 }

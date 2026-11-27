@@ -1344,4 +1344,18 @@ for (let i = 0; i < 10; i++) chain6 = G.newGame(chain6, 'base');
 assert.ok(G.histToJSON(chain6.history, 5).length <= 5, 'histToJSON honors the cap');
 console.log('ok 69: history flatten/rebuild round-trips; undo works after a save/load, across game boundaries');
 
+// 70. online mode: only your own player index may act; undo keeps the live net object
+s = G.createGame();
+s.net = { myIndex: 1, code: 'TEST1', isHost: false };
+s.selectedId = baba(s).id;
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), false, 'P1 cannot act when you are P2 online');
+assert.strictEqual(G.challenge(s, 0), false, 'challenge gated too');
+assert.strictEqual(G.resign(s, 0), false, 'resign gated too');
+s.net.myIndex = 0;
+assert.strictEqual(G.moveSelected(s, 0, 1, 0, false), true, 'your own turn works');
+assert.strictEqual(G.undo(s), true);
+assert.ok(s.net && s.net.myIndex === 0, 'undo preserves the net object');
+assert.ok(baba(s).x === 0 && baba(s).y === 4, 'undo rewound the move');
+console.log('ok 70: online turn gating (act/challenge/resign) + undo keeps the net connection');
+
 console.log('\nAll engine tests passed.');
