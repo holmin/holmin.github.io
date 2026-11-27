@@ -1427,12 +1427,8 @@ function initUI() {
     ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
     KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0],
   };
-  // supply tile hotkeys: 1-9, 0, then q e t y u i o
-  const TILEKEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0',
-    'KeyQ', 'KeyE', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'];
-
   window.addEventListener('keydown', (e) => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyN') { // N = new game (rotates the starting player)
       S = newGame(S, levelId);
       render();
@@ -1445,21 +1441,6 @@ function initUI() {
     }
     if (S.over || S.scenarioOver) return;
     if (S._thirstyPending && S._thirstyPending.length) return; // THIRSTY choice first (tap a highlighted water cell)
-    if (e.code === 'Tab') {
-      const list = activeSelectable();
-      if (list.length) {
-        const i = list.findIndex(x => x.id === S.selectedId);
-        S.selectedId = list[(i + 1) % list.length].id;
-        render();
-      }
-      return;
-    }
-    if (e.code === 'Escape') { S.placeIdx = null; S.fastDir = null; render(); return; }
-    const ti = TILEKEYS.indexOf(e.code);
-    if (ti >= 0) {
-      if (ti < S.supply.length) { S.placeIdx = S.placeIdx === ti ? null : ti; render(); }
-      return;
-    }
     const m = KEYMAP[e.code];
     if (!m) return;
     if (S.fastDir) { S.fastDir = { dx: m[0], dy: m[1] }; render(); return; } // re-aim the FAST ray

@@ -173,8 +173,8 @@ Works with touch or mouse/keyboard; the board scales to the screen width.
   thing can reach and it moves there directly (no choosing needed) — if several could
   reach it, tap the thing (or Tab) first. A cell containing your own thing always
   selects it, never walks onto it
-- Place: tap a rule tile (or keys 1–9, 0, q–p), then tap a highlighted cell; Esc cancels
-- Keyboard: arrows/WASD = move · 1–9, 0, q–p = pick a tile · Tab = select next your-thing · Esc = cancel · **Z = undo** · **N = new game** (rotates the starting player)
+- Place: tap a rule tile (tap it again to un-pick), then tap a highlighted cell
+- Keyboard: arrows/WASD = move · **Z = undo** · **N = new game** (rotates the starting player)
 - 👥 buttons toggle characters on/off in the current game (1–6 players) — undoable with Z.
   PLAYER names show with their sprite in the buttons, rules list and log (not on the board/tiles);
   formed (non-default) rules are bold and listed above the defaults
