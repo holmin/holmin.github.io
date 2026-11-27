@@ -74,14 +74,14 @@ console.log('ok 4: one push per move unless STRONG (chain push)');
 
 // 5. Rule formation right/down
 s = G.createGame();
-G.doPlace(s, 0, 2, 1, 2);
-G.doPlace(s, 0, 0, 2, 2);
+G.doPlace(s, 0, s.supply.findIndex(x => x.noun === 'ROCK'), 1, 2);
+G.doPlace(s, 0, 0, 2, 2); // IS WIN
 G.ensureParsed(s);
 assert.ok(rulesOf(s).includes('ROCK IS WIN'));
 assert.strictEqual(rulesOf(s)[0], 'ROCK IS WIN', 'formed rules listed above defaults');
 s = G.createGame();
-G.doPlace(s, 0, 2, 2, 1);
-G.doPlace(s, 0, 0, 2, 2);
+G.doPlace(s, 0, s.supply.findIndex(x => x.noun === 'ROCK'), 2, 1);
+G.doPlace(s, 0, 0, 2, 2); // IS WIN
 G.ensureParsed(s);
 assert.ok(rulesOf(s).includes('ROCK IS WIN'));
 console.log('ok 5: rule formation + ordering');
@@ -593,8 +593,8 @@ assert.ok(s.supply.some(t => t.prop === 'CURIOUS') && s.supply.some(t => t.prop 
 assert.strictEqual(G.parseLevel('dev').dev, true);
 assert.deepStrictEqual(G.parseLevel('dm:hot-melt,scared').mods, ['hot-melt', 'scared']);
 s = G.createGame(undefined, undefined, 'm:square,win-harder,fast');
-assert.deepStrictEqual(s.supply.map(t => t.prop || t.noun), ['WIN', 'WIN', 'WIN', 'WIN', 'ROCK', 'FLAG', 'SQUARE', 'FAST'],
-  'supply sorted: IS WIN first, then nouns, then properties');
+assert.deepStrictEqual(s.supply.map(t => t.prop || t.noun), ['WIN', 'WIN', 'WIN', 'WIN', 'FLAG', 'ROCK', 'SQUARE', 'FAST'],
+  'supply sorted alphabetically: IS WIN first, then nouns, then properties');
 console.log('ok 34: modifier cards (video order, named by permanent rule) + purple corner rules + developer level + sorted supply');
 
 // 35. TEXT rules do NOT apply to the permanent printed margin tiles

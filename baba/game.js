@@ -74,13 +74,12 @@ function parseLevel(levelId) {
 const BASE_TILES = [{ prop: 'WIN' }, { prop: 'WIN' }, { noun: 'ROCK' }, { noun: 'FLAG' }];
 // tray order: IS WIN first, then nouns (NOUNS order), then all properties (ALL_PROPS order)
 function sortSupply(supply) {
+  // WIN first, then nouns, then the other properties — alphabetical within each group
   return supply.slice().sort((a, b) => {
     const grp = (t) => (t.prop ? (t.prop === 'WIN' ? 0 : 2) : 1);
     const ga = grp(a), gb = grp(b);
     if (ga !== gb) return ga - gb;
-    if (a.prop && b.prop) return (a.prop === 'WIN' ? -1 : ALL_PROPS.indexOf(a.prop)) - (b.prop === 'WIN' ? -1 : ALL_PROPS.indexOf(b.prop));
-    if (a.noun && b.noun) return NOUNS.indexOf(a.noun) - NOUNS.indexOf(b.noun);
-    return 0;
+    return (a.prop || a.noun).localeCompare(b.prop || b.noun);
   });
 }
 function supplyFor(levelId) {
@@ -1436,11 +1435,6 @@ function initUI() {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyN') { // N = new game (rotates the starting player)
       S = newGame(S, levelId);
-      render();
-      return;
-    }
-    if (e.code === 'KeyR') {
-      S = newScenario(S.scenario, S.enabled, levelId);
       render();
       return;
     }
