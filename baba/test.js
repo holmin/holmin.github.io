@@ -1120,12 +1120,13 @@ assert.ok(s.dlog.some(m => /mv ent=BABA#\d+ from=0,4 to=1,4 kind=move/.test(m)),
 const pIdx = s.supply.findIndex(t => t.prop === 'WIN');
 assert.strictEqual(G.place(s, 1, pIdx, 3, 0), true, 'P2 places IS WIN next to KEKE');
 assert.ok(s.dlog.some(m => /ACTION place player=2 tile=IS_WIN at=3,0/.test(m)), 'ACTION place line');
+G.moveSelected(s, 1, -1, 0, false); // P2's second action -> back to P1
 s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 0 });
 s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 3, y: 0 });
-const f58 = s.entities.find(e => e.type === 'FLAG'); f58.x = 1; f58.y = 4;
+const f58 = s.entities.find(e => e.type === 'FLAG'); f58.x = 2; f58.y = 4;
 G.ensureParsed(s);
 s.selectedId = baba(s).id;
-G.moveSelected(s, 0, 1, 0, false); // BABA onto FLAG IS WIN
+G.moveSelected(s, 0, 1, 0, false); // BABA (1,4) onto FLAG (2,4), FLAG IS WIN
 assert.ok(s.over && s.over.winner === 0);
 assert.ok(s.dlog.some(m => /end winner=0 reason="/.test(m)), 'end line');
 assert.ok(s.dlog.some(m => /FLAG IS WIN/.test(m)), 'rule-formation line logged');
