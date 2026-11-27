@@ -1068,7 +1068,7 @@ function challenge(S, p) {
 // without them. If the removal also kills every OTHER player, it is a DRAW —
 // resigning never counts as a win for the resigning player.
 function resign(S, p) {
-  if (S.over || S.scenarioOver) return false;
+  if (S.over || S.scenarioOver || S.numPlayers === 0) return false;
   if (S.turn !== p) return false;
   pushHistory(S, snapshot(S));
   const name = charAtRank(S, p).name;
@@ -1386,7 +1386,7 @@ function initUI() {
     document.getElementById('supply-empty').style.display = S.supply.length ? 'none' : 'block';
 
     document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft <= 0 || S.numPlayers !== 2; // sudden death is 2-player only
-    document.getElementById('btn-resign').disabled = !!(S.over || S.scenarioOver);
+    document.getElementById('btn-resign').disabled = !!(S.over || S.scenarioOver) || S.numPlayers === 0; // nothing to resign with 0 players
     document.getElementById('btn-undo').disabled = !S.history || S.history.length === 0; // greyed out until there is something to undo
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);

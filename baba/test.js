@@ -1259,4 +1259,11 @@ s = G.createGame();
 assert.strictEqual(G.challenge(s, 0), true, 'sudden death works with 2 players');
 console.log('ok 65: sudden death greyed out / rejected unless exactly 2 players');
 
+// 66. resign rejected when there are 0 players (all characters toggled off)
+s = G.createGame();
+for (const ci of G.activeChars(s).slice()) G.setEnabled(s, ci, false);
+assert.strictEqual(s.numPlayers, 0);
+assert.strictEqual(G.resign(s, 0), false, 'no resign with 0 players');
+console.log('ok 66: resign rejected with 0 players');
+
 console.log('\nAll engine tests passed.');
