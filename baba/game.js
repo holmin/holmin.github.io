@@ -1043,6 +1043,15 @@ function challenge(S, p) {
   if (S.over || S.challenge || S.numPlayers < 2) return false;
   if (S.turn !== p) return false;
   if (S.actionsLeft <= 0) return false; // sudden death is allowed any time during your turn, even after the first action
+  const maxActions = S.gameTurn === 0 ? 1 : 2;
+  if (S.actionsLeft < maxActions) {
+    // sudden death after 1 of 2 actions: revert the action(s) already taken this turn,
+    // so the challenge always starts from a clean turn
+    undo(S);
+    dlog(S, `ACTION challenge player=${p + 1} (sudden death) - first action of the turn reverted`);
+  } else {
+    dlog(S, `ACTION challenge player=${p + 1} (sudden death)`);
+  }
   pushHistory(S, snapshot(S));
   S.challenge = { challenger: p, left: 10 };
   S.turn = (p + 1) % S.numPlayers;
@@ -1361,7 +1370,7 @@ function initUI() {
         html += w === null
           ? `<div class="big">🤝 DRAW</div><div class="sub">${S.over.reason}</div>`
           : `<div class="big" style="color:${wch.color}">${spriteImg(wch.noun)} ${wch.name} (PLAYER ${w + 1}) wins the game!</div><div class="sub">${S.over.reason}</div>`;
-        html += `<div class="sub">(N) new game — the loser swaps one rule card and picks who starts</div>`;
+        html += `<div class="sub">(N) new game — the loser swaps one card and picks who starts</div>`;
       }
       ov.innerHTML = html;
     } else {
@@ -1452,7 +1461,7 @@ function initUI() {
   const mod1 = document.getElementById('mod1'), mod2 = document.getElementById('mod2'), devChk = document.getElementById('devmode');
   for (const sel of [mod1, mod2]) {
     const none = document.createElement('option');
-    none.value = 'none'; none.textContent = '— none —';
+    none.value = 'none'; none.textContent = '(none selected)';
     sel.appendChild(none);
     MODIFIERS.forEach(m => {
       const o = document.createElement('option');

@@ -1185,4 +1185,21 @@ assert.strictEqual(G.undo(s3), true);
 assert.ok(baba(s3).x === 0 && baba(s3).y === 4, 'undo again -> very start of the old game');
 console.log('ok 61: undo works across rules changes (modifier dropdowns)');
 
+// 62. sudden death after 1 of 2 actions reverts that first action (clean turn for the challenge)
+s = G.createGame();
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // P1's only action of turn 1 -> P2, actionsLeft=2
+s.selectedId = keke(s).id;
+G.moveSelected(s, 1, -1, 0, false); // P2 action 1 of 2: KEKE (4,0) -> (3,0)
+assert.strictEqual(s.actionsLeft, 1);
+assert.deepStrictEqual([keke(s).x, keke(s).y], [3, 0]);
+assert.strictEqual(G.challenge(s, 1), true, 'challenge allowed after 1 of 2 actions');
+assert.ok(s.challenge && s.challenge.challenger === 1, 'sudden death started by P2');
+assert.strictEqual(s.turn, 0, 'P1 now gets the 10 actions');
+assert.deepStrictEqual([keke(s).x, keke(s).y], [4, 0], 'first action of the turn was reverted');
+assert.ok(s.dlog.some(m => /ACTION challenge player=2 .*first action of the turn reverted/.test(m)), 'revert logged');
+assert.strictEqual(G.undo(s), true);
+assert.ok(!s.challenge && s.turn === 1 && s.actionsLeft === 2, 'undo removes the challenge and lands on the clean turn start');
+console.log('ok 62: sudden death after 1 of 2 actions undoes the first action');
+
 console.log('\nAll engine tests passed.');
