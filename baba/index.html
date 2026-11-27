@@ -61,7 +61,7 @@
   .ent.word.perm { background: #9b59b6; color: #fff; }
   .ent.sel { box-shadow: 0 0 0 2px var(--selc, #f1c40f); border-radius: 50%; }
   .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
-  #controls { margin-top: 10px; display: flex; flex-direction: row; gap: 12px; align-items: center; justify-content: flex-start; flex-wrap: nowrap; }
+  #controls { margin-top: 10px; display: flex; flex-direction: row; gap: 12px; align-items: stretch; justify-content: flex-start; flex-wrap: nowrap; }
   #controls > * { flex: 1 1 0; min-width: 0; }
   #dpad #btn-pull {
     grid-column: 1; grid-row: 1; /* above the left key, left of the up key */
@@ -91,10 +91,11 @@
   #dpad button[data-dx="-1"][data-dy="0"] { grid-column: 1; grid-row: 2; }
   #dpad button[data-dx="0"][data-dy="1"] { grid-column: 2; grid-row: 2; }
   #dpad button[data-dx="1"][data-dy="0"] { grid-column: 3; grid-row: 2; }
-  .cbtns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; min-width: 0; }
+  .cbtns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, 1fr); gap: 5px; min-width: 0; }
   .cbtns button {
-    width: 100%; border: 1px solid #2c3357; background: #141830; color: #8b93c9; cursor: pointer;
-    border-radius: 999px; padding: 6px 2px; font-size: 10px; font-weight: 700;
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    border: 1px solid #2c3357; background: #141830; color: #8b93c9; cursor: pointer;
+    border-radius: 999px; padding: 2px; font-size: 10px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
     touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   }
@@ -270,6 +271,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=62"></script>
+<script src="game.js?v=63"></script>
 </body>
 </html>

@@ -1388,6 +1388,7 @@ function initUI() {
 
     document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft <= 0;
     document.getElementById('btn-resign').disabled = !!(S.over || S.scenarioOver);
+    document.getElementById('btn-undo').disabled = !S.history || S.history.length === 0; // greyed out until there is something to undo
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);
     });
