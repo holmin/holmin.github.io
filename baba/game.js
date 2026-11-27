@@ -217,12 +217,11 @@ function syncFixedTiles(S) {
 // The previous game state is pushed onto the new game's history, so undo (Z)
 // can backtrace across new game / win / loss.
 function newGame(S, levelId) {
-  const before = JSON.parse(snapshot(S));
-  before.history = S.history; // carry the undo chain across the game boundary (linear, not nested)
+  const before = snapshot(S);
   S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1;
   const S2 = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
   carryLog(S, S2, `ACTION newgame starter=P${S2.turn + 1}`);
-  S2.history.unshift(JSON.stringify(before));
+  S2.history.unshift({ boundary: true, snap: before, prevHistory: S.history }); // reference, not a copy
   if (S2.history.length > 500) S2.history.pop();
   return S2;
 }
@@ -413,7 +412,19 @@ function pushHistory(S, before) {
 
 function undo(S) {
   if (!S.history || S.history.length === 0) return false;
-  const snap = JSON.parse(S.history.shift());
+  const h = S.history.shift();
+  if (typeof h !== 'string') {
+    // game boundary: restore the previous game and its history BY REFERENCE
+    // (never serialize the chain into the entry — that would grow quadratically)
+    S.history = h.prevHistory || [];
+    const snap = JSON.parse(h.snap);
+    Object.assign(S, snap);
+    if (Array.isArray(S.river)) S.river = new Set(S.river);
+    ensureParsed(S);
+    log(S, '↩ undone');
+    return true;
+  }
+  const snap = JSON.parse(h);
   Object.assign(S, snap);
   if (Array.isArray(S.river)) S.river = new Set(S.river);
   ensureParsed(S);

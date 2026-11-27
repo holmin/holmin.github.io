@@ -1151,4 +1151,20 @@ G.resolve(s2, 0);
 assert.ok(s2.dlog.some(m => /ROCK IS WIN/.test(m)), 'rule formation logged');
 console.log('ok 59: debug log is emoji-free, survives new game (blank-line separated), logs rule changes');
 
+// 60. spamming new game must not leak: history chain stays linear (no nested copies)
+s = G.createGame();
+for (let i = 0; i < 300; i++) s = G.newGame(s, 'base');
+let total = 0, n = 0, h = s.history;
+while (h && h.length) {
+  for (const e of h) { total += typeof e === 'string' ? e.length : e.snap.length; n++; }
+  const b = h.find(e => typeof e !== 'string');
+  h = b ? b.prevHistory : null;
+}
+assert.ok(n <= 500, 'chain capped at 500 entries, got ' + n);
+assert.ok(total < 5 * 1024 * 1024, 'chain is linear in size, total KB = ' + (total / 1024).toFixed(0));
+let undos = 0;
+while (G.undo(s) && undos++ < 600) {}
+assert.ok(undos > 100, 'undo walks the whole chain back: ' + undos + ' steps');
+console.log('ok 60: new-game spam keeps memory bounded (linear undo chain)');
+
 console.log('\nAll engine tests passed.');
