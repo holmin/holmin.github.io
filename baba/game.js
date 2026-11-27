@@ -46,6 +46,8 @@ function riverAt(S, x, y) { return (S.river || RIVER).has(x + ',' + y); }
 // base tiles — flag/rock/win + RIVER/TEXT nouns). The developer option at the
 // BOTTOM of the dropdown has all of them and is preselected for now.
 const ALL_PROPS = ['CURIOUS', 'FAST', 'STOP', 'SINK', 'MELT', 'HOT', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP', 'THIRSTY', 'STRONG', 'SCARED', 'SHEEP'];
+// props we invented that are NOT in the youtube playthrough -> purple tiles
+const CUSTOM_PROPS = ['STOP', 'SINK', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP'];
 // Level cards ("modifiers") in the order they appear in the campaign video
 // (world 1, then world 2). A card is named after its permanent rule when it
 // has one (e.g. RIVER IS HOT instead of HOT/MELT). `fixed` rules are printed
@@ -1014,7 +1016,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
     riverAt, openedInCell,
-    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, ALT_DEFAULT_ENABLED, MODIFIERS, parseLevel, supplyFor, ALL_PROPS, SPRITE_IMG, typesOf,
+    RIVER, HOME_CORNERS, CHARACTERS, DEFAULT_ENABLED, ALT_DEFAULT_ENABLED, MODIFIERS, parseLevel, supplyFor, ALL_PROPS, CUSTOM_PROPS, SPRITE_IMG, typesOf,
     NOUNS, PLAYER_NOUNS, PLAYER_EMOJI, PLAYER_COLORS, PLAYER_NAMES,
   };
 }
@@ -1225,7 +1227,7 @@ function initUI() {
             if (ch) { sp.style.background = ch.color + '44'; sp.style.borderRadius = '50%'; }
             sp.innerHTML = spriteImg(e.type);
           } else if (e.prop) {
-            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.fixed ? ' fixed' : '') + (e.perm ? ' perm' : '');
+            sp.className = 'ent word prop-' + e.prop.toLowerCase() + (e.fixed ? ' fixed' : '') + (e.perm ? ' perm' : '') + (CUSTOM_PROPS.includes(e.prop) ? ' custom' : '');
             sp.textContent = e.label;
           } else {
             sp.className = 'ent word noun' + (e.fixed ? ' fixed' : '') + (e.perm ? ' perm' : '');
@@ -1268,7 +1270,7 @@ function initUI() {
     tray.innerHTML = '';
     S.supply.forEach((t, i) => {
       const b = document.createElement('button');
-      b.className = 'tile' + (t.prop ? ' prop-' + t.prop.toLowerCase() : ' noun') + (S.placeIdx === i ? ' picked' : '');
+      b.className = 'tile' + (t.prop ? ' prop-' + t.prop.toLowerCase() : ' noun') + (t.prop && CUSTOM_PROPS.includes(t.prop) ? ' custom' : '') + (S.placeIdx === i ? ' picked' : '');
       b.textContent = t.prop ? 'IS ' + t.prop : t.noun;
       b.title = 'Click, then click a highlighted cell to place';
       b.addEventListener('click', () => {

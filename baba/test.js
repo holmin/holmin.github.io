@@ -1107,4 +1107,11 @@ assert.strictEqual(G.undo(s3), true);
 assert.ok(s3.over && s3.over.winner === 0 && s3.turn === 0, 'undo twice -> back in finished game 1');
 console.log('ok 56: undo backtraces across multiple games');
 
+// 57. custom (non-transcript) props are the purple ones
+assert.deepStrictEqual(G.CUSTOM_PROPS, ['STOP', 'SINK', 'OPEN', 'SHUT', 'DEFEAT', 'WRAP']);
+for (const p of ['WIN', 'FAST', 'HOT', 'MELT', 'CURIOUS', 'THIRSTY', 'STRONG', 'SCARED', 'SHEEP']) {
+  assert.ok(!G.CUSTOM_PROPS.includes(p), p + ' is from the video -> not purple');
+}
+console.log('ok 57: CUSTOM_PROPS = only the rules not in the youtube transcript');
+
 console.log('\nAll engine tests passed.');
