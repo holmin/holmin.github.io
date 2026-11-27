@@ -253,6 +253,7 @@ function newScenario(prev, enabled, levelId) {
     numPlayers,
   };
   if (prev) prev.worldPoints.forEach((v, i) => { if (i < numPlayers) sc.worldPoints[i] = v; });
+  if (prev) prev.score.forEach((v, i) => { if (i < numPlayers) sc.score[i] = v; }); // scenario points carry over
   sc.enabled = enabled.slice();
   return createGame(enabled, sc, levelId);
 }
@@ -1314,8 +1315,8 @@ function initUI() {
     const turnEl = document.getElementById('turn');
     turnEl.style.background = S.challenge ? '#8b1e2d' : ''; // sudden death: status goes red
     turnEl.style.color = S.challenge ? '#fff' : '';
-    const wins = (S.scenario && S.scenario.wins) || [];
-    document.getElementById('streak').textContent = wins.some(w => w > 0) ? wins.join('–') : ''; // e.g. 2–3
+    const tally = (S.scenario && S.scenario.score) || [];
+    document.getElementById('streak').textContent = tally.some(w => w > 0) ? tally.join('–') : ''; // e.g. 2–3
     const cur = S.numPlayers > 0 ? charAtRank(S, S.turn) : null;
     if (S.over) {
       const w = S.over.winner;

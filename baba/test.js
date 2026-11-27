@@ -1202,4 +1202,21 @@ assert.strictEqual(G.undo(s), true);
 assert.ok(!s.challenge && s.turn === 1 && s.actionsLeft === 2, 'undo removes the challenge and lands on the clean turn start');
 console.log('ok 62: sudden death after 1 of 2 actions undoes the first action');
 
+// 63. the win tally next to the title (scenario score, e.g. 1-0) survives new game
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 0 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 3, y: 0 });
+const f63 = s.entities.find(e => e.type === 'FLAG'); f63.x = 1; f63.y = 4;
+G.ensureParsed(s);
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // BABA onto FLAG IS WIN -> won
+assert.ok(s.over && s.over.winner === 0 && s.scenarioOver, 'game won, scenario over');
+assert.deepStrictEqual(s.scenario.score, [1, 0], 'score 1-0');
+const s4 = G.newGame(s, s.level); // scenarioOver -> newScenario path
+assert.deepStrictEqual(s4.scenario.score, [1, 0], 'tally carried into the new game');
+assert.deepStrictEqual(s4.scenario.wins, [0, 0], 'per-scenario bo3 counter resets');
+const s5 = G.newScenario(s4.scenario, s4.enabled, s4.level);
+assert.deepStrictEqual(s5.scenario.score, [1, 0], 'tally survives newScenario (R key) too');
+console.log('ok 63: win tally (score) persists across new game / new scenario');
+
 console.log('\nAll engine tests passed.');
