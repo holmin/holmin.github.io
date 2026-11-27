@@ -63,15 +63,15 @@
   .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
   #controls { margin-top: 10px; display: flex; flex-direction: row; gap: 12px; align-items: center; justify-content: flex-start; flex-wrap: nowrap; }
   #controls > * { flex: 1 1 0; min-width: 0; }
-  #btn-pull {
-    flex: 0 0 auto; width: 58px; padding: 6px 2px; font-size: 11px; font-weight: 800; line-height: 1.25;
-    white-space: pre-line; text-align: center; cursor: pointer;
-    border: 2px solid #3a4170; border-radius: 10px; background: #2a3050; color: #dfe3ff;
-    touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  #dpad #btn-pull {
+    grid-column: 1; grid-row: 1; /* above the left key, left of the up key */
+    padding: 2px; font-size: 10px; font-weight: 800; line-height: 1.2;
+    white-space: pre-line; text-align: center;
+    border: 2px solid #3a4170; background: #2a3050; color: #dfe3ff;
   }
-  #btn-pull.on {
+  #dpad #btn-pull.on {
     background: #2ecc71; border-color: #8fffbe; color: #06281a;
-    box-shadow: 0 0 12px rgba(46, 204, 113, .8);
+    box-shadow: 0 0 10px rgba(46, 204, 113, .8);
   }
   #dpad { flex: 0 0 auto; }
   #dpad {
@@ -172,6 +172,7 @@
     #app { flex-direction: column; align-items: center; }
     #dpad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 34px); }
     .cbtns button { padding: 5px 2px; font-size: 9px; }
+    #dpad #btn-pull { font-size: 9px; }
     #side { display: contents; }
     #side > * { width: min(100%, 420px); }
     #titlerow { order: -3; width: min(100%, 420px); justify-content: center; text-align: center; }  /* title centered on top in the one-column mobile layout */
@@ -185,7 +186,7 @@
     #dpad button { font-size: 12px; border-radius: 8px; }
     .cbtns { gap: 4px; }
     .cbtns button { padding: 4px 2px; font-size: 9px; white-space: normal; }
-    #btn-pull { width: 52px; font-size: 10px; }
+
     #levelrow { margin-top: 6px; }
     #tray-wrap { margin-top: 6px; padding: 6px; }
     .checks { gap: 8px; margin-top: 4px; font-size: 11px; }
@@ -200,9 +201,9 @@
       <div id="overlay" class="hidden"></div>
     </div>
     <div id="controls">
-      <button id="btn-pull" title="toggle: pull objects along when moving away from them">PULL
-○ off</button>
       <div id="dpad">
+        <button id="btn-pull" title="toggle: pull objects along when moving away from them">PULL
+○ off</button>
         <button data-dx="0" data-dy="-1" aria-label="up">▲</button>
         <button data-dx="-1" data-dy="0" aria-label="left">◀</button>
         <button data-dx="0" data-dy="1" aria-label="down">▼</button>
@@ -269,6 +270,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=61"></script>
+<script src="game.js?v=62"></script>
 </body>
 </html>

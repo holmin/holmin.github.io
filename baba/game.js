@@ -1471,7 +1471,7 @@ function initUI() {
     tryMove(m[0], m[1]);
   });
 
-  document.querySelectorAll('#dpad button').forEach((b) => {
+  document.querySelectorAll('#dpad button[data-dx]').forEach((b) => {
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       if (S.fastDir) { S.fastDir = { dx: Number(b.dataset.dx), dy: Number(b.dataset.dy) }; render(); return; }
