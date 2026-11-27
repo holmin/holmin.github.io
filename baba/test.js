@@ -136,10 +136,11 @@ for (let i = 0; i < 10 && !s.over; i++) {
   if (!G.moveSelected(s, 1, d[0], d[1], false)) G.moveSelected(s, 1, 0, i % 2 === 0 ? 1 : -1, false);
 }
 assert.ok(s.over && s.over.winner === 0, 'challenger wins after 10 failed actions');
-// sudden death is allowed mid-turn, even after only the first action
+// sudden death is allowed mid-turn, even after only the first action of the turn
 s = G.createGame();
+s.gameTurn = 1; s.turn = 0; s.actionsLeft = 2; // a normal 2-action turn for P1
 s.selectedId = baba(s).id;
-G.moveSelected(s, 0, 1, 0, false); // first action used; gameTurn 1 -> 2 actions, 1 left
+G.moveSelected(s, 0, 1, 0, false); // first action used -> 1 left, still P1's turn
 assert.strictEqual(s.actionsLeft, 1);
 assert.strictEqual(G.challenge(s, 0), true, 'challenge allowed after the first action');
 assert.ok(s.challenge && s.turn === 1, 'challenge started mid-turn');
