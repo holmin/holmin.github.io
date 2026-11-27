@@ -57,7 +57,7 @@
   .word.noun::after { content: '▼'; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: calc(var(--cell) * .12); opacity: .6; }
   .word[class*="prop-"], .tile[class*="prop-"] { background: #e67e22; color: #fff; border-radius: 8px; }
   .word.prop-win, .tile.prop-win { background: #ffd700; color: #4a3b00; }
-  .word.custom, .tile.custom { background: #9b59b6; color: #fff; }  /* our own rules (not in the video): purple */
+  .word.custom, .tile.custom { background: #4a4f66; color: #c9cdea; }  /* our own rules (not in the video): dark grey = debug/wrong */
   .ent.word.perm { background: #9b59b6; color: #fff; }
   .ent.sel { box-shadow: 0 0 0 2px var(--selc, #f1c40f); border-radius: 50%; }
   .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
@@ -127,6 +127,11 @@
   #levelrow select { flex: 1 1 0; min-width: 0; }
   #levelrow label { display: flex; gap: 4px; align-items: center; }
   .checks { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: #8b93c9; }  /* the two dev checkboxes on their own line */
+  #dlog-wrap { margin-top: 8px; font-size: 12px; color: #8b93c9; }
+  #dlog-wrap label { display: flex; gap: 4px; align-items: center; }
+  #dlog { max-height: 180px; overflow-y: auto; background: #1a1f38; border-radius: 8px; padding: 6px 8px 6px 26px; margin: 6px 0 0; }
+  #dlog li { margin: 1px 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #aab2e8; }
+  #dlog-wrap.off #dlog { display: none; }
   #level {
     background: #2a3050; color: #dfe3ff; border: 1px solid #3a4170; border-radius: 8px;
     padding: 6px; font-size: 12px; font-weight: 700; max-width: 100%;
@@ -235,9 +240,10 @@
       Controls: tap a bordered thing to select it, then tap a walk cell to move; arrows/WASD/swipe/D-pad also work;
       keys 1–9, 0, q–p pick a rule tile; N = new game. Pick 0–2 rule cards below the board.
     </div>
+    <div id="dlog-wrap"><label><input type="checkbox" id="dlogon" checked> debug log (dev)</label><ol id="dlog"></ol></div>
     </div>
   </div>
 </div>
-<script src="game.js?v=53"></script>
+<script src="game.js?v=54"></script>
 </body>
 </html>

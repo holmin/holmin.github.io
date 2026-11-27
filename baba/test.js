@@ -1111,4 +1111,24 @@ for (const p of ['WIN', 'FAST', 'HOT', 'MELT', 'CURIOUS', 'THIRSTY', 'STRONG', '
 }
 console.log('ok 57: CUSTOM_PROPS = only the rules not in the youtube transcript');
 
+// 58. debug log records every action in a greppable, structured format
+s = G.createGame();
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false);
+assert.ok(s.dlog.some(m => /#\d+ ACTION move player=1 ent=BABA#\d+ dir=1,0 pull=false/.test(m)), 'ACTION move line');
+assert.ok(s.dlog.some(m => /mv ent=BABA#\d+ from=0,4 to=1,4 kind=move/.test(m)), 'mv detail line');
+const pIdx = s.supply.findIndex(t => t.prop === 'WIN');
+assert.strictEqual(G.place(s, 1, pIdx, 3, 0), true, 'P2 places IS WIN next to KEKE');
+assert.ok(s.dlog.some(m => /ACTION place player=2 tile=IS_WIN at=3,0/.test(m)), 'ACTION place line');
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 2, y: 0 });
+s.entities.push({ id: 901, kind: 'word', prop: 'WIN', label: 'IS WIN', owner: 0, x: 3, y: 0 });
+const f58 = s.entities.find(e => e.type === 'FLAG'); f58.x = 1; f58.y = 4;
+G.ensureParsed(s);
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // BABA onto FLAG IS WIN
+assert.ok(s.over && s.over.winner === 0);
+assert.ok(s.dlog.some(m => /end winner=0 reason="/.test(m)), 'end line');
+assert.ok(s.dlog.some(m => /FLAG IS WIN/.test(m)), 'rule-formation line logged');
+console.log('ok 58: debug log (dlog) records actions in structured lines');
+
 console.log('\nAll engine tests passed.');

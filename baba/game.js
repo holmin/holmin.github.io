@@ -160,6 +160,7 @@ function createGame(enabled, scenario, levelId) {
     log: [], rules: [], _prevRules: [], history: [],
     river: new Set(RIVER),
     _loopSteps: 0, _thirstyPending: [], _thirstyChooser: UI_THIRSTY_CHOOSER,
+    dlog: [], _dseq: 0,
   };
   S.mods = pl.mods; S.dev = pl.dev;
   syncFixedTiles(S);
@@ -220,6 +221,7 @@ function newGame(S, levelId) {
   before.history = S.history; // carry the undo chain across the game boundary (linear, not nested)
   S.scenario.firstPlayer = (S.scenario.firstPlayer || 0) + 1;
   const S2 = S.scenarioOver ? newScenario(S.scenario, S.enabled, levelId) : createGame(S.enabled, S.scenario, levelId);
+  dlog(S2, `ACTION newgame starter=P${S2.turn + 1}`);
   S2.history.unshift(JSON.stringify(before));
   if (S2.history.length > 500) S2.history.pop();
   return S2;
@@ -370,6 +372,16 @@ function entitiesAt(S, x, y) { return S.entities.filter(e => e.x === x && e.y ==
 function log(S, msg) {
   S.log.unshift(msg);
   if (S.log.length > 8) S.log.pop();
+  dlog(S, msg); // also into the detailed debug log
+}
+// detailed, greppable debug log of every action (shown under the help text; "debug log (dev)" checkbox)
+function dlog(S, msg) {
+  if (!S.dlog) return;
+  S.dlog.push('#' + (++S._dseq) + ' ' + msg);
+  if (S.dlog.length > 500) S.dlog.shift();
+}
+function entName(e) {
+  return (e.kind === 'object' ? e.type : (e.prop ? 'IS ' + e.prop : e.noun)) + '#' + e.id;
 }
 
 function snapshot(S) {
@@ -417,6 +429,7 @@ function end(S, winner, reason) {
   }
   const wch = winner === null ? null : charAtRank(S, winner);
   log(S, winner === null ? '🤝 ' + reason : `${wch.emoji} ${wch.name} (PLAYER ${winner + 1}) ${reason}`);
+  dlog(S, `end winner=${winner} reason="${reason}"`);
 }
 
 // Videogame destruction rules, applied after every action (and after CURIOUS
@@ -614,8 +627,9 @@ function doMove(S, m, dx, dy, pull) {
       }
     }
   }
+  let removed = [];
   if (dead.size) {
-    const removed = S.entities.filter(e => dead.has(e));
+    removed = S.entities.filter(e => dead.has(e));
     S.entities = S.entities.filter(e => !dead.has(e));
     recycleTiles(S, removed);
   }
@@ -643,6 +657,12 @@ function doMove(S, m, dx, dy, pull) {
     }
   }
   if (S._entered) S._entered.push(...ev); // enter-events (for CURIOUS/SCARED): from -> to
+  if (S.dlog) {
+    dlog(S, `mv ent=${entName(m)} from=${ox},${oy} to=${m.x},${m.y} kind=move`);
+    for (const o of list) dlog(S, `mv ent=${entName(o)} to=${o.x},${o.y} kind=push`);
+    if (pulled) dlog(S, `mv ent=${entName(pulled)} to=${pulled.x},${pulled.y} kind=pull`);
+    for (const e of removed) dlog(S, `destroyed ent=${entName(e)}`);
+  }
   return true;
 }
 
@@ -750,6 +770,7 @@ function moveSelected(S, p, dx, dy, pull) {
   if (!sel) return false;
   return act(S, p, () => {
     if (!canMove(S, sel, dx, dy)) return false;
+    dlog(S, `ACTION move player=${p + 1} ent=${entName(sel)} dir=${dx},${dy} pull=${!!pull}`);
     doMove(S, sel, dx, dy, pull);
     // FAST (diary #3): move as many spaces as you like in a single direction
     if (propsOf(S, sel).FAST) {
@@ -768,6 +789,7 @@ function fastMoveTo(S, p, dx, dy, tx, ty) {
   if (!sel || !yours.includes(sel)) sel = yours[0];
   if (!sel || !propsOf(S, sel).FAST) return false;
   return act(S, p, () => {
+    dlog(S, `ACTION fast-move player=${p + 1} ent=${entName(sel)} dir=${dx},${dy} to=${tx},${ty}`);
     let g = 0;
     while ((sel.x !== tx || sel.y !== ty) && g++ < 20 && canMove(S, sel, dx, dy)) doMove(S, sel, dx, dy, false);
     return sel.x === tx && sel.y === ty;
@@ -859,7 +881,7 @@ function resolveCascade(S, actor) {
         : [[0, dy], [dx, 0]];
       for (const [mx, my] of dirs) {
         if (mx === 0 && my === 0) continue;
-        if (canMove(S, c, mx, my)) { doMove(S, c, mx, my, false); moved = true; break; }
+        if (canMove(S, c, mx, my)) { doMove(S, c, mx, my, false); dlog(S, `curious ent=${entName(c)} to=${c.x},${c.y}`); moved = true; break; }
       }
     }
     const scared = S.entities.filter(e => !e.fixed && propsOf(S, e).SCARED);
@@ -881,7 +903,9 @@ function resolveCascade(S, actor) {
       if (dirs.size > 1) continue; // would have to flee in multiple directions -> paralyzed, doesn't move
       const [, fdx, fdy] = trig[0]; // flee in the opposite direction, as far as possible
       if (fdx === 0 && fdy === 0) continue;
-      while (!bumpLoop(S, actor) && canMove(S, c, fdx, fdy)) { doMove(S, c, fdx, fdy, false); moved = true; }
+      let fled = false;
+      while (!bumpLoop(S, actor) && canMove(S, c, fdx, fdy)) { doMove(S, c, fdx, fdy, false); moved = true; fled = true; }
+      if (fled) dlog(S, `scared ent=${entName(c)} fled-to=${c.x},${c.y}`);
     }
     if (!moved) return;
   }
@@ -944,7 +968,9 @@ function resolveThirsty(S, actor) {
       }
       target = c;
     }
+    dlog(S, `thirsty ent=${entName(e)} from=${e.x},${e.y}` + (dests.length > 1 ? ` options=${dests.map(d => d.join(',')).join('|')}` : '') + ` chose=${target[0]},${target[1]}`);
     moveToward(S, e, target[0], target[1], actor);
+    dlog(S, `thirsty ent=${entName(e)} to=${e.x},${e.y}`);
   }
 }
 // UI hook: the player picked one of the tied closest river cells for a THIRSTY thing
@@ -972,6 +998,8 @@ function place(S, p, idx, x, y) {
   return act(S, p, () => {
     if (idx >= S.supply.length) return false;
     if (!placeTargets(S, p).has(x + ',' + y)) return false;
+    const t = S.supply[idx];
+    dlog(S, `ACTION place player=${p + 1} tile=${t.prop ? 'IS_' + t.prop : t.noun} at=${x},${y}`);
     doPlace(S, p, idx, x, y);
     return true;
   });
@@ -1305,6 +1333,14 @@ function initUI() {
     } else {
       ov.classList.add('hidden');
     }
+
+    // debug log (dev) panel under the help text
+    const dw = document.getElementById('dlog-wrap');
+    dw.classList.toggle('off', !document.getElementById('dlogon').checked);
+    const dl = document.getElementById('dlog');
+    const esc = (m) => m.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    dl.innerHTML = (S.dlog || []).map(m => '<li>' + esc(m) + '</li>').join('');
+    dl.scrollTop = dl.scrollHeight;
   }
 
   const KEYMAP = {
@@ -1368,6 +1404,9 @@ function initUI() {
     document.getElementById('btn-pull').classList.toggle('on', pullOn);
   });
   document.getElementById('btn-undo').addEventListener('click', () => { undo(S); render(); });
+  document.getElementById('dlogon').addEventListener('change', (e) => {
+    document.getElementById('dlog-wrap').classList.toggle('off', !e.target.checked);
+  });
 
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
   document.getElementById('btn-newgame').addEventListener('click', () => {
