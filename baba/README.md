@@ -45,6 +45,7 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   WIN HARDER (+2 WIN), **ROCK IS THIRSTY**, STRONG, **ROCK IS SCARED**, **ROCK IS SHEEP**.
   A card's permanent rule is printed as **purple tiles in the board corners** —
   first card's rule top-left, second card's rule lower-left. The **all rules (dev)**
+- **restore state? (dev):** UI state (selected cards + dev checkboxes) is saved to localStorage on every change, but only applied when this checkbox is clicked (one-shot; it unchecks itself).
   checkbox gives one of every tile with an **infinite supply** (placing does not
   consume a tile, destroyed tiles are not returned — so only one `IS WIN` is needed).
   In normal games placing consumes the tile, and **destroyed tiles return to the
@@ -70,7 +71,9 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **CURIOUS** (board-game keyword, design diary #3): when **anything enters** a
   CURIOUS thing's row or column — i.e. arrives in a cell of that line from outside
   it — it moves **1 space toward it**. Moving along the same row/column does not
-  trigger it; every CURIOUS thing in the entered line reacts. **Placing a tile
+  trigger it; every CURIOUS thing in the entered line reacts. The step **cannot
+  push** (board game: "it cannot push"), but it may stack onto a YOU+WIN cell.
+  **Placing a tile
   does NOT count as entering** (official FAQ): a freshly placed rule triggers
   only from the next action on. Effects cascade (a push can make a rock move,
   which makes another curious thing move, …); if resolving one action runs
@@ -88,10 +91,12 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
 - **SCARED**: when something **enters an edge-adjacent space** (moving, being
   pushed, **or being placed** there; not diagonal), it **flees as far as possible
   in the opposite direction**. If it would have to flee in multiple directions at
-  once, it is **paralyzed** and does not move. SCARED things **cannot be pulled**
+  once, it is **paralyzed** and does not move. The flee **does not push** and
+  stops against the board edge. SCARED things **cannot be pulled**
   (unless the puller is STRONG).
 - **SHEEP**: when a SHEEP thing **moves**, every other SHEEP thing moves the
-  **same amount in the same direction**, if its destination cell is free.
+  **same amount in the same direction**, **pushing one thing if that is what it
+  takes** ("a sheep will push if possible").
 - **WRAP**: when pushed or moved outside the grid, a WRAP thing wraps to the
   opposite side — unless that side is blocked. Pushing/walking toward one of the
   permanent printed tiles in the margin also wraps (they never block it).

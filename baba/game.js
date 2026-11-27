@@ -411,7 +411,7 @@ function snapshot(S) {
     entities: S.entities, supply: S.supply, turn: S.turn, gameTurn: S.gameTurn,
     actionsLeft: S.actionsLeft, challenge: S.challenge, over: S.over,
     scenarioOver: S.scenarioOver, scenario: S.scenario, numPlayers: S.numPlayers, enabled: S.enabled,
-    selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules,
+    selectedId: S.selectedId, placeIdx: S.placeIdx, _prevRules: S._prevRules, _thirstyPending: S._thirstyPending || [],
     river: Array.from(S.river || RIVER), level: S.level, spawnOrder: S.spawnOrder, mods: S.mods, dev: S.dev,
     // NOTE: history is deliberately NOT embedded here (that would nest recursively
     // and explode JSON size); newGame attaches the chain explicitly at game boundaries
@@ -677,13 +677,31 @@ function doMove(S, m, dx, dy, pull) {
     for (const [e, edx, edy] of movers) {
       if (!S.entities.includes(e) || !propsOf(S, e).SHEEP) continue;
       for (const o of S.entities.slice()) {
-        if (o === e || movedIds.has(o.id) || !propsOf(S, o).SHEEP) continue;
+        if (o === e || movedIds.has(o.id) || o.fixed || !propsOf(S, o).SHEEP) continue;
         let tx = o.x + edx, ty = o.y + edy;
         if (tx < 0 || ty < 0 || tx >= W || ty >= H) {
           if (!propsOf(S, o).WRAP) continue;
           tx = wrapCoord(tx, W); ty = wrapCoord(ty, H);
         }
-        if (entitiesAt(S, tx, ty).some(x => x !== o)) continue; // occupied -> not possible
+        const blockers = entitiesAt(S, tx, ty).filter(x => x !== o && !x.fixed);
+        if (blockers.length > 1) continue; // can only push one thing
+        if (blockers.length === 1) {
+          const b = blockers[0], bp = propsOf(S, b);
+          if (enterableProp(bp) || stackable(S, o, b)) { /* enter/stack instead of pushing */ }
+          else if (bp.STOP || (bp.SHUT && !openedInCell(S, b))) continue;
+          else {
+            // push the blocker one step, if its own target is free
+            let bx = b.x + edx, by = b.y + edy;
+            if (bx < 0 || by < 0 || bx >= W || by >= H) {
+              if (!propsOf(S, b).WRAP) continue;
+              bx = wrapCoord(bx, W); by = wrapCoord(by, H);
+            }
+            if (entitiesAt(S, bx, by).some(x => x !== b && !x.fixed)) continue;
+            ev.push({ id: b.id, fx: b.x, fy: b.y, tx: bx, ty: by });
+            b.x = bx; b.y = by;
+            movedIds.add(b.id);
+          }
+        }
         ev.push({ id: o.id, fx: o.x, fy: o.y, tx, ty });
         o.x = tx; o.y = ty;
         movedIds.add(o.id);
@@ -915,7 +933,10 @@ function resolveCascade(S, actor) {
         : [[0, dy], [dx, 0]];
       for (const [mx, my] of dirs) {
         if (mx === 0 && my === 0) continue;
-        if (canMove(S, c, mx, my)) { doMove(S, c, mx, my, false); dlog(S, `curious ent=${entName(c)} to=${c.x},${c.y}`); moved = true; break; }
+        const tx = c.x + mx, ty = c.y + my;
+        if (tx < 0 || ty < 0 || tx >= W || ty >= H) continue;
+        if (entitiesAt(S, tx, ty).some(x => !x.fixed && !stackable(S, c, x))) continue; // CURIOUS cannot push (board game), but may stack onto a YOU+WIN cell
+        doMove(S, c, mx, my, false); dlog(S, `curious ent=${entName(c)} to=${c.x},${c.y}`); moved = true; break;
       }
     }
     const scared = S.entities.filter(e => !e.fixed && propsOf(S, e).SCARED);
@@ -938,7 +959,13 @@ function resolveCascade(S, actor) {
       const [, fdx, fdy] = trig[0]; // flee in the opposite direction, as far as possible
       if (fdx === 0 && fdy === 0) continue;
       let fled = false;
-      while (!bumpLoop(S, actor) && canMove(S, c, fdx, fdy)) { doMove(S, c, fdx, fdy, false); moved = true; fled = true; }
+      for (;;) {
+        if (bumpLoop(S, actor)) break;
+        const tx = c.x + fdx, ty = c.y + fdy;
+        if (tx < 0 || ty < 0 || tx >= W || ty >= H) break; // against the wall it cannot flee (video)
+        if (entitiesAt(S, tx, ty).some(x => !x.fixed)) break; // SCARED does not push while fleeing
+        doMove(S, c, fdx, fdy, false); moved = true; fled = true;
+      }
       if (fled) dlog(S, `scared ent=${entName(c)} fled-to=${c.x},${c.y}`);
     }
     if (!moved) return;
@@ -1488,8 +1515,34 @@ function initUI() {
     const s = (devChk.checked ? 'd' : '') + (mods.length ? 'm:' + mods.join(',') : '');
     return s || 'base';
   }
+  // UI state (cards + dev checkboxes) is saved to localStorage on every change, but only
+  // APPLIED when the "restore state? (dev)" checkbox is clicked (one-shot).
+  function saveUI() {
+    try {
+      localStorage.setItem('baba-ui', JSON.stringify({ mod1: mod1.value, mod2: mod2.value, dev: devChk.checked, alt: altChk.checked }));
+    } catch (e) { /* storage unavailable (private mode) — saving is best-effort */ }
+  }
+  document.getElementById('restore').addEventListener('change', (e) => {
+    const chk = e.target;
+    if (!chk.checked) return;
+    chk.checked = false; // one-shot: apply once, then uncheck
+    let st = null;
+    try { st = JSON.parse(localStorage.getItem('baba-ui') || 'null'); } catch (err) { st = null; }
+    if (!st) { dlog(S, 'ACTION checkbox restore=no saved state'); render(); return; }
+    mod1.value = st.mod1 || 'none';
+    mod2.value = st.mod2 || 'none';
+    if (mod1.value !== 'none' && mod1.value === mod2.value) mod2.value = 'none';
+    devChk.checked = !!st.dev;
+    altChk.checked = !!st.alt;
+    document.getElementById('players').hidden = !altChk.checked;
+    levelId = currentLevelId();
+    S = changeRules(S, levelId); // start a game with the restored cards/dev setting
+    dlog(S, `ACTION checkbox restore=${JSON.stringify(st)}`);
+    render();
+  });
   function rebuild() {
     levelId = currentLevelId();
+    saveUI();
     // changing modifiers starts a new game with those cards; the old game stays on
     // the history (boundary entry), so undo (Z) backtraces across the change
     S = changeRules(S, levelId);
@@ -1504,6 +1557,7 @@ function initUI() {
     S.level = currentLevelId();
     S.supply = supplyFor(S.level);
     dlog(S, `ACTION checkbox dev=${devChk.checked}`);
+    saveUI();
     render();
   });
   // character select is hidden unless "alternate characters (dev)" is checked.
@@ -1522,8 +1576,10 @@ function initUI() {
   altChk.addEventListener('change', () => {
     pwrap.hidden = !altChk.checked; // in place: no restart, BABA + KEKE stay chosen
     dlog(S, `ACTION checkbox altchars=${altChk.checked}`);
+    saveUI();
     render();
   });
+  saveUI(); // initial save (after altChk exists)
 
   let touchStart = null;
   board.addEventListener('touchstart', (e) => {

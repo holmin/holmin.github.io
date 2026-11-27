@@ -1266,4 +1266,56 @@ assert.strictEqual(s.numPlayers, 0);
 assert.strictEqual(G.resign(s, 0), false, 'no resign with 0 players');
 console.log('ok 66: resign rejected with 0 players');
 
+// 67. undo clears a pending THIRSTY tie (snapshot includes _thirstyPending)
+s = G.createGame(undefined, undefined, 'm:thirsty');
+const r67 = s.entities.find(e => e.kind === 'object' && e.type === 'ROCK');
+r67.x = 1; r67.y = 2; // tie: river at (1,1) up and (2,2) right, both distance 1
+G.ensureParsed(s);
+s.history.unshift(G.snapshot(s)); // pre-action snapshot (pending empty)
+s._thirstyChooser = () => null;    // UI mode: defer ties to a tap
+G.resolveThirsty(s, 0);
+assert.strictEqual(s._thirstyPending.length, 1, 'tie deferred to a tap');
+G.undo(s);
+assert.deepStrictEqual(s._thirstyPending, [], 'undo clears the pending THIRSTY tie');
+console.log('ok 67: undo during a THIRSTY tie does not leave a stale prompt');
+
+// 68. video rulings: CURIOUS cannot push, SCARED flees without pushing, SHEEP echo may push one thing
+// 68a. CURIOUS thing whose step is blocked by an occupied cell does not push
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'FLAG', x: 0, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'CURIOUS', label: 'IS CURIOUS', owner: 0, x: 1, y: 3 });
+const flag68 = s.entities.find(e => e.type === 'FLAG'); flag68.x = 2; flag68.y = 2; // FLAG IS CURIOUS
+baba(s).x = 2; baba(s).y = 0;
+G.ensureParsed(s);
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 0, 1, false); // BABA (2,0)->(2,1): enters the flag's column; flag steps up into (2,1), occupied by BABA
+assert.deepStrictEqual([flag68.x, flag68.y], [2, 2], 'curious flag did not push BABA out of the way');
+assert.deepStrictEqual([baba(s).x, baba(s).y], [2, 1], 'BABA not pushed');
+// 68b. SCARED flees without pushing (blocked flee -> stays)
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 0, y: 3 });
+s.entities.push({ id: 901, kind: 'word', prop: 'SCARED', label: 'IS SCARED', owner: 0, x: 1, y: 3 });
+const rA3 = rock(s, 0, 0); rA3.x = 2; rA3.y = 2;   // scared rock; entered at (2,1) it would flee DOWN
+const flagC = s.entities.find(e => e.type === 'FLAG'); flagC.x = 2; flagC.y = 3; // blocks the flee
+baba(s).x = 1; baba(s).y = 1;
+G.ensureParsed(s);
+s.selectedId = baba(s).id;
+G.moveSelected(s, 0, 1, 0, false); // BABA (1,1)->(2,1): becomes adjacent to the scared rock
+assert.deepStrictEqual([rA3.x, rA3.y], [2, 2], 'scared rock did not push the flag to flee');
+assert.deepStrictEqual([flagC.x, flagC.y], [2, 3], 'flag unmoved');
+// 68c. SHEEP echo pushes one blocker if possible
+s = G.createGame();
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 1, y: 5 }); // right -> IS P1 at (2,5): ROCK IS P1
+s.entities.push({ id: 901, kind: 'word', noun: 'ROCK', x: 0, y: 3 });
+s.entities.push({ id: 902, kind: 'word', prop: 'SHEEP', label: 'IS SHEEP', owner: 0, x: 1, y: 3 }); // ROCK IS SHEEP
+const rM = rock(s, 0, 0); rM.x = 2; rM.y = 2;   // mover sheep rock (also YOU)
+const rE = rock(s, 4, 4); rE.x = 3; rE.y = 2;   // echo sheep rock; its up-step (3,1) is blocked by the flag
+const flagD = s.entities.find(e => e.type === 'FLAG'); flagD.x = 3; flagD.y = 1;
+G.ensureParsed(s);
+s.selectedId = rM.id;
+G.moveSelected(s, 0, 0, -1, false); // mover (2,2)->(2,1); echo rock steps up, pushing flag (3,1)->(3,0)
+assert.deepStrictEqual([rE.x, rE.y], [3, 1], 'sheep echo moved into the blocked cell by pushing');
+assert.deepStrictEqual([flagD.x, flagD.y], [3, 0], 'blocker flag pushed one step');
+console.log('ok 68: CURIOUS no-push, SCARED flee no-push, SHEEP echo can push one thing');
+
 console.log('\nAll engine tests passed.');
