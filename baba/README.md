@@ -141,6 +141,11 @@ Live at https://holmin.github.io/baba/ — or open `index.html` locally.
   not auto-win.
 - **Sudden death (C):** if you think the game is unwinnable, skip your turn to
   challenge — your opponent then gets 10 actions to win; if they fail, you win.
+- **Resign:** the current player can resign (button). All of their YOU things
+  disappear from the board. With 2 players the other player wins; with more
+  players the game continues without them. If the removal also takes down every
+  other player, the game is a draw — resigning never counts as a win for the
+  resigning player.
 - **Game end:** a YOU+WIN share, a resolved challenge, or a PLAYER who cannot
   take their actions (the other PLAYER wins).
 - **Scoring:** winner of a game gets a game point; first to the target

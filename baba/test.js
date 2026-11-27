@@ -1219,4 +1219,36 @@ const s5 = G.newScenario(s4.scenario, s4.enabled, s4.level);
 assert.deepStrictEqual(s5.scenario.score, [1, 0], 'tally survives newScenario (R key) too');
 console.log('ok 63: win tally (score) persists across new game / new scenario');
 
+// 64. resign: 2p -> other player wins; >2p -> YOUs disappear, game continues;
+//     killing all other players with the resign is a DRAW, never a win for the resigner
+s = G.createGame();
+assert.strictEqual(G.resign(s, 0), true, 'P1 can resign on their turn');
+assert.ok(s.over && s.over.winner === 1 && /resigned/.test(s.over.reason), '2p: the other player wins');
+assert.ok(!s.entities.some(e => !e.fixed && G.isYouBy(s, e, 0)), "P1's YOU things are gone");
+assert.ok(s.dlog.some(m => /ACTION resign player=1/.test(m)), 'resign logged');
+assert.strictEqual(G.undo(s), true);
+assert.ok(!s.over && G.yourThings(s, 0).length > 0, 'undo brings the resigned player back');
+
+// 3 players: resign removes the YOUs and play continues with the next living player
+const en3 = G.DEFAULT_ENABLED.slice(); en3[2] = true;
+s = G.createGame(en3);
+assert.strictEqual(s.numPlayers, 3);
+assert.strictEqual(G.resign(s, 0), true);
+assert.ok(!s.over, 'game continues with 3 players');
+assert.ok(!s.entities.some(e => !e.fixed && G.isYouBy(s, e, 0)), "P1's YOU things removed");
+assert.strictEqual(s.turn, 1, 'turn passes to the next living player');
+
+// resign that also kills every other player -> draw, NOT a win for the resigner
+s = G.createGame();
+s.entities = s.entities.filter(e => e.type !== 'KEKE'); // P2's figure off-board; P2 only has rule-based YOUs
+s.entities.push({ id: 900, kind: 'word', noun: 'ROCK', x: 1, y: 5 }); // right -> IS P1 at (2,5): ROCK IS P1
+s.entities.push({ id: 901, kind: 'word', noun: 'ROCK', x: 4, y: 2 }); // right -> IS P2 at (5,2): ROCK IS P2
+G.ensureParsed(s);
+assert.ok(G.yourThings(s, 1).length > 0, 'P2 controls the rocks via rule');
+assert.strictEqual(G.resign(s, 0), true);
+assert.ok(s.over && s.over.winner === null, 'everyone else died with the resign -> DRAW');
+assert.ok(/resigned/.test(s.over.reason) && !/win/.test(s.over.reason.replace('does not count as a win', '')), 'reason mentions the resign, not a win');
+assert.ok(!s.scenario.score.some(v => v > 0), 'no scenario point awarded');
+console.log('ok 64: resign (2p win for opponent, >2p continue, mass-kill = draw not win)');
+
 console.log('\nAll engine tests passed.');

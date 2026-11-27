@@ -62,7 +62,17 @@
   .ent.sel { box-shadow: 0 0 0 2px var(--selc, #f1c40f); border-radius: 50%; }
   .ent.sel.cur { box-shadow: 0 0 0 4px var(--selc, #f1c40f); }
   #controls { margin-top: 10px; display: flex; flex-direction: row; gap: 12px; align-items: center; justify-content: flex-start; flex-wrap: nowrap; }
-  #controls > * { flex: 1 1 0; }
+  #controls > * { flex: 1 1 0; min-width: 0; }
+  #btn-pull {
+    flex: 0 0 auto; width: 58px; padding: 6px 2px; font-size: 11px; font-weight: 800; line-height: 1.25;
+    white-space: pre-line; text-align: center; cursor: pointer;
+    border: 2px solid #3a4170; border-radius: 10px; background: #2a3050; color: #dfe3ff;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  #btn-pull.on {
+    background: #2ecc71; border-color: #8fffbe; color: #06281a;
+    box-shadow: 0 0 12px rgba(46, 204, 113, .8);
+  }
   #dpad { flex: 0 0 auto; }
   #dpad {
     display: grid;
@@ -81,13 +91,15 @@
   #dpad button[data-dx="-1"][data-dy="0"] { grid-column: 1; grid-row: 2; }
   #dpad button[data-dx="0"][data-dy="1"] { grid-column: 2; grid-row: 2; }
   #dpad button[data-dx="1"][data-dy="0"] { grid-column: 3; grid-row: 2; }
-  .cbtns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; min-width: 0; }
+  .cbtns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; min-width: 0; }
   .cbtns button {
-    width: 100%; border: 1px solid #3a4170; background: #2a3050; color: #dfe3ff;
-    border-radius: 10px; padding: 8px 10px; font-size: 12px; font-weight: 700; white-space: nowrap;
-    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+    width: 100%; border: 1px solid #2c3357; background: #141830; color: #8b93c9; cursor: pointer;
+    border-radius: 999px; padding: 6px 2px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   }
-  .cbtns button.on { background: #2ecc71; color: #06281a; }
+  .cbtns button:active { background: #232a4d; color: #dfe3ff; }
+  .cbtns button:disabled { opacity: .35; }
   #tray-wrap { margin-top: 10px; background: #1a1f38; border-radius: 8px; padding: 10px; }
   #tray-wrap h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8b93c9; margin-bottom: 6px; }
   #supply { display: flex; flex-wrap: wrap; gap: 6px; min-height: 40px; }
@@ -159,7 +171,7 @@
   @media (max-width: 860px) {
     #app { flex-direction: column; align-items: center; }
     #dpad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 34px); }
-    .cbtns button { padding: 6px 8px; font-size: 11px; }
+    .cbtns button { padding: 5px 2px; font-size: 9px; }
     #side { display: contents; }
     #side > * { width: min(100%, 420px); }
     #titlerow { order: -3; width: min(100%, 420px); justify-content: center; text-align: center; }  /* title centered on top in the one-column mobile layout */
@@ -172,7 +184,8 @@
     #dpad { grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(2, 30px); gap: 3px; }
     #dpad button { font-size: 12px; border-radius: 8px; }
     .cbtns { gap: 4px; }
-    .cbtns button { padding: 4px 3px; font-size: 10px; border-radius: 8px; }
+    .cbtns button { padding: 4px 2px; font-size: 9px; white-space: normal; }
+    #btn-pull { width: 52px; font-size: 10px; }
     #levelrow { margin-top: 6px; }
     #tray-wrap { margin-top: 6px; padding: 6px; }
     .checks { gap: 8px; margin-top: 4px; font-size: 11px; }
@@ -187,6 +200,8 @@
       <div id="overlay" class="hidden"></div>
     </div>
     <div id="controls">
+      <button id="btn-pull" title="toggle: pull objects along when moving away from them">PULL
+○ off</button>
       <div id="dpad">
         <button data-dx="0" data-dy="-1" aria-label="up">▲</button>
         <button data-dx="-1" data-dy="0" aria-label="left">◀</button>
@@ -194,10 +209,10 @@
         <button data-dx="1" data-dy="0" aria-label="right">▶</button>
       </div>
       <div class="cbtns">
-        <button id="btn-pull">PULL: off</button>
-        <button id="btn-undo">undo (Z)</button>
+        <button id="btn-undo" title="undo last action (Z)">undo</button>
         <button id="btn-challenge" title="Skip your turn: opponent must win within 10 actions or you win">sudden death</button>
-        <button id="btn-newgame" title="N">new game (N)</button>
+        <button id="btn-resign" title="the current player resigns">resign</button>
+        <button id="btn-newgame" title="new game (N)">new game</button>
       </div>
     </div>
     <div id="levelrow"><span>Cards:</span><select id="mod1"></select><select id="mod2"></select></div>
@@ -254,6 +269,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=60"></script>
+<script src="game.js?v=61"></script>
 </body>
 </html>

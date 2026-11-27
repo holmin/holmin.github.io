@@ -1064,6 +1064,41 @@ function challenge(S, p) {
   return true;
 }
 
+// Resign: the current player gives up — all of their YOU things disappear from the
+// board. With 2 players the other player wins. With more players the game continues
+// without them. If the removal also kills every OTHER player, it is a DRAW —
+// resigning never counts as a win for the resigning player.
+function resign(S, p) {
+  if (S.over || S.scenarioOver) return false;
+  if (S.turn !== p) return false;
+  pushHistory(S, snapshot(S));
+  const name = charAtRank(S, p).name;
+  const mine = S.entities.filter(e => !e.fixed && isYouBy(S, e, p));
+  if (mine.length) S.entities = S.entities.filter(e => !mine.includes(e));
+  S.challenge = null;
+  dlog(S, `ACTION resign player=${p + 1} (${name}) - ${mine.length} YOU thing(s) removed`);
+  const alive = [];
+  for (let q = 0; q < S.numPlayers; q++) if (yourThings(S, q).length) alive.push(q);
+  if (alive.length === 1 && alive[0] !== p) {
+    end(S, alive[0], `${name} resigned`);
+  } else if (alive.length <= 1) { // nobody left, or only the resigner: draw, never a win for p
+    end(S, null, alive.length === 0
+      ? `${name} resigned and nobody is left on the board`
+      : `${name} resigned; taking the last other player down does not count as a win`);
+  } else {
+    // more than 2 players and others are still alive: game continues without p
+    let t = (p + 1) % S.numPlayers;
+    while (!alive.includes(t)) t = (t + 1) % S.numPlayers;
+    S.turn = t; S.gameTurn++; S.actionsLeft = 2; S.selectedId = null; S.placeIdx = null;
+    log(S, `${charAtRank(S, p).emoji} ${name} resigns — the game continues without them`);
+    if (!hasLegalAction(S, S.turn)) {
+      const others = alive.filter(q => q !== S.turn);
+      end(S, others.length === 1 ? others[0] : null, `${charAtRank(S, S.turn).name} cannot take an action`);
+    }
+  }
+  return true;
+}
+
 function spendClock(S, p) {
   const sc = S.scenario;
   if (sc.bo3 || !sc.clocks[p]) return false;
@@ -1080,7 +1115,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     W, H, NOUNS, EMOJI, createGame, newScenario, parseRules, ensureParsed, ruleList,
     propsOf, isYou, isWin, youOwner, youOwners, isYouBy, entitiesAt, canMove, doMove, placeTargets, canPlace,
-    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge, newGame, changeRules,
+    doPlace, legalMoves, hasLegalAction, yourThings, act, moveSelected, place, challenge, newGame, changeRules, resign,
     spendClock, resolve, undo, snapshot, setEnabled, activeChars, charAtRank, isRiverCell,
     resolveCurious, resolveCascade, resolveThirsty, pickThirsty, thirstyOptions, setThirstyChooser, bumpLoop,
     fastMoveTo, fastReach, moversTo, walkTarget, wrapCoord, syncFixedTiles, resolveDestructive,
@@ -1352,6 +1387,7 @@ function initUI() {
     document.getElementById('supply-empty').style.display = S.supply.length ? 'none' : 'block';
 
     document.getElementById('btn-challenge').disabled = S.over || S.scenarioOver || S.challenge !== null || S.actionsLeft <= 0;
+    document.getElementById('btn-resign').disabled = !!(S.over || S.scenarioOver);
     document.querySelectorAll('#players button').forEach((b, i) => {
       b.classList.toggle('on', !!S.enabled[i]);
     });
@@ -1444,7 +1480,7 @@ function initUI() {
   });
   document.getElementById('btn-pull').addEventListener('click', () => {
     pullOn = !pullOn;
-    document.getElementById('btn-pull').textContent = 'PULL: ' + (pullOn ? 'ON' : 'off');
+    document.getElementById('btn-pull').textContent = 'PULL\n' + (pullOn ? '\u25cf ON' : '\u25cb off');
     document.getElementById('btn-pull').classList.toggle('on', pullOn);
   });
   document.getElementById('btn-undo').addEventListener('click', () => { undo(S); render(); });
@@ -1454,6 +1490,7 @@ function initUI() {
   });
 
   document.getElementById('btn-challenge').addEventListener('click', () => { challenge(S, S.turn); render(); });
+  document.getElementById('btn-resign').addEventListener('click', () => { resign(S, S.turn); render(); });
   document.getElementById('btn-newgame').addEventListener('click', () => {
     S = newGame(S, levelId); // rotates the starting player
     render();
