@@ -81,7 +81,7 @@
   #dpad button[data-dx="-1"][data-dy="0"] { grid-column: 1; grid-row: 2; }
   #dpad button[data-dx="0"][data-dy="1"] { grid-column: 2; grid-row: 2; }
   #dpad button[data-dx="1"][data-dy="0"] { grid-column: 3; grid-row: 2; }
-  .cbtns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .cbtns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; min-width: 0; }
   .cbtns button {
     width: 100%; border: 1px solid #3a4170; background: #2a3050; color: #dfe3ff;
     border-radius: 10px; padding: 8px 10px; font-size: 12px; font-weight: 700; white-space: nowrap;
@@ -166,7 +166,17 @@
     #turn { order: -2; width: min(100%, 420px); }  /* status bar on its own line */
     body { padding: 8px; }
   }
-  @media (max-width: 340px) { #controls { flex-wrap: wrap; } }  /* very narrow screens: let the buttons wrap below the dpad */
+  @media (max-width: 340px) { /* iPhone 5 / iPod touch: keep dpad + 4 buttons on ONE row so the tile tray stays visible */
+    body { padding: 4px; }
+    #controls { gap: 6px; margin-top: 6px; flex-wrap: nowrap; }
+    #dpad { grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(2, 30px); gap: 3px; }
+    #dpad button { font-size: 12px; border-radius: 8px; }
+    .cbtns { gap: 4px; }
+    .cbtns button { padding: 4px 3px; font-size: 10px; border-radius: 8px; }
+    #levelrow { margin-top: 6px; }
+    #tray-wrap { margin-top: 6px; padding: 6px; }
+    .checks { gap: 8px; margin-top: 4px; font-size: 11px; }
+  }
 </style>
 </head>
 <body>
@@ -244,6 +254,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=59"></script>
+<script src="game.js?v=60"></script>
 </body>
 </html>
